@@ -30,13 +30,22 @@ Thanks for your interest in contributing!
 - Run `make lint` to check for issues.
 - Pre-commit hooks will run automatically on each commit.
 
+## Type Checking
+
+We use [Pyright](https://github.com/microsoft/pyright) for static type analysis.
+
+- Run `make typecheck` to check types.
+- Add type annotations to all new functions and methods.
+- Use `from __future__ import annotations` for forward references.
+- Pyright is configured in `pyproject.toml` under `[tool.pyright]`.
+
 ## Running Tests
 
 ```bash
 make test
 ```
 
-Or run the full check (lint + test):
+Or run the full check suite (lint + typecheck + test):
 
 ```bash
 make check
@@ -46,7 +55,7 @@ make check
 
 1. Create a feature branch from `main`.
 2. Make your changes and add tests if applicable.
-3. Ensure `make check` passes.
+3. Ensure `make check` passes (lint, typecheck, and tests).
 4. Open a pull request with a clear description of your changes.
 
 ## Reporting Issues

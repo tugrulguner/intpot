@@ -1,4 +1,4 @@
-.PHONY: install test lint format check build clean
+.PHONY: install test lint format typecheck check build clean
 
 install:
 	uv sync --all-extras
@@ -14,7 +14,10 @@ format:
 	uv run ruff check --fix src/ tests/
 	uv run ruff format src/ tests/
 
-check: lint test
+typecheck:
+	uv run pyright src/ tests/
+
+check: lint typecheck test
 
 build:
 	uv build

@@ -30,7 +30,14 @@ dependencies = [
 mcp = ["fastmcp>=2.0.0"]
 api = ["fastapi>=0.100.0", "uvicorn>=0.20.0"]
 all = ["intpot[mcp,api]"]
-dev = ["pytest>=7.0.0", "ruff>=0.8.0", "pre-commit>=3.0.0", "intpot[all]"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.8.0",
+    "pre-commit>=3.0.0",
+    "pyright>=1.1.390",
+    "intpot[all]",
+]
 
 [project.urls]
 Homepage = "https://github.com/tugrulguner/intpot"
@@ -46,6 +53,18 @@ packages = ["src/intpot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+include = ["src", "tests"]
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportMissingTypeStubs = false
+reportAttributeAccessIssue = false
+reportAssignmentType = false
 
 [tool.ruff]
 target-version = "py311"
