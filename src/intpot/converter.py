@@ -61,6 +61,25 @@ class IntpotApp:
 
         return APIGenerator().generate(self._get_tools())
 
+    def write(self, path: str | Path, target: str) -> Path:
+        """Generate code and write it to a file.
+
+        Args:
+            path: Output file path.
+            target: Target framework — "cli", "mcp", or "api".
+
+        Returns:
+            The resolved Path that was written.
+        """
+        generators = {"cli": self.to_cli, "mcp": self.to_mcp, "api": self.to_api}
+        if target not in generators:
+            raise ValueError(f"Unknown target '{target}', expected: cli, mcp, api")
+        code = generators[target]()
+        out = Path(path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(code)
+        return out.resolve()
+
 
 def load(source: Any) -> IntpotApp:
     """Load a source for conversion.

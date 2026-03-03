@@ -124,6 +124,39 @@ def test_same_type_raises():
         app.to_mcp()
 
 
+def test_write_to_file(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    app = intpot.load(mcp)
+    out = tmp_path / "output" / "cli_app.py"
+    result = app.write(out, "cli")
+    assert out.exists()
+    content = out.read_text()
+    assert "import typer" in content
+    assert "def greet(" in content
+    assert result == out.resolve()
+
+
+def test_write_invalid_target():
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    app = intpot.load(mcp)
+    with pytest.raises(ValueError, match="Unknown target"):
+        app.write("/tmp/out.py", "invalid")
+
+
 def test_unknown_instance():
     with pytest.raises(DetectionError, match="Unrecognized"):
         intpot.load(42)

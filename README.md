@@ -86,9 +86,16 @@ def greet(name: str) -> str:
 
 app = intpot.load(mcp)
 print(app.to_cli())
+
+# Write directly to a file
+app.write("output/cli_app.py", "cli")
+app.write("output/api_app.py", "api")
 ```
 
-The `load()` function accepts file paths (str or Path) and live app instances (FastMCP, Typer, FastAPI). The returned `IntpotApp` object provides `.to_cli()`, `.to_mcp()`, and `.to_api()` methods that return generated code as strings.
+The `load()` function accepts file paths (str or Path) and live app instances (FastMCP, Typer, FastAPI). The returned `IntpotApp` object provides:
+
+- `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
+- `.write(path, target)` — generate and write to a file in one step (`target` is `"cli"`, `"mcp"`, or `"api"`)
 
 ## Architecture
 
