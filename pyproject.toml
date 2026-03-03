@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "intpot"
+version = "0.1.0"
+description = "Universal converter between CLI (Typer), MCP (FastMCP), and API (FastAPI) interfaces"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Tugrul Guner" }]
+keywords = ["cli", "mcp", "fastapi", "typer", "converter", "code-generation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
+dependencies = [
+    "typer>=0.9.0",
+    "jinja2>=3.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+mcp = ["fastmcp>=2.0.0"]
+api = ["fastapi>=0.100.0", "uvicorn>=0.20.0"]
+all = ["intpot[mcp,api]"]
+dev = ["pytest>=7.0.0", "ruff>=0.8.0", "pre-commit>=3.0.0", "intpot[all]"]
+
+[project.urls]
+Homepage = "https://github.com/tugrulguner/intpot"
+Repository = "https://github.com/tugrulguner/intpot"
+Issues = "https://github.com/tugrulguner/intpot/issues"
+Changelog = "https://github.com/tugrulguner/intpot/blob/main/CHANGELOG.md"
+
+[project.scripts]
+intpot = "intpot.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/intpot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",    # line length handled by formatter
+    "B008",    # typer.Argument/Option in function defaults is idiomatic for Typer
+    "SIM105",  # contextlib.suppress is less readable for our use case
+    "RUF059",  # unpacked unused vars in tests are fine
+    "UP042",   # str+Enum needed for Typer compatibility (StrEnum requires 3.11+)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.isort]
+known-first-party = ["intpot"]

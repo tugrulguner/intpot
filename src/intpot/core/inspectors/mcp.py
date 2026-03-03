@@ -1,0 +1,86 @@
+"""Extract tools from a FastMCP server instance."""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+from typing import Any
+
+from intpot.core.inspectors.base import BaseInspector
+from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+
+
+def _python_type_name(annotation: Any) -> str:
+    """Convert a type annotation to a string representation."""
+    if annotation is inspect.Parameter.empty or annotation is None:
+        return "str"
+    if isinstance(annotation, type):
+        return annotation.__name__
+    return str(annotation)
+
+
+class MCPInspector(BaseInspector):
+    def inspect(self, app: Any) -> list[ToolInfo]:
+        tools: list[ToolInfo] = []
+
+        # FastMCP >=2.0 stores tools via local_provider
+        # Use the async _list_tools to get registered FunctionTool objects
+        provider = getattr(app, "local_provider", None)
+        if provider is None:
+            return tools
+
+        try:
+            function_tools = asyncio.run(provider._list_tools())
+        except RuntimeError:
+            # Already in an async context
+            loop = asyncio.get_event_loop()
+            function_tools = loop.run_until_complete(provider._list_tools())
+
+        for ft in function_tools:
+            fn = getattr(ft, "fn", None)
+            if fn is None:
+                continue
+
+            tool_name = getattr(ft, "name", fn.__name__)
+            description = getattr(ft, "description", "") or ""
+            if not description and fn.__doc__:
+                description = fn.__doc__.strip()
+
+            sig = inspect.signature(fn)
+            type_hints: dict[str, Any] = {}
+            try:
+                type_hints = inspect.get_annotations(fn, eval_str=True)
+            except Exception:
+                pass
+
+            params: list[ParameterInfo] = []
+            for param_name, param in sig.parameters.items():
+                annotation = type_hints.get(param_name, param.annotation)
+                type_str = _python_type_name(annotation)
+
+                default = _SENTINEL
+                if param.default is not inspect.Parameter.empty:
+                    default = param.default
+
+                params.append(
+                    ParameterInfo(
+                        name=param_name,
+                        type_annotation=type_str,
+                        default=default,
+                        description="",
+                    )
+                )
+
+            return_annotation = type_hints.get("return", sig.return_annotation)
+            return_type = _python_type_name(return_annotation)
+
+            tools.append(
+                ToolInfo(
+                    name=tool_name,
+                    description=description,
+                    parameters=params,
+                    return_type=return_type,
+                )
+            )
+
+        return tools
