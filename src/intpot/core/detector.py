@@ -71,3 +71,14 @@ def detect_source(source_path: Path) -> tuple[SourceType, Any]:
     raise DetectionError(
         f"No FastMCP, Typer, or FastAPI app instance found in {source_path}"
     )
+
+
+def detect_instance(obj: Any) -> tuple[SourceType, Any]:
+    """Detect source type from a live app instance."""
+    if _is_fastmcp(obj):
+        return SourceType.MCP, obj
+    if _is_typer(obj):
+        return SourceType.CLI, obj
+    if _is_fastapi(obj):
+        return SourceType.API, obj
+    raise DetectionError(f"Unrecognized app type: {type(obj).__name__}")

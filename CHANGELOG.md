@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Python API** — `intpot.load()` accepts file paths or live app instances (FastMCP, Typer, FastAPI) and returns an `IntpotApp` with `.to_cli()`, `.to_mcp()`, `.to_api()` methods
+- **Directory auto-discovery** — `intpot to cli ./myproject/` scans a directory for convertible apps
+- `detect_instance()` function for detecting live Python objects (not just files)
+- `discover_sources()` function for recursive directory scanning
+- `IntpotApp` wrapper class for programmatic conversions
+- New tests for Python API and discovery (13 new tests, 42 total)
+
 ## [0.1.0] - 2026-03-02
 
 ### Added

@@ -51,6 +51,29 @@ Or run the full check suite (lint + typecheck + test):
 make check
 ```
 
+## Project Structure
+
+```
+src/intpot/
+├── __init__.py          # Package exports (load, IntpotApp)
+├── cli.py               # Main CLI entry point
+├── converter.py         # Python API (IntpotApp, load())
+├── commands/            # CLI command handlers (to_cli, to_mcp, to_api, init)
+├── core/
+│   ├── models.py        # Shared data models (ToolInfo, ParameterInfo, SourceType)
+│   ├── detector.py      # Auto-detect source type from files or live instances
+│   ├── discovery.py     # Directory scanning for convertible apps
+│   ├── inspectors/      # Framework-specific inspectors (extract tools)
+│   └── generators/      # Framework-specific generators (render code)
+└── templates/           # Jinja2 templates for code generation
+```
+
+Key concepts:
+- **Detection** — identify framework type from a file path or live object
+- **Inspection** — extract normalized `ToolInfo` from framework-specific apps
+- **Generation** — render `ToolInfo` into target framework code via Jinja2 templates
+- **Python API** — `intpot.load(source)` returns an `IntpotApp` for programmatic use
+
 ## Pull Request Process
 
 1. Create a feature branch from `main`.

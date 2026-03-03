@@ -57,7 +57,38 @@ intpot to api app.py
 
 # Write output to a file
 intpot to cli server.py --output cli_app.py
+
+# Convert all apps in a directory
+intpot to cli ./myproject/
+intpot to mcp ./myproject/ --output ./converted/
 ```
+
+## Python API
+
+Use intpot programmatically from Python:
+
+```python
+import intpot
+
+# From a file
+app = intpot.load("mcp_server.py")
+cli_code = app.to_cli()
+api_code = app.to_api()
+
+# From a live instance
+from fastmcp import FastMCP
+
+mcp = FastMCP("my-server")
+
+@mcp.tool()
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+
+app = intpot.load(mcp)
+print(app.to_cli())
+```
+
+The `load()` function accepts file paths (str or Path) and live app instances (FastMCP, Typer, FastAPI). The returned `IntpotApp` object provides `.to_cli()`, `.to_mcp()`, and `.to_api()` methods that return generated code as strings.
 
 ## Architecture
 
@@ -245,7 +276,7 @@ intpot to api <source> [--output <path>]
 
 | Argument/Option | Description |
 |----------------|-------------|
-| `source` | Path to the source Python file |
+| `source` | Path to a source Python file or directory |
 | `--output`, `-o` | Output file path (prints to stdout if omitted) |
 
 ## Development
