@@ -10,11 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Python API** — `intpot.load()` accepts file paths or live app instances (FastMCP, Typer, FastAPI) and returns an `IntpotApp` with `.to_cli()`, `.to_mcp()`, `.to_api()` methods
+- **`.write(path, target)`** — generate and write to a file in one step from the Python API
 - **Directory auto-discovery** — `intpot to cli ./myproject/` scans a directory for convertible apps
 - `detect_instance()` function for detecting live Python objects (not just files)
 - `discover_sources()` function for recursive directory scanning
 - `IntpotApp` wrapper class for programmatic conversions
-- New tests for Python API and discovery (13 new tests, 42 total)
+- Pyright type checking (`make typecheck`) with `[tool.pyright]` config
+- pytest-cov for test coverage reporting
+- CI typecheck job and coverage in test job
+- Example conversion files with input/output headers for all 6 directions
+- Full README rewrite with architecture diagram, Python API docs, CLI reference
+- CONTRIBUTING.md project structure and type checking sections
+- New tests for Python API, discovery, and `.write()` (44 total)
 
 ## [0.1.0] - 2026-03-02
 
