@@ -14,7 +14,7 @@ def {{ tool.name }}(
 {%- endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
-    """{{ tool.description }}"""
+    """{{ tool.description | escape_doc }}"""
     # TODO: implement
     return "{{ tool.name }} called"
 {%- endfor %}

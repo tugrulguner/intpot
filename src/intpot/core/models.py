@@ -1,4 +1,4 @@
-"""Shared data models for the inspect → normalize → generate pipeline."""
+"""Shared data models for the inspect -> normalize -> generate pipeline."""
 
 from __future__ import annotations
 
@@ -34,3 +34,4 @@ class ToolInfo:
     description: str = ""
     parameters: list[ParameterInfo] = field(default_factory=list)
     return_type: str = "str"
+    http_method: str = "POST"

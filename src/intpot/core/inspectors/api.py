@@ -5,17 +5,9 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
+from intpot.core.inspectors._utils import python_type_name
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
-
-
-def _python_type_name(annotation: Any) -> str:
-    if annotation is inspect.Parameter.empty or annotation is None:
-        return "str"
-    if isinstance(annotation, type):
-        return annotation.__name__
-    return str(annotation)
-
 
 _INTERNAL_ROUTES = {
     "openapi",
@@ -44,8 +36,12 @@ class APIInspector(BaseInspector):
             description = endpoint.__doc__ or ""
             description = description.strip()
 
+            # Capture HTTP methods from the route
+            methods = getattr(route, "methods", None) or {"POST"}
+            http_method = next(iter(sorted(methods))).upper()
+
             sig = inspect.signature(endpoint)
-            type_hints = {}
+            type_hints: dict[str, Any] = {}
             try:
                 type_hints = inspect.get_annotations(endpoint, eval_str=True)
             except Exception:
@@ -54,21 +50,24 @@ class APIInspector(BaseInspector):
             params: list[ParameterInfo] = []
             for param_name, param in sig.parameters.items():
                 annotation = type_hints.get(param_name, param.annotation)
-                type_str = _python_type_name(annotation)
+                type_str = python_type_name(annotation)
 
                 default = _SENTINEL
                 if param.default is not inspect.Parameter.empty:
                     # FastAPI uses special default objects (Query, Path, Body, etc.)
                     raw_default = param.default
                     if hasattr(raw_default, "default"):
-                        # It's a FastAPI FieldInfo
-                        if raw_default.default is not None:
-                            default = raw_default.default
+                        # It's a FastAPI FieldInfo — preserve None as a valid default
+                        default = raw_default.default
                     else:
                         default = raw_default
 
                 desc = ""
-                if hasattr(param.default, "description") and param.default.description:
+                if (
+                    param.default is not inspect.Parameter.empty
+                    and hasattr(param.default, "description")
+                    and param.default.description
+                ):
                     desc = param.default.description
 
                 params.append(
@@ -81,7 +80,7 @@ class APIInspector(BaseInspector):
                 )
 
             return_annotation = type_hints.get("return", sig.return_annotation)
-            return_type = _python_type_name(return_annotation)
+            return_type = python_type_name(return_annotation)
 
             tools.append(
                 ToolInfo(
@@ -89,6 +88,7 @@ class APIInspector(BaseInspector):
                     description=description,
                     parameters=params,
                     return_type=return_type,
+                    http_method=http_method,
                 )
             )
 

@@ -64,8 +64,10 @@ class CLIInspector(BaseInspector):
                     continue
 
                 type_str = _click_type_to_str(param.type)
+
+                # Check if parameter is required via Click's own flag
                 default = _SENTINEL
-                if param.default is not None:
+                if not getattr(param, "required", False):
                     default = param.default
 
                 desc = ""
@@ -83,7 +85,7 @@ class CLIInspector(BaseInspector):
 
             tools.append(
                 ToolInfo(
-                    name=cmd_name,
+                    name=cmd_name.replace("-", "_"),
                     description=description,
                     parameters=params,
                     return_type="str",

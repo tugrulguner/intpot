@@ -4,6 +4,7 @@ install:
 	uv sync --all-extras
 
 test:
+	uv sync --all-extras --reinstall-package intpot
 	uv run pytest tests/ -v
 
 lint:

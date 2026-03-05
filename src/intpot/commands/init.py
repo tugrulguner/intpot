@@ -23,6 +23,10 @@ def init_command(
     ),
 ) -> None:
     """Scaffold a new project (FastMCP / Typer / FastAPI)."""
+    if "/" in name or "\\" in name:
+        typer.echo("Project name must not contain path separators.", err=True)
+        raise typer.Exit(1)
+
     target_dir = Path.cwd() / name
     if target_dir.exists():
         typer.echo(f"Directory '{name}' already exists.", err=True)

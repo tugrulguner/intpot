@@ -7,11 +7,35 @@ from intpot.commands.to_api import to_api
 from intpot.commands.to_cli import to_cli
 from intpot.commands.to_mcp import to_mcp
 
+
+def _version_callback(value: bool) -> None:
+    if value:
+        from importlib.metadata import version
+
+        typer.echo(f"intpot {version('intpot')}")
+        raise typer.Exit()
+
+
 app = typer.Typer(
     name="intpot",
     help="Universal converter between CLI (Typer), MCP (FastMCP), and API (FastAPI) interfaces.",
     no_args_is_help=True,
 )
+
+
+@app.callback()
+def main(
+    version: bool | None = typer.Option(
+        None,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    """Universal converter between CLI, MCP, and API interfaces."""
+
 
 to_app = typer.Typer(
     name="to",

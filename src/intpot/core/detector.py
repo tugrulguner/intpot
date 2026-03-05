@@ -16,15 +16,19 @@ class DetectionError(Exception):
 
 def _import_module_from_path(source_path: Path) -> Any:
     """Import a Python module from a file path."""
-    module_name = source_path.stem
-    # Avoid name collisions with already-imported modules
-    unique_name = f"_intpot_source_{module_name}"
+    # Use the full resolved path to avoid collisions between same-named files
+    path_hash = abs(hash(str(source_path.resolve())))
+    unique_name = f"_intpot_source_{source_path.stem}_{path_hash}"
     spec = importlib.util.spec_from_file_location(unique_name, source_path)
     if spec is None or spec.loader is None:
         raise DetectionError(f"Cannot load module from {source_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        # Clean up sys.modules to avoid leaking imported modules
+        sys.modules.pop(unique_name, None)
     return module
 
 

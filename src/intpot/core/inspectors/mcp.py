@@ -6,17 +6,9 @@ import asyncio
 import inspect
 from typing import Any
 
+from intpot.core.inspectors._utils import python_type_name
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
-
-
-def _python_type_name(annotation: Any) -> str:
-    """Convert a type annotation to a string representation."""
-    if annotation is inspect.Parameter.empty or annotation is None:
-        return "str"
-    if isinstance(annotation, type):
-        return annotation.__name__
-    return str(annotation)
 
 
 class MCPInspector(BaseInspector):
@@ -32,9 +24,13 @@ class MCPInspector(BaseInspector):
         try:
             function_tools = asyncio.run(provider._list_tools())
         except RuntimeError:
-            # Already in an async context
-            loop = asyncio.get_event_loop()
-            function_tools = loop.run_until_complete(provider._list_tools())
+            # Already in an async context — create a new event loop in a thread
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                function_tools = pool.submit(
+                    asyncio.run, provider._list_tools()
+                ).result()
 
         for ft in function_tools:
             fn = getattr(ft, "fn", None)
@@ -56,7 +52,7 @@ class MCPInspector(BaseInspector):
             params: list[ParameterInfo] = []
             for param_name, param in sig.parameters.items():
                 annotation = type_hints.get(param_name, param.annotation)
-                type_str = _python_type_name(annotation)
+                type_str = python_type_name(annotation)
 
                 default = _SENTINEL
                 if param.default is not inspect.Parameter.empty:
@@ -72,7 +68,7 @@ class MCPInspector(BaseInspector):
                 )
 
             return_annotation = type_hints.get("return", sig.return_annotation)
-            return_type = _python_type_name(return_annotation)
+            return_type = python_type_name(return_annotation)
 
             tools.append(
                 ToolInfo(

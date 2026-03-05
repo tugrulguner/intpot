@@ -42,7 +42,7 @@ def discover_sources(directory: Path) -> list[tuple[Path, SourceType, Any]]:
 
         try:
             source_type, app_instance = detect_source(py_file)
-        except (DetectionError, Exception):
+        except (DetectionError, SyntaxError, ImportError, OSError):
             continue
 
         results.append((py_file, source_type, app_instance))

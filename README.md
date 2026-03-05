@@ -1,4 +1,8 @@
-# intpot
+# IntPot
+
+<p align="center">
+  <img src="intpot_image.png" alt="IntPot" width="600">
+</p>
 
 [![CI](https://github.com/tugrulguner/intpot/actions/workflows/ci.yml/badge.svg)](https://github.com/tugrulguner/intpot/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/intpot)](https://pypi.org/project/intpot/)
@@ -18,7 +22,10 @@ Given a source file written in any of these frameworks, intpot detects the frame
 ## Features
 
 - **6 conversion directions** — CLI to MCP, CLI to API, MCP to CLI, MCP to API, API to CLI, API to MCP
+- **Python API** — `intpot.load()` accepts file paths or live app instances for programmatic conversion
+- **Directory auto-discovery** — scan an entire directory and convert all found apps at once
 - **Auto-detection** — automatically identifies the source framework by analyzing imports and patterns
+- **HTTP method preservation** — API routes keep their GET/POST/PUT/DELETE methods through conversion
 - **Project scaffolding** — `intpot init` creates new CLI, MCP, or API projects from templates
 - **Jinja2 templates** — clean, readable generated code with proper type hints
 - **Fully typed** — PEP 561 compatible with `py.typed` marker
@@ -95,7 +102,9 @@ app.write("output/api_app.py", "api")
 The `load()` function accepts file paths (str or Path) and live app instances (FastMCP, Typer, FastAPI). The returned `IntpotApp` object provides:
 
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
-- `.write(path, target)` — generate and write to a file in one step (`target` is `"cli"`, `"mcp"`, or `"api"`)
+- `.write(path, target)` — generate and write to a file in one step (`target` is `"cli"`, `"mcp"`, `"api"`, or a `SourceType` enum)
+- `.tools` — list of normalized `ToolInfo` objects describing all detected functions
+- `.source_type` — detected framework type (`SourceType.CLI`, `SourceType.MCP`, or `SourceType.API`)
 
 ## Architecture
 
@@ -119,7 +128,7 @@ intpot uses a four-stage pipeline:
                     (extract functions)
                           |
                     +-----v-----+
-                    | ToolDef[] |
+                    | ToolInfo[] |
                     | (normalized|
                     |  schema)  |
                     +-----+-----+
@@ -134,7 +143,7 @@ intpot uses a four-stage pipeline:
 ```
 
 1. **DETECT** — `core/detector.py` imports the source file and identifies whether it's a Typer app, FastMCP server, or FastAPI app
-2. **INSPECT** — Framework-specific inspectors (`core/inspectors/`) extract function signatures, parameters, types, defaults, and docstrings into a normalized `ToolDef` schema
+2. **INSPECT** — Framework-specific inspectors (`core/inspectors/`) extract function signatures, parameters, types, defaults, and docstrings into a normalized `ToolInfo` schema
 3. **GENERATE** — Framework-specific generators (`core/generators/`) render the normalized schema into target code using Jinja2 templates
 
 ## Examples

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-03-04
+
+### Fixed
+
+- CLI inspector now converts hyphenated command names to underscores (e.g. `add-numbers` → `add_numbers`) to produce valid Python identifiers
+- PascalCase generator handles camelCase, snake_case, and hyphenated names correctly (was using Jinja2 `capitalize` which lowercased everything)
+- CLI inspector uses Click's `param.required` flag instead of checking `default is not None` — fixes false defaults for required params
+- MCP inspector async fallback uses `ThreadPoolExecutor` instead of deprecated `get_event_loop()`
+- Detector uses path-hashed module names to prevent collisions when loading multiple files with the same stem
+- Detector cleans up `sys.modules` after loading source files
+- Discovery narrows exception catching to `DetectionError | SyntaxError | ImportError | OSError` instead of bare `Exception`
+- Templates escape triple-quotes in docstrings via `escape_doc` filter
+- API template conditionally imports pydantic only when needed
+- API template uses `http_method` from `ToolInfo` instead of hardcoding POST
+
+### Added
+
+- `--version` / `-V` flag on CLI
+- `IntpotApp.__repr__()` for better debugging
+- `IntpotApp.tools` public property
+- `IntpotApp.write()` accepts `SourceType` enum in addition to strings
+- `ToolInfo.http_method` field — API inspector captures HTTP methods from routes
+- Friendly `ModuleNotFoundError` messages pointing to `pip install intpot[mcp]` / `intpot[api]`
+- Path separator validation in `intpot init`
+- 16 new tests (60 total)
+
+### Changed
+
+- Deduplicated CLI command logic into shared `_convert.py` module
+- Shared `python_type_name` utility in `inspectors/_utils.py`
+- Release workflow requires CI to pass before publishing
+- Removed unused `rich` dependency
+- Fixed README reference to `ToolDef` → `ToolInfo`
+
 ## [0.2.1] - 2026-03-02
 
 ### Added
