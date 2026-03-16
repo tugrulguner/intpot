@@ -20,15 +20,15 @@ class _SentinelType:
 
     _instance = None
 
-    def __new__(cls) -> "_SentinelType":
+    def __new__(cls) -> _SentinelType:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __deepcopy__(self, memo: dict) -> "_SentinelType":
+    def __deepcopy__(self, memo: dict) -> _SentinelType:
         return self
 
-    def __copy__(self) -> "_SentinelType":
+    def __copy__(self) -> _SentinelType:
         return self
 
     def __repr__(self) -> str:

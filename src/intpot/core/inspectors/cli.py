@@ -53,7 +53,7 @@ class CLIInspector(BaseInspector):
 
     def _extract_commands(
         self,
-        group: click.BaseCommand,
+        group: click.BaseCommand,  # type: ignore[reportGeneralTypeIssues]
         tools: list[ToolInfo],
         prefix: str = "",
     ) -> None:

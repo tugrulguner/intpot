@@ -44,10 +44,7 @@ def extract_source_imports(fn: Any) -> list[str]:
     # Collect all top-level import nodes and the names they bind
     import_nodes: list[tuple[ast.stmt, set[str]]] = []
     for node in module_tree.body:
-        if isinstance(node, ast.Import):
-            names = {alias.asname or alias.name for alias in node.names}
-            import_nodes.append((node, names))
-        elif isinstance(node, ast.ImportFrom):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = {alias.asname or alias.name for alias in node.names}
             import_nodes.append((node, names))
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import ast
 import copy
-import textwrap
 
 from intpot.core.models import SourceType, ToolInfo
 
@@ -33,9 +32,7 @@ def transform_tools(
     return result
 
 
-def _target_return_type(
-    tool: ToolInfo, source: SourceType, target: SourceType
-) -> str:
+def _target_return_type(tool: ToolInfo, source: SourceType, target: SourceType) -> str:
     """Determine the correct return type for the target framework."""
     if target == SourceType.CLI:
         return "None"
@@ -110,9 +107,7 @@ class _TyperEchoToReturn(ast.NodeTransformer):
         ):
             return True
         # echo(...) — bare name in case of `from typer import echo`
-        if isinstance(func, ast.Name) and func.id == "echo":
-            return True
-        return False
+        return isinstance(func, ast.Name) and func.id == "echo"
 
 
 class _TyperExitTransformer(ast.NodeTransformer):
