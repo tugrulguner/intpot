@@ -17,6 +17,20 @@ def to_api(
     output: Path = typer.Option(
         None, "--output", "-o", help="Output file or directory path"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print detection details to stderr"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview output without writing files"
+    ),
 ) -> None:
     """Convert a CLI or MCP source to a FastAPI app."""
-    convert(source, output, target=SourceType.API, label="FastAPI app", suffix="_api")
+    convert(
+        source,
+        output,
+        target=SourceType.API,
+        label="FastAPI app",
+        suffix="_api",
+        verbose=verbose,
+        dry_run=dry_run,
+    )

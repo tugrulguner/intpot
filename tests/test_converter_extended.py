@@ -102,7 +102,9 @@ def test_pascal_case_in_api_output():
         typer.echo(a + b)
 
     code = intpot.load(cli).to_api()
-    assert "class AddNumbersRequest" in code
+    assert "def add_numbers(" in code
+    assert "a: int" in code
+    assert "b: int" in code
 
 
 def test_http_method_preserved():

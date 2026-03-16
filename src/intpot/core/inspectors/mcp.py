@@ -6,9 +6,22 @@ import asyncio
 import inspect
 from typing import Any
 
-from intpot.core.inspectors._utils import python_type_name
+from intpot.core.inspectors._utils import (
+    extract_function_body,
+    extract_source_imports,
+    python_type_name,
+)
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+
+
+def _is_mcp_context(annotation: Any) -> bool:
+    """Check if an annotation is the FastMCP Context type."""
+    if isinstance(annotation, type):
+        return annotation.__name__ == "Context" and "fastmcp" in (
+            annotation.__module__ or ""
+        )
+    return False
 
 
 class MCPInspector(BaseInspector):
@@ -52,6 +65,8 @@ class MCPInspector(BaseInspector):
             params: list[ParameterInfo] = []
             for param_name, param in sig.parameters.items():
                 annotation = type_hints.get(param_name, param.annotation)
+                if _is_mcp_context(annotation):
+                    continue
                 type_str = python_type_name(annotation)
 
                 default = _SENTINEL
@@ -76,6 +91,9 @@ class MCPInspector(BaseInspector):
                     description=description,
                     parameters=params,
                     return_type=return_type,
+                    function_body=extract_function_body(fn),
+                    source_imports=extract_source_imports(fn),
+                    is_async=asyncio.iscoroutinefunction(fn),
                 )
             )
 

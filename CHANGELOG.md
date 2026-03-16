@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-03-13
+
+### Fixed
+
+- FastAPI `Body(...)` no longer emits `PydanticUndefined` as a literal default — parameters using `Body(...)` are now correctly treated as required
+- MCP `ctx: Context` parameters are filtered out during inspection so they don't bleed into CLI/API output where `Context` is undefined
+- `copy.deepcopy` in transforms no longer breaks `_SENTINEL` identity checks — `_SENTINEL` is now a singleton class that survives copy/deepcopy
+- Generated code now includes source imports (e.g. `import json`) that the original function body references, preventing `NameError` at runtime
+- CLI inspector now unwraps Typer-decorated callbacks before extracting source imports (Typer wraps callbacks, causing `inspect.getfile` to resolve to `typer/main.py` instead of the user's source file)
+- Template whitespace cleanup — removed extra blank lines emitted when no extra imports are present
+
+### Added
+
+- `extract_source_imports(fn)` utility — AST-based extraction of imports referenced by a function body
+- `source_imports` field on `ToolInfo` for carrying per-tool import requirements through the pipeline
+- Extra imports rendering in all three output templates (CLI, MCP, API)
+- Dependency injection comments in generated code — `Depends()` parameters are surfaced as `# NOTE:` comments
+- Generated API code now includes `if __name__ == "__main__": uvicorn.run(...)` entry point, matching CLI and MCP templates
+- Advanced example apps (`advanced_cli.py`, `advanced_mcp.py`, `advanced_api.py`) exercising real-world patterns
+- `scripts/demo.sh` — full demo script that runs all conversions, scaffolding, and directory discovery, saving outputs to `examples/conversions/`
+- `scripts/manual_test.py` — targeted verification script for all v0.2.4 bug fixes
+- 8 new roundtrip tests validating generated code compiles and preserves tool signatures (90 total)
+
 ## [0.2.3] - 2026-03-04
 
 ### Fixed

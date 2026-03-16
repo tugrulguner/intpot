@@ -2,11 +2,28 @@
 
 from __future__ import annotations
 
+import functools
 from pathlib import Path
 from typing import Any
 
 from intpot.core.detector import detect_instance, detect_source
 from intpot.core.models import SourceType, ToolInfo
+
+
+def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
+    """Inspect an app instance and return normalized tool definitions."""
+    if source_type == SourceType.MCP:
+        from intpot.core.inspectors.mcp import MCPInspector
+
+        return MCPInspector().inspect(app_instance)
+    if source_type == SourceType.CLI:
+        from intpot.core.inspectors.cli import CLIInspector
+
+        return CLIInspector().inspect(app_instance)
+
+    from intpot.core.inspectors.api import APIInspector
+
+    return APIInspector().inspect(app_instance)
 
 
 class IntpotApp:
@@ -26,25 +43,16 @@ class IntpotApp:
         src = f", source_path={self.source_path!r}" if self.source_path else ""
         return f"IntpotApp(source_type={self.source_type.value!r}{src})"
 
-    @property
+    @functools.cached_property
     def tools(self) -> list[ToolInfo]:
         """Inspect the app and return normalized tool definitions."""
-        return self._get_tools()
+        return inspect_app(self.source_type, self.app)
 
-    def _get_tools(self) -> list[ToolInfo]:
-        """Inspect the app and return normalized tool definitions."""
-        if self.source_type == SourceType.MCP:
-            from intpot.core.inspectors.mcp import MCPInspector
+    def _tools_for(self, target: SourceType) -> list[ToolInfo]:
+        """Return tools transformed for the target framework."""
+        from intpot.core.transforms import transform_tools
 
-            return MCPInspector().inspect(self.app)
-        if self.source_type == SourceType.CLI:
-            from intpot.core.inspectors.cli import CLIInspector
-
-            return CLIInspector().inspect(self.app)
-
-        from intpot.core.inspectors.api import APIInspector
-
-        return APIInspector().inspect(self.app)
+        return transform_tools(self.tools, self.source_type, target)
 
     def to_cli(self) -> str:
         """Generate Typer CLI code."""
@@ -52,7 +60,7 @@ class IntpotApp:
             raise ValueError("Source is already a CLI app")
         from intpot.core.generators.cli import CLIGenerator
 
-        return CLIGenerator().generate(self._get_tools())
+        return CLIGenerator().generate(self._tools_for(SourceType.CLI))
 
     def to_mcp(self) -> str:
         """Generate FastMCP server code."""
@@ -60,7 +68,7 @@ class IntpotApp:
             raise ValueError("Source is already an MCP server")
         from intpot.core.generators.mcp import MCPGenerator
 
-        return MCPGenerator().generate(self._get_tools())
+        return MCPGenerator().generate(self._tools_for(SourceType.MCP))
 
     def to_api(self) -> str:
         """Generate FastAPI app code."""
@@ -68,7 +76,7 @@ class IntpotApp:
             raise ValueError("Source is already an API app")
         from intpot.core.generators.api import APIGenerator
 
-        return APIGenerator().generate(self._get_tools())
+        return APIGenerator().generate(self._tools_for(SourceType.API))
 
     def write(self, path: str | Path, target: str | SourceType) -> Path:
         """Generate code and write it to a file.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import sys
 from pathlib import Path
@@ -9,9 +10,41 @@ from typing import Any
 
 from intpot.core.models import SourceType
 
+_FRAMEWORK_CONSTRUCTORS = {"FastMCP", "Typer", "FastAPI"}
+
 
 class DetectionError(Exception):
     pass
+
+
+def _has_framework_app_ast(source_path: Path) -> bool:
+    """Check if a Python file contains a framework app assignment using AST.
+
+    Looks for module-level assignments where the RHS is a Call to one of the
+    known framework constructors (FastMCP, Typer, FastAPI).
+    Returns False on syntax errors or files that don't contain such assignments.
+    """
+    try:
+        source = source_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(source_path))
+    except (SyntaxError, UnicodeDecodeError, ValueError):
+        return False
+
+    for node in ast.iter_child_nodes(tree):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        value = node.value
+        if value is None:
+            continue
+        if isinstance(value, ast.Call):
+            func = value.func
+            # Handle direct calls like FastAPI() or Typer()
+            if isinstance(func, ast.Name) and func.id in _FRAMEWORK_CONSTRUCTORS:
+                return True
+            # Handle attribute calls like fastapi.FastAPI() or typer.Typer()
+            if isinstance(func, ast.Attribute) and func.attr in _FRAMEWORK_CONSTRUCTORS:
+                return True
+    return False
 
 
 def _import_module_from_path(source_path: Path) -> Any:
@@ -58,6 +91,11 @@ def detect_source(source_path: Path) -> tuple[SourceType, Any]:
     source_path = Path(source_path).resolve()
     if not source_path.exists():
         raise DetectionError(f"File not found: {source_path}")
+
+    if not _has_framework_app_ast(source_path):
+        raise DetectionError(
+            f"No FastMCP, Typer, or FastAPI app instance found in {source_path}"
+        )
 
     module = _import_module_from_path(source_path)
 

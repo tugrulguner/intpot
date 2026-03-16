@@ -63,6 +63,7 @@ src/intpot/
 │   ├── models.py        # Shared data models (ToolInfo, ParameterInfo, SourceType)
 │   ├── detector.py      # Auto-detect source type from files or live instances
 │   ├── discovery.py     # Directory scanning for convertible apps
+│   ├── transforms.py    # AST-based body/type transforms between frameworks
 │   ├── inspectors/      # Framework-specific inspectors (extract tools)
 │   └── generators/      # Framework-specific generators (render code)
 └── templates/           # Jinja2 templates for code generation

@@ -17,6 +17,20 @@ def to_mcp(
     output: Path = typer.Option(
         None, "--output", "-o", help="Output file or directory path"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print detection details to stderr"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview output without writing files"
+    ),
 ) -> None:
     """Convert a CLI or API source to a FastMCP server."""
-    convert(source, output, target=SourceType.MCP, label="MCP server", suffix="_mcp")
+    convert(
+        source,
+        output,
+        target=SourceType.MCP,
+        label="MCP server",
+        suffix="_mcp",
+        verbose=verbose,
+        dry_run=dry_run,
+    )

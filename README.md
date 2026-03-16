@@ -108,7 +108,7 @@ The `load()` function accepts file paths (str or Path) and live app instances (F
 
 ## Architecture
 
-intpot uses a four-stage pipeline:
+intpot uses a three-stage pipeline:
 
 ```
                     +-----------+
@@ -249,7 +249,7 @@ def greet(
     return "greet called"
 ```
 
-See the [`examples/`](examples/) directory for all 6 conversion outputs.
+See the [`examples/`](examples/) directory for all conversion outputs, including advanced examples with `import json`, `Body(...)`, `Depends()`, async tools, and more. Run `bash scripts/demo.sh` to regenerate them all.
 
 ## CLI Reference
 
@@ -322,6 +322,10 @@ make format      # auto-format code
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for what's planned for v2 (full AST transform pipeline).
 
 ## License
 

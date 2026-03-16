@@ -17,6 +17,20 @@ def to_cli(
     output: Path = typer.Option(
         None, "--output", "-o", help="Output file or directory path"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print detection details to stderr"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview output without writing files"
+    ),
 ) -> None:
     """Convert an MCP or API source to a Typer CLI app."""
-    convert(source, output, target=SourceType.CLI, label="CLI app", suffix="_cli")
+    convert(
+        source,
+        output,
+        target=SourceType.CLI,
+        label="CLI app",
+        suffix="_cli",
+        verbose=verbose,
+        dry_run=dry_run,
+    )

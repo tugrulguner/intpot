@@ -22,10 +22,11 @@ def test_generate_api_app():
     code = APIGenerator().generate(tools)
 
     assert "from fastapi import FastAPI" in code
-    assert "from pydantic import BaseModel" in code
-    assert "class AddRequest(BaseModel):" in code
+    assert "Body" in code
     assert 'app.post("/add")' in code
-    assert "def add(request: AddRequest)" in code
+    assert "def add(" in code
+    assert "a: int" in code
+    assert "b: int" in code
 
 
 def test_generate_no_params():
@@ -35,4 +36,3 @@ def test_generate_no_params():
 
     code = APIGenerator().generate(tools)
     assert "def ping()" in code
-    assert "AddRequest" not in code

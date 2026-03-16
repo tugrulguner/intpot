@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,11 @@ _SKIP_DIRS = {
 }
 
 
-def discover_sources(directory: Path) -> list[tuple[Path, SourceType, Any]]:
+def discover_sources(
+    directory: Path,
+    *,
+    verbose: bool = False,
+) -> list[tuple[Path, SourceType, Any]]:
     """Scan a directory for Python files containing app instances.
 
     Returns list of (file_path, source_type, app_instance) tuples.
@@ -42,9 +47,17 @@ def discover_sources(directory: Path) -> list[tuple[Path, SourceType, Any]]:
 
         try:
             source_type, app_instance = detect_source(py_file)
-        except (DetectionError, SyntaxError, ImportError, OSError):
+        except SyntaxError:
+            if verbose:
+                print(f"SKIP (syntax): {py_file}", file=sys.stderr)
+            continue
+        except (DetectionError, ImportError, OSError):
+            if verbose:
+                print(f"SKIP (no app): {py_file}", file=sys.stderr)
             continue
 
+        if verbose:
+            print(f"FOUND: {py_file} ({source_type.value})", file=sys.stderr)
         results.append((py_file, source_type, app_instance))
 
     return results

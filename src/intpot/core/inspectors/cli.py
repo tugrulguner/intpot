@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import click
 
+from intpot.core.inspectors._utils import extract_function_body, extract_source_imports
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 
@@ -46,50 +48,83 @@ class CLIInspector(BaseInspector):
         if click_group is None:
             return tools
 
+        self._extract_commands(click_group, tools, prefix="")
+        return tools
+
+    def _extract_commands(
+        self,
+        group: click.BaseCommand,
+        tools: list[ToolInfo],
+        prefix: str = "",
+    ) -> None:
+        """Recursively extract commands from Click groups."""
         commands: dict[str, click.Command] = {}
-        if isinstance(click_group, click.Group):
-            commands = click_group.commands
-        elif isinstance(click_group, click.Command):
-            commands = {click_group.name or "main": click_group}
+        if isinstance(group, click.Group):
+            commands = group.commands
+        elif isinstance(group, click.Command):
+            commands = {group.name or "main": group}
 
         for cmd_name, cmd in commands.items():
             if cmd_name is None:
                 continue
 
-            description = cmd.help or ""
+            full_name = f"{prefix}{cmd_name}".replace("-", "_")
 
-            params: list[ParameterInfo] = []
-            for param in cmd.params:
-                if param.name is None or param.name == "help":
-                    continue
+            # Recurse into sub-groups
+            if isinstance(cmd, click.Group):
+                self._extract_commands(cmd, tools, prefix=f"{full_name}_")
+                continue
 
-                type_str = _click_type_to_str(param.type)
+            self._extract_single_command(cmd, full_name, tools)
 
-                # Check if parameter is required via Click's own flag
-                default = _SENTINEL
-                if not getattr(param, "required", False):
-                    default = param.default
+    def _extract_single_command(
+        self,
+        cmd: click.Command,
+        name: str,
+        tools: list[ToolInfo],
+    ) -> None:
+        """Extract a single Click command into a ToolInfo."""
+        description = cmd.help or ""
 
-                desc = ""
-                if hasattr(param, "help") and param.help:
-                    desc = param.help
+        params: list[ParameterInfo] = []
+        for param in cmd.params:
+            if param.name is None or param.name == "help":
+                continue
 
-                params.append(
-                    ParameterInfo(
-                        name=param.name,
-                        type_annotation=type_str,
-                        default=default,
-                        description=desc,
-                    )
-                )
+            type_str = _click_type_to_str(param.type)
 
-            tools.append(
-                ToolInfo(
-                    name=cmd_name.replace("-", "_"),
-                    description=description,
-                    parameters=params,
-                    return_type="str",
+            # Check if parameter is required via Click's own flag
+            default = _SENTINEL
+            if not getattr(param, "required", False):
+                default = param.default
+
+            desc = ""
+            if hasattr(param, "help") and param.help:
+                desc = param.help
+
+            params.append(
+                ParameterInfo(
+                    name=param.name,
+                    type_annotation=type_str,
+                    default=default,
+                    description=desc,
                 )
             )
 
-        return tools
+        # Extract function body and async status from the callback
+        callback = cmd.callback
+        fn_body = extract_function_body(callback) if callback else None
+        src_imports = extract_source_imports(callback) if callback else []
+        is_async = asyncio.iscoroutinefunction(callback) if callback else False
+
+        tools.append(
+            ToolInfo(
+                name=name,
+                description=description,
+                parameters=params,
+                return_type="str",
+                function_body=fn_body,
+                is_async=is_async,
+                source_imports=src_imports,
+            )
+        )
