@@ -1,4 +1,4 @@
-# IntPot
+# intpot
 
 <p align="center">
   <img src="intpot_image.png" alt="IntPot" width="600">
