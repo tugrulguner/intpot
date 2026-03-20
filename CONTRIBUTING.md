@@ -4,20 +4,16 @@ Thanks for your interest in contributing!
 
 ## Development Setup
 
-1. Fork and clone the repository:
+After forking and cloning (see [Pull Request Process](#pull-request-process) below):
+
+1. Install dependencies (requires [uv](https://docs.astral.sh/uv/)):
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/intpot.git
    cd intpot
-   ```
-
-2. Install dependencies (requires [uv](https://docs.astral.sh/uv/)):
-
-   ```bash
    uv sync --all-extras
    ```
 
-3. Install pre-commit hooks:
+2. Install pre-commit hooks:
 
    ```bash
    uv run pre-commit install
@@ -77,10 +73,22 @@ Key concepts:
 
 ## Pull Request Process
 
-1. Create a feature branch from `main`.
-2. Make your changes and add tests if applicable.
-3. Ensure `make check` passes (lint, typecheck, and tests).
-4. Open a pull request with a clear description of your changes.
+1. **Fork** the repository on GitHub.
+2. **Clone** your fork locally:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/intpot.git
+   ```
+3. **Create a feature branch** from `main`:
+   ```bash
+   git checkout -b my-feature
+   ```
+4. Make your changes and add tests if applicable.
+5. Ensure `make check` passes (lint, typecheck, and tests).
+6. **Push** to your fork:
+   ```bash
+   git push origin my-feature
+   ```
+7. Open a **Pull Request** against `tugrulguner/intpot:main` with a clear description of your changes.
 
 ## Reporting Issues
 
