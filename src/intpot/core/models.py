@@ -15,6 +15,17 @@ class SourceType(Enum):
     API = "api"
 
 
+class Agent(str, Enum):
+    """Supported AI coding agents for skill installation."""
+
+    claude = "claude"
+    cursor = "cursor"
+    windsurf = "windsurf"
+    copilot = "copilot"
+    cline = "cline"
+    codex = "codex"
+
+
 class _SentinelType:
     """Sentinel for 'no default value'. Singleton that survives deepcopy."""
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-26
+
+### Added
+
+- **`intpot add skills` command** — install intpot skills/rules for AI coding agents directly into your project
+- Auto-detects which agents are configured by checking for `.claude/`, `.cursor/`, `.windsurf/`, `.github/`, `.clinerules/`, and `AGENTS.md`
+- Supports 6 agents: **Claude Code**, **Cursor**, **Windsurf**, **GitHub Copilot**, **Cline**, and **OpenAI Codex CLI**
+- `--agent` flag to target a specific agent (e.g. `intpot add skills --agent claude`)
+- `--path` flag to target a specific project directory
+- Installs two skill files per agent: **intpot CLI** (command reference) and **intpot Python API** (programmatic usage)
+- Idempotent — safe to run multiple times without duplicating content
+- Each agent gets the correct file format: `.md` for Claude/Windsurf/Cline, `.mdc` with frontmatter for Cursor, appended sections for Copilot/Codex
+- 14 new tests covering all agents, auto-detection, edge cases, and content quality
+
 ## [0.2.6] - 2026-03-16
 
 ### Fixed
