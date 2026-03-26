@@ -9,13 +9,13 @@ from pathlib import Path
 import typer
 
 from intpot.skills.content import (
-    CLI_SKILL_BODY,
-    PYTHON_SKILL_BODY,
     claude_skill,
+    cli_skill_body,
     cline_rule,
     codex_instruction,
     copilot_instruction,
     cursor_rule,
+    python_skill_body,
     windsurf_rule,
 )
 
@@ -47,11 +47,11 @@ def _write_claude(root: Path) -> list[Path]:
     written: list[Path] = []
 
     cli_path = skills_dir / "intpot-cli.md"
-    cli_path.write_text(claude_skill("intpot CLI", CLI_SKILL_BODY))
+    cli_path.write_text(claude_skill("intpot CLI", cli_skill_body()))
     written.append(cli_path)
 
     py_path = skills_dir / "intpot-python.md"
-    py_path.write_text(claude_skill("intpot Python API", PYTHON_SKILL_BODY))
+    py_path.write_text(claude_skill("intpot Python API", python_skill_body()))
     written.append(py_path)
 
     return written
@@ -64,11 +64,11 @@ def _write_cursor(root: Path) -> list[Path]:
     written: list[Path] = []
 
     cli_path = rules_dir / "intpot-cli.mdc"
-    cli_path.write_text(cursor_rule("intpot CLI", CLI_SKILL_BODY))
+    cli_path.write_text(cursor_rule("intpot CLI", cli_skill_body()))
     written.append(cli_path)
 
     py_path = rules_dir / "intpot-python.mdc"
-    py_path.write_text(cursor_rule("intpot Python API", PYTHON_SKILL_BODY))
+    py_path.write_text(cursor_rule("intpot Python API", python_skill_body()))
     written.append(py_path)
 
     return written
@@ -81,11 +81,11 @@ def _write_windsurf(root: Path) -> list[Path]:
     written: list[Path] = []
 
     cli_path = rules_dir / "intpot-cli.md"
-    cli_path.write_text(windsurf_rule("intpot CLI", CLI_SKILL_BODY))
+    cli_path.write_text(windsurf_rule("intpot CLI", cli_skill_body()))
     written.append(cli_path)
 
     py_path = rules_dir / "intpot-python.md"
-    py_path.write_text(windsurf_rule("intpot Python API", PYTHON_SKILL_BODY))
+    py_path.write_text(windsurf_rule("intpot Python API", python_skill_body()))
     written.append(py_path)
 
     return written
@@ -106,9 +106,9 @@ def _write_copilot(root: Path) -> list[Path]:
         # Already installed — skip to avoid duplicates
         return written
 
-    combined = copilot_instruction("intpot CLI", CLI_SKILL_BODY) + copilot_instruction(
-        "intpot Python API", PYTHON_SKILL_BODY
-    )
+    combined = copilot_instruction(
+        "intpot CLI", cli_skill_body()
+    ) + copilot_instruction("intpot Python API", python_skill_body())
 
     with instructions_path.open("a") as f:
         f.write(combined)
@@ -124,11 +124,11 @@ def _write_cline(root: Path) -> list[Path]:
     written: list[Path] = []
 
     cli_path = rules_dir / "intpot-cli.md"
-    cli_path.write_text(cline_rule("intpot CLI", CLI_SKILL_BODY))
+    cli_path.write_text(cline_rule("intpot CLI", cli_skill_body()))
     written.append(cli_path)
 
     py_path = rules_dir / "intpot-python.md"
-    py_path.write_text(cline_rule("intpot Python API", PYTHON_SKILL_BODY))
+    py_path.write_text(cline_rule("intpot Python API", python_skill_body()))
     written.append(py_path)
 
     return written
@@ -146,9 +146,9 @@ def _write_codex(root: Path) -> list[Path]:
         return written
 
     combined = (
-        codex_instruction("intpot CLI", CLI_SKILL_BODY)
+        codex_instruction("intpot CLI", cli_skill_body())
         + "\n"
-        + codex_instruction("intpot Python API", PYTHON_SKILL_BODY)
+        + codex_instruction("intpot Python API", python_skill_body())
     )
 
     with agents_path.open("a") as f:

@@ -2,156 +2,24 @@
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------------------
-# Shared skill content (plain markdown)
-# ---------------------------------------------------------------------------
+from pathlib import Path
 
-CLI_SKILL_BODY = """\
-# intpot CLI
+_SKILLS_DIR = Path(__file__).resolve().parent.parent / "templates" / "skills"
 
-**intpot** converts between Typer (CLI), FastMCP (MCP), and FastAPI (API) Python apps.
 
-## When to Use
+def _read_skill(name: str) -> str:
+    """Read a skill markdown template from the templates/skills/ directory."""
+    return (_SKILLS_DIR / name).read_text()
 
-Use intpot when you need to:
-- Convert a CLI app to an MCP server or REST API
-- Convert an MCP server to a CLI app or REST API
-- Convert a FastAPI app to a CLI or MCP server
-- Scaffold a new CLI, MCP, or API project
 
-## Commands
+def cli_skill_body() -> str:
+    """Return the CLI skill content."""
+    return _read_skill("cli.md")
 
-### Scaffold a new project
 
-```bash
-intpot init <name> --type <mcp|cli|api>
-```
-
-### Convert between frameworks
-
-```bash
-# MCP server -> Typer CLI
-intpot to cli server.py
-
-# CLI app -> FastMCP server
-intpot to mcp app.py
-
-# CLI app -> FastAPI app
-intpot to api app.py
-
-# Write output to a file
-intpot to cli server.py --output cli_app.py
-
-# Convert all apps in a directory
-intpot to cli ./myproject/
-intpot to mcp ./myproject/ --output ./converted/
-
-# Preview without writing (dry run)
-intpot to cli server.py --dry-run
-
-# Verbose output (show detection details)
-intpot to mcp app.py --verbose
-```
-
-## Options
-
-| Option | Description |
-|--------|-------------|
-| `--output`, `-o` | Output file/directory path (prints to stdout if omitted) |
-| `--verbose`, `-v` | Show detection details on stderr |
-| `--dry-run` | Preview generated code without writing files |
-
-## Installation
-
-```bash
-pip install intpot            # core (CLI conversions only)
-pip install intpot[mcp]       # + FastMCP support
-pip install intpot[api]       # + FastAPI support
-pip install intpot[all]       # everything
-```
-"""
-
-PYTHON_SKILL_BODY = """\
-# intpot Python API
-
-**intpot** provides a Python API for converting between Typer (CLI), FastMCP (MCP), \
-and FastAPI (API) apps programmatically.
-
-## When to Use
-
-Use the Python API when you need to:
-- Convert apps programmatically within scripts or pipelines
-- Inspect app functions/tools/endpoints as normalized data
-- Generate code from live app instances (not just files)
-- Integrate intpot into build tools or CI/CD
-
-## Core API
-
-### `intpot.load(source)`
-
-Load a file path or live app instance. Returns an `IntpotApp`.
-
-```python
-import intpot
-
-# From a file path
-app = intpot.load("mcp_server.py")
-
-# From a live FastMCP instance
-from fastmcp import FastMCP
-mcp = FastMCP("my-server")
-
-@mcp.tool()
-def greet(name: str) -> str:
-    return f"Hello, {name}!"
-
-app = intpot.load(mcp)
-```
-
-### `IntpotApp` methods
-
-```python
-app = intpot.load("server.py")
-
-# Generate code as strings
-cli_code = app.to_cli()
-mcp_code = app.to_mcp()
-api_code = app.to_api()
-
-# Write directly to files
-app.write("output/cli_app.py", "cli")
-app.write("output/api_app.py", "api")
-app.write("output/mcp_server.py", "mcp")
-
-# Inspect normalized tools
-for tool in app.tools:
-    print(tool.name, tool.description)
-    for param in tool.parameters:
-        print(f"  {param.name}: {param.annotation} = {param.default}")
-
-# Check detected source type
-print(app.source_type)  # SourceType.MCP, SourceType.CLI, or SourceType.API
-```
-
-### `intpot.inspect_app(source_type, app_instance)`
-
-Low-level inspection — extract `ToolInfo` list from a live app instance.
-
-```python
-from intpot import inspect_app
-from intpot.core.models import SourceType
-
-tools = inspect_app(SourceType.MCP, mcp_instance)
-for tool in tools:
-    print(tool.name, [p.name for p in tool.parameters])
-```
-
-## Installation
-
-```python
-pip install intpot[all]  # includes fastmcp + fastapi extras
-```
-"""
+def python_skill_body() -> str:
+    """Return the Python API skill content."""
+    return _read_skill("python.md")
 
 
 # ---------------------------------------------------------------------------
