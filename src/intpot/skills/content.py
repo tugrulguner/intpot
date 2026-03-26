@@ -14,12 +14,12 @@ def _read_skill(name: str) -> str:
 
 def cli_skill_body() -> str:
     """Return the CLI skill content."""
-    return _read_skill("cli.md")
+    return _read_skill("intpot-cli.md")
 
 
 def python_skill_body() -> str:
     """Return the Python API skill content."""
-    return _read_skill("python.md")
+    return _read_skill("intpot-python.md")
 
 
 # ---------------------------------------------------------------------------
