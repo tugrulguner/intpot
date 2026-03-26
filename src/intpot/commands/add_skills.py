@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from enum import Enum
 from pathlib import Path
 
 import typer
 
+from intpot.core.models import Agent
 from intpot.skills.content import (
     claude_skill,
     cli_skill_body,
@@ -18,19 +18,6 @@ from intpot.skills.content import (
     python_skill_body,
     windsurf_rule,
 )
-
-# ---------------------------------------------------------------------------
-# Agent enum
-# ---------------------------------------------------------------------------
-
-
-class Agent(str, Enum):
-    claude = "claude"
-    cursor = "cursor"
-    windsurf = "windsurf"
-    copilot = "copilot"
-    cline = "cline"
-    codex = "codex"
 
 
 # ---------------------------------------------------------------------------
