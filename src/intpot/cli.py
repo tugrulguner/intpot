@@ -2,6 +2,7 @@
 
 import typer
 
+from intpot.commands.add_skills import add_skills
 from intpot.commands.init import init_command
 from intpot.commands.to_api import to_api
 from intpot.commands.to_cli import to_cli
@@ -43,8 +44,16 @@ to_app = typer.Typer(
     no_args_is_help=True,
 )
 
+add_app = typer.Typer(
+    name="add",
+    help="Install extras into the current project.",
+    no_args_is_help=True,
+)
+
 app.command("init")(init_command)
 to_app.command("cli")(to_cli)
 to_app.command("mcp")(to_mcp)
 to_app.command("api")(to_api)
+add_app.command("skills")(add_skills)
 app.add_typer(to_app, name="to")
+app.add_typer(add_app, name="add")

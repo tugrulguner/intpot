@@ -29,6 +29,7 @@ Given a source file written in any of these frameworks, intpot detects the frame
 - **Project scaffolding** — `intpot init` creates new CLI, MCP, or API projects from templates
 - **Jinja2 templates** — clean, readable generated code with proper type hints
 - **Fully typed** — PEP 561 compatible with `py.typed` marker
+- **AI agent skills** — `intpot add skills` installs skills/rules for Claude Code, Cursor, Windsurf, Copilot, Cline, and Codex
 - **Zero config** — just point at a Python file and specify the target
 
 ## Installation
@@ -68,6 +69,24 @@ intpot to cli server.py --output cli_app.py
 # Convert all apps in a directory
 intpot to cli ./myproject/
 intpot to mcp ./myproject/ --output ./converted/
+```
+
+### Install AI agent skills
+
+```bash
+# Auto-detect agents in your project
+intpot add skills
+
+# Target a specific agent
+intpot add skills --agent claude
+intpot add skills --agent cursor
+intpot add skills --agent windsurf
+intpot add skills --agent copilot
+intpot add skills --agent cline
+intpot add skills --agent codex
+
+# Specify a project directory
+intpot add skills --path ./myproject/
 ```
 
 ## Python API
@@ -293,7 +312,32 @@ intpot to api <source> [--output <path>]
 | Argument/Option | Description |
 |----------------|-------------|
 | `source` | Path to a source Python file or directory |
-| `--output`, `-o` | Output file path (prints to stdout if omitted) |
+| `--output`, `-o` | Output file/directory path (prints to stdout if omitted) |
+
+### `intpot add skills`
+
+Install intpot skills/rules for AI coding agents. Auto-detects which agents are
+configured in the project, or specify one explicitly.
+
+```
+intpot add skills [--agent <name>] [--path <dir>]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--agent`, `-a` | Target agent: `claude`, `cursor`, `windsurf`, `copilot`, `cline`, `codex` |
+| `--path`, `-p` | Project root directory (defaults to current directory) |
+
+**Supported agents and output locations:**
+
+| Agent | Files created |
+|-------|--------------|
+| Claude Code | `.claude/skills/intpot-cli.md`, `.claude/skills/intpot-python.md` |
+| Cursor | `.cursor/rules/intpot-cli.mdc`, `.cursor/rules/intpot-python.mdc` |
+| Windsurf | `.windsurf/rules/intpot-cli.md`, `.windsurf/rules/intpot-python.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` (appended) |
+| Cline | `.clinerules/intpot-cli.md`, `.clinerules/intpot-python.md` |
+| OpenAI Codex | `AGENTS.md` (appended) |
 
 ## Development
 
