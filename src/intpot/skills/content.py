@@ -166,7 +166,6 @@ def claude_skill(title: str, body: str) -> str:
 
 def cursor_rule(title: str, body: str, globs: str = '["*.py"]') -> str:
     """Format as a Cursor rule (.mdc in .cursor/rules/)."""
-    slug = title.lower().replace(" ", "-")
     return (
         f"---\n"
         f"description: {title} — use intpot to convert between CLI, MCP, and API frameworks\n"

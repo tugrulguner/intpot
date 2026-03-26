@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from collections.abc import Callable
 
 import typer
 
@@ -158,7 +158,7 @@ def _write_codex(root: Path) -> list[Path]:
     return written
 
 
-_AGENT_WRITERS: dict[Agent, callable] = {
+_AGENT_WRITERS: dict[Agent, Callable[..., list[Path]]] = {
     Agent.claude: _write_claude,
     Agent.cursor: _write_cursor,
     Agent.windsurf: _write_windsurf,
@@ -193,13 +193,13 @@ def _detect_agents(root: Path) -> list[Agent]:
 
 
 def add_skills(
-    agent: Optional[Agent] = typer.Option(
+    agent: Agent | None = typer.Option(
         None,
         "--agent",
         "-a",
         help="Target agent (claude, cursor, windsurf, copilot, cline, codex). Auto-detects if omitted.",
     ),
-    path: Optional[Path] = typer.Option(
+    path: Path | None = typer.Option(
         None,
         "--path",
         "-p",
