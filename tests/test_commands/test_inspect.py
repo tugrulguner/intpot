@@ -72,10 +72,12 @@ def test_inspect_json_output(tmp_source):
     result = runner.invoke(app, ["inspect", str(source), "--json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert data["type"] == "mcp"
-    assert len(data["tools"]) == 1
-    assert data["tools"][0]["name"] == "add"
-    assert len(data["tools"][0]["parameters"]) == 2
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["type"] == "mcp"
+    assert len(data[0]["tools"]) == 1
+    assert data[0]["tools"][0]["name"] == "add"
+    assert len(data[0]["tools"][0]["parameters"]) == 2
 
 
 def test_inspect_json_has_params(tmp_source):
@@ -90,7 +92,7 @@ def test_inspect_json_has_params(tmp_source):
     result = runner.invoke(app, ["inspect", str(source), "--json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    params = data["tools"][0]["parameters"]
+    params = data[0]["tools"][0]["parameters"]
     names = [p["name"] for p in params]
     assert "name" in names
     assert "count" in names
@@ -99,3 +101,4 @@ def test_inspect_json_has_params(tmp_source):
 def test_inspect_nonexistent_file():
     result = runner.invoke(app, ["inspect", "/tmp/no_such_file_xyz.py"])
     assert result.exit_code != 0
+    assert "Traceback" not in result.output

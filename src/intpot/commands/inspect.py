@@ -10,17 +10,15 @@ from pathlib import Path
 import typer
 
 from intpot.converter import inspect_app
-from intpot.core.models import _SENTINEL, SourceType
+from intpot.core.models import SourceType
 
 
 def _serialize_tool(tool):
     d = asdict(tool)
-    for p in d["parameters"]:
-        if p["default"] is _SENTINEL:
-            p["default"] = None
-            p["required"] = True
-        else:
-            p["required"] = False
+    for p_info, p_dict in zip(tool.parameters, d["parameters"]):
+        p_dict["required"] = p_info.required
+        if p_info.required:
+            del p_dict["default"]
     return d
 
 
@@ -77,12 +75,16 @@ def inspect_command(
             _print_table(file_path, source_type, tools)
         return
 
-    from intpot.core.detector import detect_source
+    from intpot.core.detector import DetectionError, detect_source
 
     if verbose:
         print(f"Detecting: {source}", file=sys.stderr)
 
-    source_type, app_instance = detect_source(source)
+    try:
+        source_type, app_instance = detect_source(source)
+    except DetectionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
 
     if verbose:
         print(f"FOUND: {source} ({source_type.value})", file=sys.stderr)
@@ -90,11 +92,13 @@ def inspect_command(
     tools = inspect_app(source_type, app_instance)
 
     if as_json:
-        out = {
-            "source": str(source),
-            "type": source_type.value,
-            "tools": [_serialize_tool(t) for t in tools],
-        }
+        out = [
+            {
+                "source": str(source),
+                "type": source_type.value,
+                "tools": [_serialize_tool(t) for t in tools],
+            }
+        ]
         typer.echo(json.dumps(out, indent=2, default=str))
         return
 
@@ -114,6 +118,7 @@ def _print_table(source: Path, source_type: SourceType, tools):
 
     table = Table(show_header=True)
     table.add_column("Name")
+    table.add_column("Description")
     table.add_column("Parameters")
     table.add_column("Return Type")
     table.add_column("Async")
@@ -121,6 +126,7 @@ def _print_table(source: Path, source_type: SourceType, tools):
     for t in tools:
         table.add_row(
             t.name,
+            t.description or "",
             _params_summary(t.parameters),
             t.return_type,
             "Yes" if t.is_async else "No",
