@@ -15,7 +15,7 @@ from intpot.core.models import SourceType
 
 def _serialize_tool(tool):
     d = asdict(tool)
-    for p_info, p_dict in zip(tool.parameters, d["parameters"]):
+    for p_info, p_dict in zip(tool.parameters, d["parameters"], strict=True):
         p_dict["required"] = p_info.required
         if p_info.required:
             del p_dict["default"]
@@ -84,7 +84,7 @@ def inspect_command(
         source_type, app_instance = detect_source(source)
     except DetectionError as exc:
         typer.echo(str(exc), err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if verbose:
         print(f"FOUND: {source} ({source_type.value})", file=sys.stderr)
