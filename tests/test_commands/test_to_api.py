@@ -44,7 +44,6 @@ def test_cli_to_api(tmp_source):
 
 
 def test_cli_to_api_return_wrapped_in_dict(tmp_source):
-    # typer.echo(X) → return {"result": X}, not bare return X
     source = tmp_source('''
         import typer
         app = typer.Typer()
@@ -58,7 +57,8 @@ def test_cli_to_api_return_wrapped_in_dict(tmp_source):
     ''')
     result = runner.invoke(app, ["to", "api", str(source)])
     assert result.exit_code == 0
-    assert '{"result":' in result.output or '"result"' in result.output
+    # ast.unparse uses single quotes; check for dict key "result"
+    assert "'result'" in result.output
 
 
 def test_api_to_api_fails(tmp_source):
