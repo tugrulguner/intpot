@@ -44,20 +44,16 @@ def test_cli_to_api(tmp_source):
 
 
 def test_cli_to_api_return_wrapped_in_dict(tmp_source):
-    source = tmp_source('''
+    source = tmp_source("""
         import typer
         app = typer.Typer()
 
         @app.command()
-        def greet(
-            name: str = typer.Argument(..., help="Name to greet"),
-            greeting: str = typer.Option("Hello", help="Greeting to use"),
-        ) -> None:
-            typer.echo(f"{greeting}, {name}!")
-    ''')
+        def greet(name: str = typer.Argument(...)) -> None:
+            typer.echo(name)
+    """)
     result = runner.invoke(app, ["to", "api", str(source)])
     assert result.exit_code == 0
-    # ast.unparse uses single quotes; check for dict key "result"
     assert "'result'" in result.output
 
 
