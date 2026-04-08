@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-07
+
+### Added
+
+- **`intpot.App` — write once, serve everywhere runtime** — define tools with `@app.tool()` and serve them as CLI, API, or MCP server without any conversion step
+- **`intpot serve` command** — `intpot serve app.py --cli/--api/--mcp` serves an intpot App as a Typer CLI, FastAPI server, or FastMCP server
+- **`intpot eject` command** — `intpot eject app.py --to cli/api/mcp` exports an intpot App as standalone framework code (uses existing generators)
+- `App.tool()` decorator — registers functions with full signature introspection (types, defaults, docstrings, async support)
+- `App.serve(mode, host, port)` — programmatic serving in any mode
+- `App.eject(target)` — programmatic code generation returning standalone framework code as a string
+- `App.tools` property — access normalized `ToolInfo` list for all registered tools
+- Runtime builders: `build_typer_app`, `build_fastapi_app`, `build_fastmcp_app` — dynamically construct live framework instances from registered tools
+- `examples/universal_app.py` — example demonstrating the new App pattern
+- 32 new tests covering App class, runtime builders, serve command, and eject command (136 total)
+
+### Changed
+
+- The existing conversion pipeline (`intpot to cli/mcp/api`, `intpot.load()`, `IntpotApp`) is fully preserved and unchanged
+
 ## [0.3.0] - 2026-03-26
 
 ### Added
