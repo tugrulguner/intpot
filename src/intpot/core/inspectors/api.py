@@ -13,7 +13,7 @@ from intpot.core.inspectors._utils import (
     python_type_name,
 )
 from intpot.core.inspectors.base import BaseInspector
-from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.models import _SENTINEL, ParameterInfo, ParameterSource, ToolInfo
 
 _INTERNAL_ROUTES = {
     "openapi",
@@ -36,6 +36,27 @@ def _is_depends(obj: Any) -> bool:
     cls_name = type(obj).__name__
     module = type(obj).__module__ or ""
     return cls_name == "Depends" and "fastapi" in module
+
+
+_FASTAPI_SOURCE_MAP: dict[str, ParameterSource] = {
+    "Query": ParameterSource.QUERY,
+    "Header": ParameterSource.HEADER,
+    "Body": ParameterSource.BODY,
+    "Path": ParameterSource.PATH,
+    "Form": ParameterSource.BODY,  # treat Form as body
+    "File": ParameterSource.BODY,
+}
+
+
+def _param_source(default: Any, param_name: str, path_params: set[str]) -> ParameterSource:
+    if param_name in path_params:
+        return ParameterSource.PATH
+    if default is not inspect.Parameter.empty and hasattr(default, "__class__"):
+        cls_name = type(default).__name__
+        module = getattr(type(default), "__module__", "") or ""
+        if "fastapi" in module and cls_name in _FASTAPI_SOURCE_MAP:
+            return _FASTAPI_SOURCE_MAP[cls_name]
+    return ParameterSource.BODY
 
 
 class APIInspector(BaseInspector):
@@ -119,6 +140,7 @@ class APIInspector(BaseInspector):
                         type_annotation=type_str,
                         default=default,
                         description=desc,
+                        source=_param_source(param.default, param_name, path_params),
                     )
                 )
 

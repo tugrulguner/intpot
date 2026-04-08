@@ -2,7 +2,18 @@
 {% if typing_imports %}
 from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
-from fastapi import FastAPI{% if tools | selectattr("parameters") | list %}, Body{% endif %}
+{%- set fastapi_deps = [] %}
+{%- if tools | selectattr("parameters") | list %}
+{%- for tool in tools %}
+{%- for param in tool.parameters %}
+{%- if param.source.value == "body" and fastapi_deps.append("Body") %}{% endif %}
+{%- if param.source.value == "query" and fastapi_deps.append("Query") %}{% endif %}
+{%- if param.source.value == "header" and fastapi_deps.append("Header") %}{% endif %}
+{%- if param.source.value == "path" and fastapi_deps.append("Path") %}{% endif %}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
+from fastapi import FastAPI{% if fastapi_deps | unique | list %}, {{ fastapi_deps | unique | sort | join(", ") }}{% endif %}
 {%- if extra_imports %}
 {% for imp in extra_imports %}
 {{ imp }}
@@ -20,9 +31,11 @@ app = FastAPI()
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- if tool.parameters %}
 {%- for param in tool.parameters %}
+{%- set fa_type = param.source.value | capitalize %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if not param.required %} = Body(default={{ param.default | repr }}{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
-{%- else %} = Body(...{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
+{%- if param.source.value == "path" %}
+{%- elif not param.required %} = {{ fa_type }}(default={{ param.default | repr }}{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
+{%- else %} = {{ fa_type }}(...{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
 {%- endif %},
 {%- endfor %}
 {% endif -%}
