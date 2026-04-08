@@ -28,11 +28,11 @@ def create_task(
 def create_task(
     title: str = Body(..., description="Task title"),
     priority: int = Body(default=3, description="Priority 1-5"),
-) -> dict:
+) -> str:
     return json.dumps({"title": title, "priority": priority})
 ```
 
-Note: `typer.echo(X)` becomes `return X` and the return type changes to `dict`.
+Note: `typer.echo(X)` becomes `return X`. The return type here is `str` because `json.dumps()` returns a string — intpot sets it based on what the function body actually returns.
 
 ### CLI to MCP
 
@@ -64,7 +64,7 @@ Required params become `typer.Argument(...)`, optional ones become `typer.Option
 ### MCP to API
 
 ```bash
-intpot to mcp mcp_server.py
+intpot to api mcp_server.py
 ```
 
 MCP tools map to POST endpoints. Parameters become `Body(...)` fields. Pretty straightforward since both MCP and API are request/response style.
@@ -130,7 +130,7 @@ def create_user(
     typer.echo({'username': username})
 ```
 
-You'll need to manually wire up your database/service layer after conversion. This is a known limitation (see the [roadmap](../ROADMAP.md) for v2 plans around dependency injection mapping).
+You'll need to manually wire up your database/service layer after conversion. This is a known limitation (see the [roadmap](https://github.com/tugrulguner/intpot/blob/main/ROADMAP.md) for v2 plans around dependency injection mapping).
 
 ## Body transforms: `typer.echo()` vs `return`
 
@@ -204,7 +204,6 @@ def create_note(title: str, body: str) -> str:
     return json.dumps({"id": note_id, "title": title})
 
 # Generated API output includes those imports
-from datetime import datetime
 import hashlib
 import json
 # ... rest of the generated code
