@@ -62,7 +62,10 @@ def test_query_param_source():
     app = FastAPI()
 
     @app.get("/search")
-    def search(q: str = Query(..., description="search term"), limit: int = Query(default=10)) -> dict:
+    def search(
+        q: str = Query(..., description="search term"),
+        limit: int = Query(default=10),
+    ) -> dict:
         return {}
 
     inspector = APIInspector()

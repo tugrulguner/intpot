@@ -48,7 +48,9 @@ _FASTAPI_SOURCE_MAP: dict[str, ParameterSource] = {
 }
 
 
-def _param_source(default: Any, param_name: str, path_params: set[str]) -> ParameterSource:
+def _param_source(
+    default: Any, param_name: str, path_params: set[str]
+) -> ParameterSource:
     if param_name in path_params:
         return ParameterSource.PATH
     if default is not inspect.Parameter.empty and hasattr(default, "__class__"):
