@@ -9,7 +9,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/intpot)](https://pypi.org/project/intpot/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Universal converter between CLI (Typer), MCP (FastMCP), and API (FastAPI) interfaces.**
+**Write once, serve as CLI, API, or MCP. Plus convert between all three.**
 
 intpot bridges three popular Python frameworks:
 
@@ -17,11 +17,13 @@ intpot bridges three popular Python frameworks:
 - **[FastMCP](https://github.com/jlowin/fastmcp)** — Model Context Protocol servers
 - **[FastAPI](https://fastapi.tiangolo.com/)** — REST API applications
 
-Given a source file written in any of these frameworks, intpot detects the framework, inspects its functions/tools/endpoints, and generates equivalent code in the target framework.
+Define your tools once with `@app.tool()` and serve them as any framework — or convert existing code between all three.
 
 ## Features
 
+- **Write once, serve everywhere** — `intpot.App` lets you define tools once and serve as CLI, API, or MCP with a single command
 - **6 conversion directions** — CLI to MCP, CLI to API, MCP to CLI, MCP to API, API to CLI, API to MCP
+- **Eject to standalone code** — `intpot eject` exports your universal app as standalone Typer, FastAPI, or FastMCP code
 - **Python API** — `intpot.load()` accepts file paths or live app instances for programmatic conversion
 - **Directory auto-discovery** — scan an entire directory and convert all found apps at once
 - **Auto-detection** — automatically identifies the source framework by analyzing imports and patterns
@@ -42,6 +44,42 @@ pip install intpot[all]       # everything
 ```
 
 ## Quick Start
+
+### Write once, serve everywhere
+
+Define your tools once, serve as CLI, API, or MCP:
+
+```python
+from intpot import App
+
+app = App("my-app")
+
+@app.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers together."""
+    return a + b
+
+@app.tool()
+def greet(name: str, greeting: str = "Hello") -> str:
+    """Greet someone by name."""
+    return f"{greeting}, {name}!"
+```
+
+Then serve in any mode:
+
+```bash
+intpot serve app.py --cli          # Run as Typer CLI
+intpot serve app.py --api          # Run as FastAPI on port 8000
+intpot serve app.py --mcp          # Run as MCP server for AI agents
+```
+
+Or eject to standalone framework code:
+
+```bash
+intpot eject app.py --to api       # Export as standalone FastAPI app
+intpot eject app.py --to cli       # Export as standalone Typer CLI
+intpot eject app.py --to mcp       # Export as standalone FastMCP server
+```
 
 ### Scaffold a new project
 
@@ -91,7 +129,33 @@ intpot add skills --path ./myproject/
 
 ## Python API
 
-Use intpot programmatically from Python:
+### Universal App (write once, serve everywhere)
+
+```python
+from intpot import App
+
+app = App("my-app")
+
+@app.tool()
+def greet(name: str, greeting: str = "Hello") -> str:
+    """Greet someone."""
+    return f"{greeting}, {name}!"
+
+# Serve as any framework
+app.serve(mode="cli")                         # Run as Typer CLI
+app.serve(mode="api", host="0.0.0.0", port=8000)  # Run as FastAPI
+app.serve(mode="mcp")                         # Run as MCP server
+
+# Eject to standalone code
+cli_code = app.eject("cli")                   # Returns Typer code string
+api_code = app.eject("api")                   # Returns FastAPI code string
+
+# Access normalized tool definitions
+for tool in app.tools:
+    print(tool.name, tool.parameters)
+```
+
+### Conversion API (convert existing framework code)
 
 ```python
 import intpot
@@ -118,12 +182,17 @@ app.write("output/cli_app.py", "cli")
 app.write("output/api_app.py", "api")
 ```
 
-The `load()` function accepts file paths (str or Path) and live app instances (FastMCP, Typer, FastAPI). The returned `IntpotApp` object provides:
+**`App`** (universal runtime):
+- `.tool()` — decorator to register functions as tools
+- `.serve(mode, host, port)` — serve as CLI, API, or MCP
+- `.eject(target)` — generate standalone framework code
+- `.tools` — list of normalized `ToolInfo` objects
 
+**`IntpotApp`** (conversion wrapper, returned by `intpot.load()`):
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
-- `.write(path, target)` — generate and write to a file in one step (`target` is `"cli"`, `"mcp"`, `"api"`, or a `SourceType` enum)
-- `.tools` — list of normalized `ToolInfo` objects describing all detected functions
-- `.source_type` — detected framework type (`SourceType.CLI`, `SourceType.MCP`, or `SourceType.API`)
+- `.write(path, target)` — generate and write to a file in one step
+- `.tools` — list of normalized `ToolInfo` objects
+- `.source_type` — detected framework type
 
 ## Architecture
 
@@ -271,6 +340,37 @@ def greet(
 See the [`examples/`](examples/) directory for all conversion outputs, including advanced examples with `import json`, `Body(...)`, `Depends()`, async tools, and more. Run `bash scripts/demo.sh` to regenerate them all.
 
 ## CLI Reference
+
+### `intpot serve`
+
+Serve an intpot App as CLI, API, or MCP server.
+
+```
+intpot serve <source> --cli|--api|--mcp [--host <host>] [--port <port>]
+```
+
+| Argument/Option | Description |
+|----------------|-------------|
+| `source` | Path to a Python file containing an `intpot.App` |
+| `--cli` | Serve as a Typer CLI |
+| `--api` | Serve as a FastAPI app |
+| `--mcp` | Serve as a FastMCP server |
+| `--host` | API server host (default: `0.0.0.0`) |
+| `--port` | API server port (default: `8000`) |
+
+### `intpot eject`
+
+Export an intpot App as standalone framework code.
+
+```
+intpot eject <source> --to <cli|mcp|api> [--output <path>]
+```
+
+| Argument/Option | Description |
+|----------------|-------------|
+| `source` | Path to a Python file containing an `intpot.App` |
+| `--to`, `-t` | Target framework: `cli`, `mcp`, `api` (required) |
+| `--output`, `-o` | Output file path (prints to stdout if omitted) |
 
 ### `intpot init`
 
