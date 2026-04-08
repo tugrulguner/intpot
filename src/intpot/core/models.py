@@ -15,6 +15,13 @@ class SourceType(Enum):
     API = "api"
 
 
+class ParameterSource(Enum):
+    BODY = "body"
+    QUERY = "query"
+    HEADER = "header"
+    PATH = "path"
+
+
 class Agent(str, Enum):
     """Supported AI coding agents for skill installation."""
 
@@ -80,6 +87,7 @@ class ParameterInfo:
     type_annotation: str = "str"
     default: Any = _SENTINEL  # _SENTINEL means required (no default)
     description: str = ""
+    source: ParameterSource = ParameterSource.BODY
 
     def __post_init__(self) -> None:
         self.name = sanitize_identifier(self.name)
