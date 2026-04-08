@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-04-08
+
+### Fixed
+
+- `intpot serve --cli` now prints return values — tool functions were executing but silently dropping output because Typer commands require explicit `typer.echo()` calls. The CLI builder now wraps registered functions so return values are printed automatically.
+
 ## [0.4.0] - 2026-04-07
 
 ### Added

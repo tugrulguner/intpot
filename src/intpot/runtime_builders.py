@@ -12,11 +12,23 @@ if TYPE_CHECKING:
 
 def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
     """Construct a Typer CLI app from registered tools."""
+    import functools
+
     import typer
 
     cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
     for tool in tools:
-        cli_app.command(name=tool.info.name, help=tool.info.description)(tool.func)
+        # Wrap so return values are printed — plain functions return values,
+        # but Typer commands need explicit output via typer.echo().
+        fn = tool.func
+
+        @functools.wraps(fn)
+        def _cli_wrapper(*args: object, _fn: object = fn, **kwargs: object) -> None:
+            result = _fn(*args, **kwargs)  # type: ignore[operator]
+            if result is not None:
+                typer.echo(result)
+
+        cli_app.command(name=tool.info.name, help=tool.info.description)(_cli_wrapper)
     return cli_app
 
 
