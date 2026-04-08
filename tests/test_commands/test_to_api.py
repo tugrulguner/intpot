@@ -43,6 +43,24 @@ def test_cli_to_api(tmp_source):
     assert "def add(" in result.output
 
 
+def test_cli_to_api_return_wrapped_in_dict(tmp_source):
+    # typer.echo(X) → return {"result": X}, not bare return X
+    source = tmp_source('''
+        import typer
+        app = typer.Typer()
+
+        @app.command()
+        def greet(
+            name: str = typer.Argument(..., help="Name to greet"),
+            greeting: str = typer.Option("Hello", help="Greeting to use"),
+        ) -> None:
+            typer.echo(f"{greeting}, {name}!")
+    ''')
+    result = runner.invoke(app, ["to", "api", str(source)])
+    assert result.exit_code == 0
+    assert '{"result":' in result.output or '"result"' in result.output
+
+
 def test_api_to_api_fails(tmp_source):
     source = tmp_source("""
         from fastapi import FastAPI

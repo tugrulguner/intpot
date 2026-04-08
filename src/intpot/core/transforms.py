@@ -79,6 +79,12 @@ def _from_cli(body: str, target: SourceType) -> str:
     new_tree = remover.visit(new_tree)
     ast.fix_missing_locations(new_tree)
 
+    # for API target, wrap bare returns in {"result": ...}
+    if target == SourceType.API:
+        wrapper = _WrapReturnInDict()
+        new_tree = wrapper.visit(new_tree)
+        ast.fix_missing_locations(new_tree)
+
     return ast.unparse(new_tree)
 
 
@@ -148,6 +154,19 @@ class _TyperExitTransformer(ast.NodeTransformer):
             and isinstance(func.value, ast.Name)
             and func.value.id == "typer"
         )
+
+
+class _WrapReturnInDict(ast.NodeTransformer):
+    """Wrap bare return values in {"result": ...} so they match -> dict return type."""
+
+    def visit_Return(self, node: ast.Return) -> ast.AST:
+        if node.value is None or isinstance(node.value, ast.Dict):
+            return node
+        new_value = ast.Dict(
+            keys=[ast.Constant(value="result")],
+            values=[node.value],
+        )
+        return ast.Return(value=new_value)
 
 
 # ---------------------------------------------------------------------------
