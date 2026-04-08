@@ -51,10 +51,12 @@ make check
 
 ```
 src/intpot/
-├── __init__.py          # Package exports (load, IntpotApp)
+├── __init__.py          # Package exports (App, IntpotApp, load)
 ├── cli.py               # Main CLI entry point
-├── converter.py         # Python API (IntpotApp, load())
-├── commands/            # CLI command handlers (to_cli, to_mcp, to_api, init)
+├── runtime.py           # Universal App class (@app.tool() decorator, serve, eject)
+├── runtime_builders.py  # Build live Typer/FastAPI/FastMCP instances from registered tools
+├── converter.py         # Conversion API (IntpotApp, load())
+├── commands/            # CLI command handlers (serve, eject, to_cli, to_mcp, to_api, init)
 ├── core/
 │   ├── models.py        # Shared data models (ToolInfo, ParameterInfo, SourceType)
 │   ├── detector.py      # Auto-detect source type from files or live instances
@@ -66,10 +68,12 @@ src/intpot/
 ```
 
 Key concepts:
+- **Runtime** — `intpot.App` registers tools via `@app.tool()` and serves them as CLI, API, or MCP at runtime
 - **Detection** — identify framework type from a file path or live object
 - **Inspection** — extract normalized `ToolInfo` from framework-specific apps
 - **Generation** — render `ToolInfo` into target framework code via Jinja2 templates
-- **Python API** — `intpot.load(source)` returns an `IntpotApp` for programmatic use
+- **Conversion API** — `intpot.load(source)` returns an `IntpotApp` for programmatic conversion
+- **Eject** — export an `intpot.App` as standalone framework code using existing generators
 
 ## Pull Request Process
 

@@ -1,14 +1,15 @@
 # Roadmap
 
-## v1 (current) — Signature + Scaffolding Converter
+## v0.4 (current) — Write Once, Serve Everywhere
 
-intpot v1 extracts function signatures, parameters, types, defaults, and docstrings from source apps and generates equivalent boilerplate in the target framework. Function bodies are carried over as-is with basic I/O transforms (`typer.echo()` ↔ `return`). Users get runnable scaffolding to build on.
+intpot v0.4 adds the `App` runtime framework: define tools once with `@app.tool()` and serve them as CLI, API, or MCP server with a single command. Eject to standalone framework code at any time.
 
-### v1 remaining polish
+### Remaining polish
 
 - [ ] Handle `Annotated[str, Body(...)]` style FastAPI parameters
 - [ ] Support Click groups / Typer sub-apps (nested command hierarchies)
 - [ ] Preserve parameter descriptions through all conversion directions
+- [ ] `--all` mode for `intpot serve` — serve CLI, API, and MCP simultaneously
 
 ## v2 — Full AST Transform Pipeline
 
