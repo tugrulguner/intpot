@@ -50,16 +50,17 @@ class App:
         return f"App({self.name!r}, tools={count})"
 
     def tool(
-        self, *, name: str | None = None
+        self, *, name: str | None = None, description: str | None = None
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """Decorator to register a function as a tool.
 
         Args:
             name: Override the tool name (defaults to function name).
+            description: Override the tool description (defaults to docstring).
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            info = _build_tool_info(func, name_override=name)
+            info = _build_tool_info(func, name_override=name, description_override=description)
             self._tools.append(RegisteredTool(func=func, info=info))
             return func
 
@@ -128,8 +129,7 @@ class App:
             import uvicorn
         except ImportError:
             raise ModuleNotFoundError(
-                "uvicorn is required for API serving. "
-                "Install it with: pip install intpot[api]"
+                "uvicorn is required for API serving. Install it with: pip install intpot[api]"
             ) from None
 
         api_app = build_fastapi_app(self.name, self._tools)
@@ -143,11 +143,14 @@ class App:
 
 
 def _build_tool_info(
-    func: Callable[..., Any], *, name_override: str | None = None
+    func: Callable[..., Any],
+    *,
+    name_override: str | None = None,
+    description_override: str | None = None,
 ) -> ToolInfo:
     """Build a ToolInfo from a plain Python function."""
     tool_name = name_override or func.__name__
-    description = inspect.getdoc(func) or ""
+    description = description_override if description_override is not None else (inspect.getdoc(func) or "")
     is_async = asyncio.iscoroutinefunction(func)
 
     # Extract parameters from signature + type hints
