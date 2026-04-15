@@ -129,8 +129,7 @@ class App:
             import uvicorn
         except ImportError:
             raise ModuleNotFoundError(
-                "uvicorn is required for API serving. "
-                "Install it with: pip install intpot[api]"
+                "uvicorn is required for API serving. Install it with: pip install intpot[api]"
             ) from None
 
         api_app = build_fastapi_app(self.name, self._tools)
@@ -151,11 +150,7 @@ def _build_tool_info(
 ) -> ToolInfo:
     """Build a ToolInfo from a plain Python function."""
     tool_name = name_override or func.__name__
-    description = (
-        description_override
-        if description_override is not None
-        else (inspect.getdoc(func) or "")
-    )
+    description = description_override if description_override is not None else (inspect.getdoc(func) or "")
     is_async = asyncio.iscoroutinefunction(func)
 
     # Extract parameters from signature + type hints
