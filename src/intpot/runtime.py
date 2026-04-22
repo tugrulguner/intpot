@@ -60,7 +60,9 @@ class App:
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            info = _build_tool_info(func, name_override=name, description_override=description)
+            info = _build_tool_info(
+                func, name_override=name, description_override=description
+            )
             self._tools.append(RegisteredTool(func=func, info=info))
             return func
 
@@ -150,7 +152,11 @@ def _build_tool_info(
 ) -> ToolInfo:
     """Build a ToolInfo from a plain Python function."""
     tool_name = name_override or func.__name__
-    description = description_override if description_override is not None else (inspect.getdoc(func) or "")
+    description = (
+        description_override
+        if description_override is not None
+        else (inspect.getdoc(func) or "")
+    )
     is_async = asyncio.iscoroutinefunction(func)
 
     # Extract parameters from signature + type hints
