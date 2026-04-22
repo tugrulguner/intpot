@@ -222,3 +222,25 @@ def test_function_body_extracted():
     tool = app.tools[0]
     assert tool.function_body is not None
     assert "return a + b" in tool.function_body
+
+
+def test_tool_description_override():
+    app = App("test")
+
+    @app.tool(description="Custom description")
+    def add(a: int, b: int) -> int:
+        """Docstring description."""
+        return a + b
+
+    assert app._tools[0].info.description == "Custom description"
+
+
+def test_tool_description_falls_back_to_docstring():
+    app = App("test")
+
+    @app.tool()
+    def add(a: int, b: int) -> int:
+        """Docstring description."""
+        return a + b
+
+    assert app._tools[0].info.description == "Docstring description."
