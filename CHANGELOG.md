@@ -10,6 +10,26 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.4.2] - 2026-08-08
+
+### Added
+
+- `@app.tool()` accepts a `description` argument to override the description that would
+  otherwise be derived from the function's docstring — useful when the docstring is
+  written for developers reading the code rather than for the agent calling the tool.
+  Thanks @itniuma2026 for a first contribution! ([#44](https://github.com/tugrulguner/intpot/pull/44))
+
+### Fixed
+
+- `async def` tools now actually run under `intpot serve --cli`. The CLI wrapper called
+  the function but never awaited it, so an async tool printed a coroutine repr instead of
+  its result; the coroutine is now run to completion before its return value is echoed.
+  Thanks @guyua9 for a first contribution! ([#45](https://github.com/tugrulguner/intpot/pull/45))
+- Converting a FastAPI app no longer collapses every parameter into a request body.
+  `Query`, `Header`, `Path`, and `Body` sources are now detected during inspection and
+  preserved in generated code, so a query parameter stays a query parameter instead of
+  becoming `Body(...)`. Thanks @MhussainD4772 for a first contribution! ([#47](https://github.com/tugrulguner/intpot/pull/47))
+
 ## [0.4.1] - 2026-04-08
 
 ### Fixed
