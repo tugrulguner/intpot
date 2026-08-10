@@ -28,6 +28,7 @@ Define your tools once with `@app.tool()` and serve them as any framework — or
 - **Directory auto-discovery** — scan an entire directory and convert all found apps at once
 - **Auto-detection** — automatically identifies the source framework by analyzing imports and patterns
 - **HTTP method preservation** — API routes keep their GET/POST/PUT/DELETE methods through conversion
+- **Parameter source preservation** — FastAPI `Query`, `Header`, `Path`, and `Body` parameters stay where they were, instead of collapsing into a request body
 - **Project scaffolding** — `intpot init` creates new CLI, MCP, or API projects from templates
 - **Jinja2 templates** — clean, readable generated code with proper type hints
 - **Fully typed** — PEP 561 compatible with `py.typed` marker
@@ -37,11 +38,14 @@ Define your tools once with `@app.tool()` and serve them as any framework — or
 ## Installation
 
 ```bash
-pip install intpot            # core (CLI conversions only)
+pip install intpot            # core: init, inspect, add skills, and Typer CLI output
 pip install intpot[mcp]       # + FastMCP support
 pip install intpot[api]       # + FastAPI support
 pip install intpot[all]       # everything
 ```
+
+The extras are only needed for frameworks you actually touch: reading a FastMCP server
+or emitting one requires `[mcp]`, and the same goes for `[api]` and FastAPI.
 
 ## Quick Start
 
@@ -63,6 +67,17 @@ def add(a: int, b: int) -> int:
 def greet(name: str, greeting: str = "Hello") -> str:
     """Greet someone by name."""
     return f"{greeting}, {name}!"
+```
+
+The tool name and description default to the function name and its docstring. Override
+either when the two audiences want different things — the docstring explains the code to
+whoever maintains it, the description tells an agent when to call the tool:
+
+```python
+@app.tool(name="lookup", description="Look up a customer by their account number.")
+def fetch_customer_record(account_id: str) -> dict:
+    """Hit the accounts table. Assumes the caller already validated account_id."""
+    ...
 ```
 
 Then serve in any mode:
@@ -183,7 +198,7 @@ app.write("output/api_app.py", "api")
 ```
 
 **`App`** (universal runtime):
-- `.tool()` — decorator to register functions as tools
+- `.tool(name=None, description=None)` — decorator to register functions as tools; both arguments override the defaults taken from the function name and docstring
 - `.serve(mode, host, port)` — serve as CLI, API, or MCP
 - `.eject(target)` — generate standalone framework code
 - `.tools` — list of normalized `ToolInfo` objects
@@ -196,7 +211,28 @@ app.write("output/api_app.py", "api")
 
 ## Architecture
 
-intpot uses a three-stage pipeline:
+Both halves of intpot meet at one normalized schema, `ToolInfo`. Everything upstream
+produces it; everything downstream consumes it.
+
+```
+   @app.tool()                        source .py file
+   (intpot.App)                    (Typer / FastMCP / FastAPI)
+        |                                    |
+        |                              1. DETECT
+        |                              2. INSPECT
+        |                                    |
+        +--------------> ToolInfo[] <--------+
+                              |
+              +---------------+---------------+
+              |                               |
+        build a live                    3. GENERATE
+      framework instance            (render a template)
+              |                               |
+       serve --cli/--api/--mcp        .py output on disk
+                                    (to cli/mcp/api, eject)
+```
+
+The conversion side is a three-stage pipeline:
 
 ```
                     +-----------+
@@ -233,6 +269,14 @@ intpot uses a three-stage pipeline:
 1. **DETECT** — `core/detector.py` imports the source file and identifies whether it's a Typer app, FastMCP server, or FastAPI app
 2. **INSPECT** — Framework-specific inspectors (`core/inspectors/`) extract function signatures, parameters, types, defaults, and docstrings into a normalized `ToolInfo` schema
 3. **GENERATE** — Framework-specific generators (`core/generators/`) render the normalized schema into target code using Jinja2 templates
+
+The runtime side skips detection and inspection: `@app.tool()` builds `ToolInfo`
+directly from the function signature, then either constructs a live framework instance
+(`serve`) or hands the same schema to the same generators (`eject`).
+
+> **Detection imports your source file.** `intpot to ...` and `intpot inspect` execute
+> the module to find the app instance, so any module-level code in it runs. Point them
+> at code you trust.
 
 ## Examples
 

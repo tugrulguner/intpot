@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "intpot"
 version = "0.4.2"
-description = "Universal converter between CLI (Typer), MCP (FastMCP), and API (FastAPI) interfaces"
+description = "Define Python tools once and serve them as a Typer CLI, FastAPI app, or FastMCP server — or convert existing apps between all three"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
