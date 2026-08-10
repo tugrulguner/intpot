@@ -7,7 +7,6 @@ import json
 app = FastAPI()
 
 
-
 @app.post("/create")
 def create(
     title: str = Body(..., description="Task title"),
@@ -18,7 +17,7 @@ def create(
 
     tag_list = [t.strip() for t in tags.split(',') if t.strip()]
     task = {'title': title, 'priority': priority, 'tags': tag_list}
-    return json.dumps(task, indent=2)
+    return {'result': json.dumps(task, indent=2)}
 
 
 @app.post("/search")
@@ -32,7 +31,7 @@ def search(
     results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
     if not include_done:
         results = [r for r in results if not r['done']]
-    return json.dumps(results[:limit], indent=2)
+    return {'result': json.dumps(results[:limit], indent=2)}
 
 
 @app.post("/stats")
@@ -40,7 +39,7 @@ def stats() -> dict:
     """Show task statistics."""
 
     summary = {'total': 42, 'done': 15, 'pending': 27}
-    return json.dumps(summary)
+    return {'result': json.dumps(summary)}
 
 
 if __name__ == "__main__":

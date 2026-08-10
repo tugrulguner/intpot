@@ -8,6 +8,14 @@ import json
 app = typer.Typer()
 
 
+def _create_user_impl(
+    username: str,
+    email: str,
+    role: str,
+) -> None:
+    """Create a new user account."""
+    typer.echo({'username': username, 'email': email, 'role': role, 'created': True})
+
 
 # NOTE: Original used dependency injection: get_db
 @app.command()
@@ -17,8 +25,16 @@ def create_user(
     role: str = typer.Option('member', help="User role"),
 ) -> None:
     """Create a new user account."""
+    result = _create_user_impl(username, email, role)
+    if result is not None:
+        typer.echo(result)
 
-    typer.echo({'username': username, 'email': email, 'role': role, 'created': True})
+
+def _get_user_impl(
+    user_id: str,
+) -> None:
+    """Retrieve a user by their ID."""
+    typer.echo({'user_id': user_id, 'username': 'example', 'role': 'member'})
 
 
 # NOTE: Original used dependency injection: get_db
@@ -27,19 +43,17 @@ def get_user(
     user_id: str = typer.Argument(..., help="Path parameter from /users/{user_id}"),
 ) -> None:
     """Retrieve a user by their ID."""
+    result = _get_user_impl(user_id)
+    if result is not None:
+        typer.echo(result)
 
-    typer.echo({'user_id': user_id, 'username': 'example', 'role': 'member'})
 
-
-# NOTE: Original used dependency injection: get_db
-@app.command()
-def update_user(
-    user_id: str = typer.Argument(..., help="Path parameter from /users/{user_id}"),
-    email: Optional[str] = typer.Option(None, help="New email address"),
-    role: Optional[str] = typer.Option(None, help="New role"),
+def _update_user_impl(
+    user_id: str,
+    email: Optional[str],
+    role: Optional[str],
 ) -> None:
     """Update user fields."""
-
     changes = {}
     if email is not None:
         changes['email'] = email
@@ -50,12 +64,41 @@ def update_user(
 
 # NOTE: Original used dependency injection: get_db
 @app.command()
+def update_user(
+    user_id: str = typer.Argument(..., help="Path parameter from /users/{user_id}"),
+    email: Optional[str] = typer.Option(None, help="New email address"),
+    role: Optional[str] = typer.Option(None, help="New role"),
+) -> None:
+    """Update user fields."""
+    result = _update_user_impl(user_id, email, role)
+    if result is not None:
+        typer.echo(result)
+
+
+def _delete_user_impl(
+    user_id: str,
+) -> None:
+    """Delete a user by their ID."""
+    typer.echo({'user_id': user_id, 'deleted': True})
+
+
+# NOTE: Original used dependency injection: get_db
+@app.command()
 def delete_user(
     user_id: str = typer.Argument(..., help="Path parameter from /users/{user_id}"),
 ) -> None:
     """Delete a user by their ID."""
+    result = _delete_user_impl(user_id)
+    if result is not None:
+        typer.echo(result)
 
-    typer.echo({'user_id': user_id, 'deleted': True})
+
+def _list_users_impl(
+    limit: int,
+    offset: int,
+) -> None:
+    """List users with pagination."""
+    typer.echo({'users': [], 'limit': limit, 'offset': offset, 'total': 0})
 
 
 # NOTE: Original used dependency injection: get_db
@@ -65,8 +108,17 @@ def list_users(
     offset: int = typer.Option(0, help=""),
 ) -> None:
     """List users with pagination."""
+    result = _list_users_impl(limit, offset)
+    if result is not None:
+        typer.echo(result)
 
-    typer.echo({'users': [], 'limit': limit, 'offset': offset, 'total': 0})
+
+def _bulk_create_impl(
+    payload: str,
+) -> None:
+    """Create multiple users from a JSON payload."""
+    users = json.loads(payload)
+    typer.echo({'created': len(users), 'users': users})
 
 
 # NOTE: Original used dependency injection: get_db
@@ -75,9 +127,9 @@ def bulk_create(
     payload: str = typer.Argument(..., help="JSON array of user objects"),
 ) -> None:
     """Create multiple users from a JSON payload."""
-
-    users = json.loads(payload)
-    typer.echo({'created': len(users), 'users': users})
+    result = _bulk_create_impl(payload)
+    if result is not None:
+        typer.echo(result)
 
 
 if __name__ == "__main__":

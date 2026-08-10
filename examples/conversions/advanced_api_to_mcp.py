@@ -8,7 +8,6 @@ import json
 mcp = FastMCP("generated-server")
 
 
-
 # NOTE: Original used dependency injection: get_db
 @mcp.tool()
 def create_user(

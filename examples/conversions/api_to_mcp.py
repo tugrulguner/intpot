@@ -5,7 +5,6 @@ from fastmcp import FastMCP
 mcp = FastMCP("generated-server")
 
 
-
 @mcp.tool()
 def add(
     a: int,

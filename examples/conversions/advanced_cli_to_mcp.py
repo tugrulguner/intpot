@@ -7,7 +7,6 @@ import json
 mcp = FastMCP("generated-server")
 
 
-
 @mcp.tool()
 def create(
     title: str,

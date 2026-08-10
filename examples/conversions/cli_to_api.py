@@ -5,7 +5,6 @@ from fastapi import FastAPI, Body
 app = FastAPI()
 
 
-
 @app.post("/add")
 def add(
     a: int = Body(..., description="First number"),
@@ -13,7 +12,7 @@ def add(
 ) -> dict:
     """Add two numbers together."""
 
-    return a + b
+    return {'result': a + b}
 
 
 @app.post("/greet")
@@ -23,7 +22,7 @@ def greet(
 ) -> dict:
     """Greet someone by name."""
 
-    return f'{greeting}, {name}!'
+    return {'result': f'{greeting}, {name}!'}
 
 
 if __name__ == "__main__":

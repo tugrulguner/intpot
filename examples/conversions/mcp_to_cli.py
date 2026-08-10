@@ -5,6 +5,13 @@ import typer
 app = typer.Typer()
 
 
+def _add_impl(
+    a: int,
+    b: int,
+) -> None:
+    """Add two numbers together."""
+    typer.echo(a + b)
+
 
 @app.command()
 def add(
@@ -12,8 +19,17 @@ def add(
     b: int = typer.Argument(..., help=""),
 ) -> None:
     """Add two numbers together."""
+    result = _add_impl(a, b)
+    if result is not None:
+        typer.echo(result)
 
-    typer.echo(a + b)
+
+def _greet_impl(
+    name: str,
+    greeting: str,
+) -> None:
+    """Greet someone by name."""
+    typer.echo(f'{greeting}, {name}!')
 
 
 @app.command()
@@ -22,8 +38,9 @@ def greet(
     greeting: str = typer.Option('Hello', help=""),
 ) -> None:
     """Greet someone by name."""
-
-    typer.echo(f'{greeting}, {name}!')
+    result = _greet_impl(name, greeting)
+    if result is not None:
+        typer.echo(result)
 
 
 if __name__ == "__main__":

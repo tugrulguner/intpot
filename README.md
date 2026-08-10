@@ -258,15 +258,28 @@ import typer
 
 app = typer.Typer()
 
+
+def _greet_impl(
+    name: str,
+    greeting: str,
+) -> None:
+    """Greet someone by name."""
+    typer.echo(f'{greeting}, {name}!')
+
+
 @app.command()
 def greet(
     name: str = typer.Argument(..., help=""),
     greeting: str = typer.Option('Hello', help=""),
 ) -> None:
     """Greet someone by name."""
-    # TODO: implement
-    typer.echo("greet called")
+    result = _greet_impl(name, greeting)
+    if result is not None:
+        typer.echo(result)
 ```
+
+The body lives in a separate function so the command can print what it returns —
+Typer discards return values, so the generated command has to echo explicitly.
 
 ### CLI app to FastAPI
 
@@ -289,21 +302,23 @@ def add(
 
 **Output**:
 ```python
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, Body
 
 app = FastAPI()
 
-class AddRequest(BaseModel):
-    a: int = Field(..., description="First number")
-    b: int = Field(..., description="Second number")
 
 @app.post("/add")
-def add(request: AddRequest) -> dict:
+def add(
+    a: int = Body(..., description="First number"),
+    b: int = Body(..., description="Second number"),
+) -> dict:
     """Add two numbers together."""
-    # TODO: implement
-    return {"result": "add called"}
+
+    return {'result': a + b}
 ```
+
+`typer.echo(a + b)` becomes a return, wrapped so the response matches the `dict`
+annotation FastAPI validates against.
 
 ### API app to MCP server
 
@@ -327,15 +342,20 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("generated-server")
 
+
 @mcp.tool()
 def greet(
     name: str,
     greeting: str = 'Hello',
 ) -> dict:
     """Greet someone by name."""
-    # TODO: implement
-    return "greet called"
+
+    return {"message": f"{greeting}, {name}!"}
 ```
+
+Bodies carry over where the two frameworks agree on conventions. Where they don't —
+a Typer command echoing instead of returning — the body is rewritten to match the
+target. Tools whose body can't be recovered generate a `# TODO: implement` stub.
 
 See the [`examples/`](examples/) directory for all conversion outputs, including advanced examples with `import json`, `Body(...)`, `Depends()`, async tools, and more. Run `bash scripts/demo.sh` to regenerate them all.
 
