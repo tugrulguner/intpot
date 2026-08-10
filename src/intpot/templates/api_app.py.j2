@@ -40,7 +40,7 @@ app = FastAPI()
 {%- endif %},
 {%- endfor %}
 {% endif -%}
-) -> dict:
+) -> {% if tool.function_body %}{{ tool.return_type }}{% else %}dict{% endif %}:
 {%- if tool.description %}
     """{{ tool.description | escape_doc }}"""
 {%- endif %}

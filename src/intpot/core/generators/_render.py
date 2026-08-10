@@ -91,6 +91,20 @@ def _collect_extra_imports(tools: list[ToolInfo]) -> list[str]:
     return sorted(result)
 
 
+_EXCESS_BLANK_LINES = re.compile(r"\n{4,}")
+
+
+def _normalize_blank_lines(code: str) -> str:
+    """Collapse runs of more than two consecutive blank lines.
+
+    Templates branch on whether a tool has a preserved body, and the two
+    branches do not carry the same trailing whitespace. Normalising here keeps
+    every generator's output at PEP 8's two-blank-line maximum without spreading
+    whitespace-control tags through the templates.
+    """
+    return _EXCESS_BLANK_LINES.sub("\n\n\n", code)
+
+
 def render_template(template_name: str, **kwargs: object) -> str:
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -110,4 +124,4 @@ def render_template(template_name: str, **kwargs: object) -> str:
             if "extra_imports" not in kwargs:
                 kwargs = dict(kwargs, extra_imports=_collect_extra_imports(tools))
 
-    return template.render(**kwargs)
+    return _normalize_blank_lines(template.render(**kwargs))
