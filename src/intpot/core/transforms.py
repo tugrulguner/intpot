@@ -26,10 +26,23 @@ def transform_tools(
 
         if t.function_body:
             t.function_body = _transform_body(t.function_body, source, target)
+            if (
+                target == SourceType.API
+                and source != target
+                and not _is_dict_type(tool.return_type)
+            ):
+                t.function_body = _wrap_returns_in_dict(t.function_body)
 
-        t.return_type = _target_return_type(tool, source, target)
+        # Pass the transformed tool: a CLI body's typer.echo() has become a
+        # return by this point, and the annotation has to describe that.
+        t.return_type = _target_return_type(t, source, target)
         result.append(t)
     return result
+
+
+def _is_dict_type(return_type: str) -> bool:
+    """Whether an annotation already denotes a mapping FastAPI can serve as-is."""
+    return return_type.lstrip("\"'").lower().startswith("dict")
 
 
 def _target_return_type(tool: ToolInfo, source: SourceType, target: SourceType) -> str:
@@ -37,6 +50,11 @@ def _target_return_type(tool: ToolInfo, source: SourceType, target: SourceType) 
     if target == SourceType.CLI:
         return "None"
     if target == SourceType.API:
+        # FastAPI validates the response against this annotation, so it has to
+        # describe what the body actually returns. Every explicit return is
+        # wrapped into a dict above; a body with no return falls through to None.
+        if tool.function_body and not _has_top_level_return(tool.function_body):
+            return "None"
         return "dict"
     # MCP: preserve original if coming from MCP/API, use str from CLI
     if source == SourceType.CLI:
@@ -200,6 +218,76 @@ def _returns_to_echo(body: str) -> str:
     new_tree = transformer.visit(tree)
     ast.fix_missing_locations(new_tree)
     return ast.unparse(new_tree)
+
+
+class _TopLevelReturnVisitor(ast.NodeVisitor):
+    """Track whether a body returns at its own scope, ignoring nested defs."""
+
+    def __init__(self) -> None:
+        self.found = False
+        self._depth = 0
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._depth += 1
+        self.generic_visit(node)
+        self._depth -= 1
+
+    visit_AsyncFunctionDef = visit_FunctionDef  # type: ignore[assignment]
+
+    def visit_Return(self, node: ast.Return) -> None:
+        if self._depth == 0:
+            self.found = True
+
+
+def _has_top_level_return(body: str) -> bool:
+    try:
+        tree = ast.parse(body)
+    except SyntaxError:
+        return False
+    visitor = _TopLevelReturnVisitor()
+    visitor.visit(tree)
+    return visitor.found
+
+
+def _wrap_returns_in_dict(body: str) -> str:
+    """Wrap `return X` as `return {'result': X}` for FastAPI targets.
+
+    A converted handler is annotated `-> dict`, and FastAPI validates the
+    response against that annotation. Returning the source function's raw
+    scalar produced a ResponseValidationError on every call.
+    """
+    try:
+        tree = ast.parse(body)
+    except SyntaxError:
+        return body
+
+    new_tree = _WrapReturnInDict().visit(tree)
+    ast.fix_missing_locations(new_tree)
+    return ast.unparse(new_tree)
+
+
+class _WrapReturnInDict(ast.NodeTransformer):
+    """Replace `return X` with `return {'result': X}` at the body's own scope."""
+
+    def __init__(self) -> None:
+        self._depth = 0
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        self._depth += 1
+        result = self.generic_visit(node)
+        self._depth -= 1
+        return result
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_Return(self, node: ast.Return) -> ast.AST:
+        if self._depth > 0 or node.value is None:
+            return node
+        if isinstance(node.value, ast.Dict):
+            return node  # already a mapping — don't nest it
+        return ast.Return(
+            value=ast.Dict(keys=[ast.Constant(value="result")], values=[node.value])
+        )
 
 
 class _ReturnToEcho(ast.NodeTransformer):
