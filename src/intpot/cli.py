@@ -22,7 +22,10 @@ def _version_callback(value: bool) -> None:
 
 app = typer.Typer(
     name="intpot",
-    help="Universal converter between CLI (Typer), MCP (FastMCP), and API (FastAPI) interfaces.",
+    help=(
+        "Define Python tools once and serve them as a Typer CLI, FastAPI app, "
+        "or FastMCP server — or convert existing apps between all three."
+    ),
     no_args_is_help=True,
 )
 
@@ -38,7 +41,7 @@ def main(
         help="Show version and exit.",
     ),
 ) -> None:
-    """Universal converter between CLI, MCP, and API interfaces."""
+    """Serve Python tools as a CLI, API, or MCP server — or convert between them."""
 
 
 to_app = typer.Typer(
