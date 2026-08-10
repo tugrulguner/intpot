@@ -2,6 +2,10 @@
 {% if typing_imports %}
 from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
+{%- set needs_asyncio = tools | selectattr("is_async") | selectattr("function_body") | list %}
+{%- if needs_asyncio %}
+import asyncio
+{% endif %}
 import typer
 {%- if extra_imports %}
 {% for imp in extra_imports %}
@@ -11,13 +15,23 @@ import typer
 
 app = typer.Typer()
 {% for tool in tools %}
+{%- if tool.function_body %}
+
+{% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
+{%- for param in tool.parameters %}
+    {{ param.name }}: {{ param.type_annotation }},
+{%- endfor %}
+) -> {{ tool.return_type }}:
+    """{{ tool.description | escape_doc }}"""
+    {{ tool.function_body | indent(4) }}
+{%- endif %}
 
 
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
 @app.command()
-{% if tool.is_async %}async {% endif %}def {{ tool.name }}(
+def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
 {%- if not param.required %} = typer.Option({{ param.default | repr }}, help="{{ param.description | escape_doc }}")
@@ -26,14 +40,16 @@ app = typer.Typer()
 {%- endfor %}
 ) -> None:
     """{{ tool.description | escape_doc }}"""
-{% if tool.function_body %}
-    {{ tool.function_body | indent(4) }}
+{%- if tool.function_body %}
+{%- set call = "_" + tool.name + "_impl(" + (tool.parameters | map(attribute="name") | join(", ")) + ")" %}
+    result = {% if tool.is_async %}asyncio.run({{ call }}){% else %}{{ call }}{% endif %}
+    if result is not None:
+        typer.echo(result)
 {%- else %}
     # TODO: implement
     typer.echo("{{ tool.name }} called")
 {%- endif %}
-{%- endfor %}
-
+{% endfor %}
 
 if __name__ == "__main__":
     app()

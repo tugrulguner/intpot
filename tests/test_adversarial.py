@@ -170,7 +170,37 @@ class TestAsyncTools:
         for gen in _all_generators():
             code = gen.generate([tool])
             compile(code, "<string>", "exec")
-            assert "async def async_tool" in code
+
+    def test_async_tool_stays_async_for_mcp_and_api(self) -> None:
+        """MCP and FastAPI both await handlers, so the async marker is preserved."""
+        from intpot.core.generators.api import APIGenerator
+        from intpot.core.generators.mcp import MCPGenerator
+
+        tool = ToolInfo(name="async_tool", description="An async tool", is_async=True)
+
+        for gen in (MCPGenerator(), APIGenerator()):
+            assert "async def async_tool" in gen.generate([tool])
+
+    def test_async_command_is_not_emitted_for_cli(self) -> None:
+        """Typer cannot run an `async def` command — it would never be awaited.
+
+        The generated command stays synchronous; when a body is preserved it is
+        driven through asyncio.run instead.
+        """
+        from intpot.core.generators.cli import CLIGenerator
+
+        tool = ToolInfo(
+            name="async_tool",
+            description="An async tool",
+            is_async=True,
+            function_body="return 42",
+        )
+
+        code = CLIGenerator().generate([tool])
+
+        assert "async def _async_tool_impl(" in code
+        assert "asyncio.run(_async_tool_impl())" in code
+        assert "async def async_tool(" not in code
 
 
 class TestFunctionBody:
