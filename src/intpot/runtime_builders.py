@@ -71,9 +71,17 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
     except Exception:
         hints = {}
 
+    variadic = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+
     signature = inspect.signature(func)
     parameters = []
     for param_name, param in signature.parameters.items():
+        if param.kind in variadic:
+            # *args / **kwargs cannot be expressed as HTTP parameters. Leaving
+            # them out means the wrapper simply never passes them, which is
+            # what an empty tuple and dict amount to anyway; rewriting them to
+            # KEYWORD_ONLY produced a signature FastAPI could not serve.
+            continue
         marker = markers[sources.get(param_name) or ParamSource.body]
         declared = (
             marker(...)

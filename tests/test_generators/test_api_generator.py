@@ -85,3 +85,21 @@ def test_generated_app_serves_a_real_request():
 
     assert response.status_code == 200
     assert response.json() == 5
+
+
+def test_blank_lines_inside_a_body_are_preserved():
+    """Normalisation targets template seams, not the source's own spacing."""
+    body = "first = 1\n\n\n\nsecond = 2\nreturn {'a': first + second}"
+    tool = ToolInfo(name="spaced", description="Spaced.", function_body=body)
+
+    code = APIGenerator().generate([tool])
+
+    assert "first = 1\n\n\n\n    second = 2" in code
+
+
+def test_blank_lines_between_top_level_defs_are_capped():
+    tools = [_add_tool("return a + b"), _add_tool("return a + b")]
+
+    code = APIGenerator().generate(tools)
+
+    assert "\n\n\n\n" not in code

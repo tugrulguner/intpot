@@ -213,3 +213,31 @@ def test_build_typer_app_runs_async_tool():
 
     assert result.exit_code == 0
     assert "Hello, World!" in result.output
+
+
+def test_fastapi_endpoint_ignores_variadic_parameters():
+    """*args / **kwargs have no HTTP equivalent.
+
+    Rewriting them to KEYWORD_ONLY produced a signature FastAPI could not
+    serve; they are dropped from the route instead.
+    """
+    from fastapi.testclient import TestClient
+
+    from intpot.runtime_builders import build_fastapi_app
+
+    app = App("variadic")
+
+    @app.tool()
+    def add(a: int, b: int, *rest: int, **opts: str) -> int:
+        """Add two numbers."""
+        return a + b
+
+    api_app: Any = build_fastapi_app("test", app._tools)
+    spec = api_app.openapi()
+    ref = spec["paths"]["/add"]["post"]["requestBody"]["content"]["application/json"][
+        "schema"
+    ]["$ref"]
+    body_schema = spec["components"]["schemas"][ref.rsplit("/", 1)[-1]]
+
+    assert sorted(body_schema["properties"]) == ["a", "b"]
+    assert TestClient(api_app).post("/add", json={"a": 2, "b": 3}).json() == 5

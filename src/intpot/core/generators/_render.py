@@ -91,11 +91,13 @@ def _collect_extra_imports(tools: list[ToolInfo]) -> list[str]:
     return sorted(result)
 
 
-_EXCESS_BLANK_LINES = re.compile(r"\n{4,}")
+# Only runs that precede a top-level line: those are the template seams. A run
+# inside a function body or a docstring belongs to the source and is left alone.
+_EXCESS_BLANK_LINES = re.compile(r"\n{4,}(?=\S)")
 
 
 def _normalize_blank_lines(code: str) -> str:
-    """Collapse runs of more than two consecutive blank lines.
+    """Collapse runs of more than two blank lines before a top-level statement.
 
     Templates branch on whether a tool has a preserved body, and the two
     branches do not carry the same trailing whitespace. Normalising here keeps
