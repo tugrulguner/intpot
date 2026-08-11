@@ -10,6 +10,60 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.5.0] - 2026-08-10
+
+### Changed
+
+- `intpot serve --api` now reads tool arguments from the request body instead of the
+  query string, matching the code that `intpot eject --to api` generates. Serving and
+  ejecting the same app previously produced two different HTTP interfaces. Parameters
+  carrying an explicit source — `Query`, `Header`, or `Path` — are honoured as declared.
+  **If you call a served app with query-string arguments, send a JSON body instead.** ([#54](https://github.com/tugrulguner/intpot/pull/54))
+- The package description now reflects what intpot does — define tools once and serve them
+  as a CLI, API, or MCP server, as well as converting between the three. The old text
+  described only the converter, which predates the `intpot.App` runtime. ([#55](https://github.com/tugrulguner/intpot/pull/55))
+- `intpot serve --api` and `App.serve(mode="api")` now bind `127.0.0.1` instead of
+  `0.0.0.0`, so a served app is no longer reachable from the network by default. **Pass
+  `--host 0.0.0.0` if you were relying on that.** Alongside it, `intpot --version` no
+  longer crashes when package metadata is unreadable, and identifiers keep their leading
+  underscores — `_name` used to be rewritten to `name`, which could collide with a real
+  `name` in generated code. ([#60](https://github.com/tugrulguner/intpot/pull/60))
+
+### Fixed
+
+- `intpot eject --to api` no longer generates code that fails on every request. The
+  handler was annotated `-> dict` regardless of what the preserved function body actually
+  returned, so FastAPI validated the response against `dict` and raised
+  `ResponseValidationError`. The annotation now follows the tool's real return type. ([#52](https://github.com/tugrulguner/intpot/pull/52))
+- Generated Typer CLIs now print what their commands return. `intpot eject --to cli`
+  emitted the preserved function body directly under `@app.command()`, and Typer discards
+  return values, so the command computed its result and printed nothing — the same bug
+  fixed for `intpot serve --cli` in 0.4.1, which never reached the code generator. Async
+  tools are also fixed: the generated command was `async def`, which Typer never awaits,
+  and now runs the body through `asyncio.run`. ([#53](https://github.com/tugrulguner/intpot/pull/53))
+- `intpot to api` no longer generates handlers that fail on every request. Converted
+  handlers are annotated `-> dict`, but the body returned whatever the source function
+  returned, so FastAPI rejected the response. Scalar returns are now wrapped as
+  `{"result": ...}` — matching the stub the converter already emits for tools with no
+  body — while sources that already return a mapping are left as they are. ([#56](https://github.com/tugrulguner/intpot/pull/56))
+- The worked examples in the README and `examples/conversions/` now match what the
+  generators actually emit. Every example showed output from an older version of the
+  templates — one of them a Pydantic request model that has not been generated in a long
+  time. ([#57](https://github.com/tugrulguner/intpot/pull/57))
+- `intpot serve --cli` can now actually run your tools. Arguments meant for the served app
+  were rejected by intpot's own argument parser, and any that got past it were discarded
+  before Typer saw them, so the command could only ever print an error. Use `--` to pass
+  through a flag that intpot also defines, such as `--port`. ([#58](https://github.com/tugrulguner/intpot/pull/58))
+- Converting a directory no longer aborts when one file fails to import. Discovery
+  executes each candidate module to find its app instance, and any error other than a
+  missing app propagated out and killed the whole scan, so none of the working files were
+  converted either. Bad files are now skipped with a message on stderr. ([#59](https://github.com/tugrulguner/intpot/pull/59))
+- Tools declaring `*args` or `**kwargs` no longer break `intpot serve --api` — variadic
+  parameters have no HTTP equivalent and are left out of the route instead of producing a
+  signature FastAPI cannot serve. Generated code also stops reformatting the blank lines
+  inside a preserved function body; only the spacing between top-level definitions is
+  normalised. ([#61](https://github.com/tugrulguner/intpot/pull/61))
+
 ## [0.4.2] - 2026-08-08
 
 ### Added
