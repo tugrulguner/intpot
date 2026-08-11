@@ -48,3 +48,80 @@ def test_serve_no_app_found(tmp_source):
     result = runner.invoke(app, ["serve", str(source), "--cli"])
     assert result.exit_code == 1
     assert "No intpot App" in result.output
+
+
+def _two_tool_app(tmp_source):
+    return tmp_source("""
+        from intpot import App
+        app = App("demo")
+
+        @app.tool()
+        def add(a: int, b: int) -> int:
+            \"\"\"Add two numbers.\"\"\"
+            return a + b
+
+        @app.tool()
+        def greet(name: str, greeting: str = "Hello") -> str:
+            \"\"\"Greet someone.\"\"\"
+            return f"{greeting}, {name}!"
+    """)
+
+
+def test_serve_cli_runs_the_named_tool(tmp_source):
+    """`serve --cli` was unusable: intpot's own parser rejected the tool's
+    arguments, and the ones that got through were discarded before Typer saw
+    them."""
+    source = _two_tool_app(tmp_source)
+
+    result = runner.invoke(app, ["serve", str(source), "--cli", "add", "2", "3"])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "5"
+
+
+def test_serve_cli_forwards_options_it_does_not_own(tmp_source):
+    source = _two_tool_app(tmp_source)
+
+    result = runner.invoke(
+        app, ["serve", str(source), "--cli", "greet", "World", "--greeting", "Hi"]
+    )
+
+    assert result.exit_code == 0
+    assert "Hi, World!" in result.output
+
+
+def test_serve_cli_accepts_a_double_dash_separator(tmp_source):
+    """`--` is the escape hatch for a flag intpot also defines."""
+    source = _two_tool_app(tmp_source)
+
+    result = runner.invoke(app, ["serve", str(source), "--cli", "--", "greet", "World"])
+
+    assert result.exit_code == 0
+    assert "Hello, World!" in result.output
+
+
+def test_serve_restores_argv(tmp_source):
+    """serve rewrites sys.argv for the served app; it must put it back."""
+    import sys
+
+    source = _two_tool_app(tmp_source)
+    before = list(sys.argv)
+
+    runner.invoke(app, ["serve", str(source), "--cli", "add", "1", "1"])
+
+    assert sys.argv == before
+
+
+def test_serve_binds_loopback_by_default():
+    """Serving should not expose the app on the network unless asked."""
+    import re
+
+    result = runner.invoke(app, ["serve", "--help"])
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+
+    assert "0.0.0.0" not in clean.split("--host")[0]
+    import inspect as _inspect
+
+    from intpot.runtime import App
+
+    assert _inspect.signature(App.serve).parameters["host"].default == "127.0.0.1"

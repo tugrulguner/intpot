@@ -14,9 +14,9 @@ from intpot.commands.to_mcp import to_mcp
 
 def _version_callback(value: bool) -> None:
     if value:
-        from importlib.metadata import version
+        from intpot import __version__
 
-        typer.echo(f"intpot {version('intpot')}")
+        typer.echo(f"intpot {__version__}")
         raise typer.Exit()
 
 
@@ -58,7 +58,11 @@ add_app = typer.Typer(
 
 app.command("init")(init_command)
 app.command("inspect")(inspect_command)
-app.command("serve")(serve_command)
+app.command(
+    "serve",
+    # Arguments intpot does not recognise belong to the served app, not to us.
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)(serve_command)
 app.command("eject")(eject_command)
 to_app.command("cli")(to_cli)
 to_app.command("mcp")(to_mcp)

@@ -27,13 +27,18 @@ def _find_intpot_app(source_path: Path) -> object:
 
 
 def serve_command(
+    ctx: typer.Context,
     source: Path = typer.Argument(
         ..., help="Path to a Python file containing an intpot App"
     ),
     cli: bool = typer.Option(False, "--cli", help="Serve as Typer CLI"),
     api: bool = typer.Option(False, "--api", help="Serve as FastAPI"),
     mcp: bool = typer.Option(False, "--mcp", help="Serve as FastMCP server"),
-    host: str = typer.Option("0.0.0.0", "--host", help="API server host"),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="API server host (use 0.0.0.0 to expose it on the network)",
+    ),
     port: int = typer.Option(8000, "--port", help="API server port"),
 ) -> None:
     """Serve an intpot App as CLI, API, or MCP server."""
@@ -52,10 +57,17 @@ def serve_command(
     app_instance = _find_intpot_app(source_path)
     assert isinstance(app_instance, App)
 
-    # For CLI mode, pass remaining args through
     mode = selected[0]
-    if mode == "cli":
-        # Strip our own args so Typer gets the user's CLI args
-        sys.argv = [str(source_path)]
+    if mode != "cli":
+        app_instance.serve(mode=mode, host=host, port=port)
+        return
 
-    app_instance.serve(mode=mode, host=host, port=port)
+    # The served Typer app reads sys.argv, so hand it the user's arguments in
+    # place of our own. Anything intpot did not consume arrives in ctx.args;
+    # use `--` to pass through a flag that intpot also defines.
+    original_argv = sys.argv
+    sys.argv = [str(source_path), *ctx.args]
+    try:
+        app_instance.serve(mode=mode, host=host, port=port)
+    finally:
+        sys.argv = original_argv

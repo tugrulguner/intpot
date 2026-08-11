@@ -98,12 +98,13 @@ class App:
         generator_cls = getattr(mod, class_name)
         return generator_cls().generate(self.tools)
 
-    def serve(self, mode: str, *, host: str = "0.0.0.0", port: int = 8000) -> None:
+    def serve(self, mode: str, *, host: str = "127.0.0.1", port: int = 8000) -> None:
         """Serve the registered tools in the specified mode.
 
         Args:
             mode: One of "cli", "api", "mcp".
-            host: Host for API mode (default "0.0.0.0").
+            host: Host for API mode (default "127.0.0.1" — loopback only; pass
+                "0.0.0.0" to expose the server on the network).
             port: Port for API mode (default 8000).
         """
         if not self._tools:

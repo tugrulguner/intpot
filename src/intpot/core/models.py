@@ -53,16 +53,21 @@ def sanitize_identifier(name: str) -> str:
     """Convert an arbitrary string into a valid Python identifier.
 
     - Replaces invalid characters with ``_``
+    - Collapses runs of ``_`` into one
     - Prepends ``_`` if the name starts with a digit
     - Appends ``_`` if the name is a Python keyword
     - Returns ``_`` for empty / whitespace-only input
+
+    Leading and trailing underscores are preserved: stripping them collapsed
+    ``_name`` onto ``name``, so two distinct parameters could end up sharing an
+    identifier in the generated code.
     """
     if not name or not name.strip():
         return "_"
     # Replace any character that is not alphanumeric or underscore
     name = re.sub(r"[^0-9a-zA-Z_]", "_", name)
     # Collapse consecutive underscores
-    name = re.sub(r"_+", "_", name).strip("_")
+    name = re.sub(r"_+", "_", name)
     if not name:
         return "_"
     # Prepend underscore if starts with digit

@@ -47,13 +47,20 @@ def discover_sources(
 
         try:
             source_type, app_instance = detect_source(py_file)
-        except SyntaxError:
-            if verbose:
-                print(f"SKIP (syntax): {py_file}", file=sys.stderr)
-            continue
-        except (DetectionError, ImportError, OSError):
+        except DetectionError:
+            # Ordinary: most files in a project are not framework apps.
             if verbose:
                 print(f"SKIP (no app): {py_file}", file=sys.stderr)
+            continue
+        except Exception as exc:
+            # Detection imports the module, so this is the file's own code
+            # failing. One unimportable file must not abort the whole scan,
+            # but it is worth reporting even without --verbose: the file
+            # looked like an app and still produced nothing.
+            print(
+                f"SKIP (import failed): {py_file}: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
             continue
 
         if verbose:

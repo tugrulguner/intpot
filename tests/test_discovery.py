@@ -89,3 +89,67 @@ def test_discover_skips_pycache(tmp_path: Path):
 
     results = discover_sources(tmp_path)
     assert results == []
+
+
+def test_one_unimportable_file_does_not_abort_the_scan(tmp_path: Path, capsys):
+    """Detection executes each candidate, so a module can raise anything.
+
+    Only DetectionError, ImportError and OSError were caught, and everything
+    else propagated out of the scan — one bad file took down the whole run and
+    the good ones were never converted.
+    """
+    _write(
+        tmp_path,
+        "boom.py",
+        """\
+        from fastmcp import FastMCP
+        mcp = FastMCP("boom")
+        raise ValueError("module-level failure")
+        """,
+    )
+    _write(
+        tmp_path,
+        "good.py",
+        """\
+        from fastmcp import FastMCP
+        mcp = FastMCP("good")
+
+        @mcp.tool()
+        def hello(name: str) -> str:
+            return name
+        """,
+    )
+
+    results = discover_sources(tmp_path)
+
+    assert [p.name for p, _, _ in results] == ["good.py"]
+    assert "SKIP (import failed)" in capsys.readouterr().err
+
+
+def test_an_import_failure_is_reported_without_verbose(tmp_path: Path, capsys):
+    """A file that looked like an app and yielded nothing is worth saying out loud."""
+    _write(
+        tmp_path,
+        "boom.py",
+        """\
+        from fastmcp import FastMCP
+        mcp = FastMCP("boom")
+        raise RuntimeError("nope")
+        """,
+    )
+
+    discover_sources(tmp_path, verbose=False)
+
+    err = capsys.readouterr().err
+    assert "boom.py" in err
+    assert "RuntimeError: nope" in err
+
+
+def test_files_without_an_app_stay_quiet(tmp_path: Path, capsys):
+    """The common case — most files are not apps — must not be noisy."""
+    _write(tmp_path, "plain.py", "x = 42\n")
+
+    results = discover_sources(tmp_path)
+
+    assert results == []
+    assert capsys.readouterr().err == ""

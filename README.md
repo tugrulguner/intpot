@@ -158,7 +158,7 @@ def greet(name: str, greeting: str = "Hello") -> str:
 
 # Serve as any framework
 app.serve(mode="cli")                         # Run as Typer CLI
-app.serve(mode="api", host="0.0.0.0", port=8000)  # Run as FastAPI
+app.serve(mode="api", port=8000)              # Run as FastAPI on 127.0.0.1
 app.serve(mode="mcp")                         # Run as MCP server
 
 # Eject to standalone code
@@ -419,7 +419,7 @@ intpot serve <source> --cli|--api|--mcp [--host <host>] [--port <port>]
 | `--cli` | Serve as a Typer CLI |
 | `--api` | Serve as a FastAPI app |
 | `--mcp` | Serve as a FastMCP server |
-| `--host` | API server host (default: `0.0.0.0`) |
+| `--host` | API server host (default: `127.0.0.1` — pass `0.0.0.0` to expose it on the network) |
 | `--port` | API server port (default: `8000`) |
 
 ### `intpot eject`
