@@ -34,7 +34,11 @@ def serve_command(
     cli: bool = typer.Option(False, "--cli", help="Serve as Typer CLI"),
     api: bool = typer.Option(False, "--api", help="Serve as FastAPI"),
     mcp: bool = typer.Option(False, "--mcp", help="Serve as FastMCP server"),
-    host: str = typer.Option("0.0.0.0", "--host", help="API server host"),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="API server host (use 0.0.0.0 to expose it on the network)",
+    ),
     port: int = typer.Option(8000, "--port", help="API server port"),
 ) -> None:
     """Serve an intpot App as CLI, API, or MCP server."""

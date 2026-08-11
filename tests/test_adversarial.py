@@ -253,3 +253,19 @@ class TestRoutePath:
         code = gen.generate([tool])
         compile(code, "<string>", "exec")
         assert "/get_users" in code
+
+
+class TestLeadingUnderscores:
+    def test_leading_underscore_is_preserved(self) -> None:
+        """Stripping it collapsed `_name` onto `name`, so two distinct
+        parameters could share one identifier in the generated code."""
+        assert sanitize_identifier("_name") == "_name"
+        assert sanitize_identifier("_name") != sanitize_identifier("name")
+
+    def test_dunder_survives_as_a_distinct_name(self) -> None:
+        assert sanitize_identifier("__init__") == "_init_"
+        assert sanitize_identifier("__init__").isidentifier()
+
+    def test_underscore_runs_still_collapse(self) -> None:
+        assert sanitize_identifier("user__id") == "user_id"
+        assert sanitize_identifier("---") == "_"

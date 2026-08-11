@@ -14,9 +14,9 @@ from intpot.commands.to_mcp import to_mcp
 
 def _version_callback(value: bool) -> None:
     if value:
-        from importlib.metadata import version
+        from intpot import __version__
 
-        typer.echo(f"intpot {version('intpot')}")
+        typer.echo(f"intpot {__version__}")
         raise typer.Exit()
 
 

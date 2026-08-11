@@ -110,3 +110,18 @@ def test_serve_restores_argv(tmp_source):
     runner.invoke(app, ["serve", str(source), "--cli", "add", "1", "1"])
 
     assert sys.argv == before
+
+
+def test_serve_binds_loopback_by_default():
+    """Serving should not expose the app on the network unless asked."""
+    import re
+
+    result = runner.invoke(app, ["serve", "--help"])
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+
+    assert "0.0.0.0" not in clean.split("--host")[0]
+    import inspect as _inspect
+
+    from intpot.runtime import App
+
+    assert _inspect.signature(App.serve).parameters["host"].default == "127.0.0.1"
