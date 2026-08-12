@@ -23,6 +23,15 @@ htmlcov/
 # OS
 .DS_Store
 
+# Agent tooling — skills are shared, local permissions are not
+.claude/settings.local.json
+
+# iCloud conflict copies, if the checkout lives under a synced folder
+* 2
+* 2.*
+* 3
+* 3.*
+
 # IDE
 .vscode/
 .idea/
