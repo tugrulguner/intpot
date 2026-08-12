@@ -496,7 +496,7 @@ intpot add skills [--agent <name>] [--path <dir>]
 
 | Agent | Files created |
 |-------|--------------|
-| Claude Code | `.claude/skills/intpot-cli.md`, `.claude/skills/intpot-python.md` |
+| Claude Code | `.claude/skills/intpot-cli/SKILL.md`, `.claude/skills/intpot-python/SKILL.md` |
 | Cursor | `.cursor/rules/intpot-cli.mdc`, `.cursor/rules/intpot-python.mdc` |
 | Windsurf | `.windsurf/rules/intpot-cli.md`, `.windsurf/rules/intpot-python.md` |
 | GitHub Copilot | `.github/copilot-instructions.md` (appended) |

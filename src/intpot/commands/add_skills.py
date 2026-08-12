@@ -26,19 +26,43 @@ from intpot.skills.content import (
 _WRITERS: dict[Agent, tuple] = {}  # populated below
 
 
+_CLAUDE_SKILLS = (
+    (
+        "intpot-cli",
+        "intpot CLI",
+        cli_skill_body,
+        "Convert Python apps between Typer (CLI), FastMCP (MCP) and FastAPI, or "
+        "serve one set of tools as all three, using the intpot command line. Use "
+        "when asked to turn a CLI into an MCP server or REST API, to expose "
+        "functions to an agent, or to scaffold a CLI/MCP/API project.",
+    ),
+    (
+        "intpot-python",
+        "intpot Python API",
+        python_skill_body,
+        "Use intpot programmatically: define tools once with intpot.App and serve "
+        "or eject them as Typer/FastAPI/FastMCP, or convert existing apps with "
+        "intpot.load(). Use when writing scripts, build steps or CI that need "
+        "framework conversion rather than the intpot command line.",
+    ),
+)
+
+
 def _write_claude(root: Path) -> list[Path]:
-    """Write Claude Code skills to .claude/skills/."""
-    skills_dir = root / ".claude" / "skills"
-    skills_dir.mkdir(parents=True, exist_ok=True)
+    """Write Claude Code skills to .claude/skills/<name>/SKILL.md.
+
+    Claude Code looks for a directory per skill containing SKILL.md, and reads
+    the YAML frontmatter to discover it. A flat .md file is never loaded.
+    """
+    skills_root = root / ".claude" / "skills"
     written: list[Path] = []
 
-    cli_path = skills_dir / "intpot-cli.md"
-    cli_path.write_text(claude_skill("intpot CLI", cli_skill_body()))
-    written.append(cli_path)
-
-    py_path = skills_dir / "intpot-python.md"
-    py_path.write_text(claude_skill("intpot Python API", python_skill_body()))
-    written.append(py_path)
+    for name, title, body, description in _CLAUDE_SKILLS:
+        skill_dir = skills_root / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        path = skill_dir / "SKILL.md"
+        path.write_text(claude_skill(title, body(), name=name, description=description))
+        written.append(path)
 
     return written
 

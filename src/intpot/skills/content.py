@@ -27,9 +27,15 @@ def python_skill_body() -> str:
 # ---------------------------------------------------------------------------
 
 
-def claude_skill(title: str, body: str) -> str:
-    """Format as a Claude Code skill (.md in .claude/skills/)."""
-    return body
+def claude_skill(title: str, body: str, *, name: str, description: str) -> str:
+    """Format as a Claude Code skill (.claude/skills/<name>/SKILL.md).
+
+    Claude Code discovers a skill by its YAML frontmatter: `name` identifies it
+    and `description` is what the model reads to decide whether the skill is
+    relevant. A file without frontmatter is never loaded, so the body alone --
+    which is what this used to return -- was silently inert.
+    """
+    return f"---\nname: {name}\ndescription: {description}\n---\n\n{body}"
 
 
 def cursor_rule(title: str, body: str, globs: str = '["*.py"]') -> str:

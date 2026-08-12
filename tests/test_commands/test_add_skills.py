@@ -25,14 +25,18 @@ def test_add_skills_auto_detect_claude(tmp_path: Path, monkeypatch):
     assert result.exit_code == 0
     assert "claude" in result.output
 
-    assert (tmp_path / ".claude" / "skills" / "intpot-cli.md").exists()
-    assert (tmp_path / ".claude" / "skills" / "intpot-python.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "intpot-cli" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "intpot-python" / "SKILL.md").exists()
 
-    cli_content = (tmp_path / ".claude" / "skills" / "intpot-cli.md").read_text()
+    cli_content = (
+        tmp_path / ".claude" / "skills" / "intpot-cli" / "SKILL.md"
+    ).read_text()
     assert "intpot" in cli_content
     assert "intpot to cli" in cli_content
 
-    py_content = (tmp_path / ".claude" / "skills" / "intpot-python.md").read_text()
+    py_content = (
+        tmp_path / ".claude" / "skills" / "intpot-python" / "SKILL.md"
+    ).read_text()
     assert "intpot.load" in py_content
 
 
@@ -118,7 +122,7 @@ def test_add_skills_explicit_agent(tmp_path: Path, monkeypatch):
 
     result = runner.invoke(app, ["add", "skills", "--agent", "claude"])
     assert result.exit_code == 0
-    assert (tmp_path / ".claude" / "skills" / "intpot-cli.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "intpot-cli" / "SKILL.md").exists()
 
 
 def test_add_skills_explicit_path(tmp_path: Path):
@@ -148,7 +152,7 @@ def test_add_skills_multiple_agents(tmp_path: Path, monkeypatch):
     assert result.exit_code == 0
     assert "claude" in result.output
     assert "cursor" in result.output
-    assert (tmp_path / ".claude" / "skills" / "intpot-cli.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "intpot-cli" / "SKILL.md").exists()
     assert (tmp_path / ".cursor" / "rules" / "intpot-cli.mdc").exists()
 
 
@@ -211,7 +215,9 @@ def test_add_skills_claude_content_quality(tmp_path: Path, monkeypatch):
 
     runner.invoke(app, ["add", "skills", "--agent", "claude"])
 
-    cli_content = (tmp_path / ".claude" / "skills" / "intpot-cli.md").read_text()
+    cli_content = (
+        tmp_path / ".claude" / "skills" / "intpot-cli" / "SKILL.md"
+    ).read_text()
     # Must have the key commands
     assert "intpot init" in cli_content
     assert "intpot to cli" in cli_content
@@ -220,7 +226,9 @@ def test_add_skills_claude_content_quality(tmp_path: Path, monkeypatch):
     assert "--output" in cli_content
     assert "--dry-run" in cli_content
 
-    py_content = (tmp_path / ".claude" / "skills" / "intpot-python.md").read_text()
+    py_content = (
+        tmp_path / ".claude" / "skills" / "intpot-python" / "SKILL.md"
+    ).read_text()
     assert "intpot.load" in py_content
     assert "IntpotApp" in py_content
     assert ".to_cli()" in py_content
@@ -228,3 +236,43 @@ def test_add_skills_claude_content_quality(tmp_path: Path, monkeypatch):
     assert ".to_api()" in py_content
     assert ".write(" in py_content
     assert "inspect_app" in py_content
+
+
+def test_claude_skills_use_the_layout_claude_code_discovers(
+    tmp_path: Path, monkeypatch
+):
+    """A flat .md file in .claude/skills/ is never loaded.
+
+    Claude Code looks for a directory per skill containing SKILL.md, and reads
+    the YAML frontmatter to find it. The installer used to write
+    `.claude/skills/intpot-cli.md` with no frontmatter, so the whole feature was
+    inert for Claude Code.
+    """
+    monkeypatch.chdir(tmp_path)
+
+    runner.invoke(app, ["add", "skills", "--agent", "claude"])
+
+    skills = tmp_path / ".claude" / "skills"
+    assert (skills / "intpot-cli" / "SKILL.md").is_file()
+    assert (skills / "intpot-python" / "SKILL.md").is_file()
+    assert list(skills.glob("*.md")) == [], "flat .md files are not discovered"
+
+
+def test_claude_skills_carry_discoverable_frontmatter(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    runner.invoke(app, ["add", "skills", "--agent", "claude"])
+
+    for name in ("intpot-cli", "intpot-python"):
+        text = (tmp_path / ".claude" / "skills" / name / "SKILL.md").read_text()
+        header, _, body = text.partition("\n---\n")
+        assert header.startswith("---\n"), f"{name} has no frontmatter block"
+        assert f"name: {name}" in header
+        # The description is what the model reads to decide relevance, so it has
+        # to say what the skill is for, not just name it.
+        description = next(
+            line for line in header.splitlines() if line.startswith("description:")
+        )
+        assert len(description) > 60, f"{name} description is too thin to match on"
+        assert "intpot" in description
+        assert body.strip().startswith("# intpot")
