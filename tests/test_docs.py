@@ -9,6 +9,8 @@ referenced a path that had moved.
 from __future__ import annotations
 
 import re
+import subprocess
+from fnmatch import fnmatch
 from pathlib import Path
 
 import click
@@ -74,14 +76,48 @@ def _documented_paths() -> list[tuple[str, str]]:
     return sorted(set(found))
 
 
+def _tracked_paths() -> set[str]:
+    out = subprocess.run(
+        ["git", "ls-files"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return set(out.splitlines())
+
+
+_TRACKED = _tracked_paths()
+
+
+def _git_knows(rel: str) -> bool:
+    """Whether git tracks this path, the directory it names, or the glob it spells."""
+    if rel in _TRACKED:
+        return True
+    if any(p.startswith(rel.rstrip("/") + "/") for p in _TRACKED):
+        return True
+    return "*" in rel and any(fnmatch(p, rel) for p in _TRACKED)
+
+
+def _git_ignores(rel: str) -> bool:
+    """Deliberately absent — AGENTS.md names `.claude/settings.local.json` to say
+    *don't commit it*. Asking git rather than the filesystem keeps this test from
+    depending on what happens to be lying around in a given checkout."""
+    return (
+        subprocess.run(
+            ["git", "check-ignore", "-q", rel], cwd=REPO_ROOT, check=False
+        ).returncode
+        == 0
+    )
+
+
 @pytest.mark.parametrize(("doc", "token"), _documented_paths())
 def test_docs_reference_only_paths_that_exist(doc: str, token: str) -> None:
     for root in _PATH_ROOTS:
-        base = REPO_ROOT / root
-        if "*" in token:
-            if any(base.glob(token)):
-                return
-        elif (base / token).exists():
+        rel = str(root / token) if str(root) != "." else token
+        if _git_knows(rel) or _git_ignores(rel):
             return
     tried = " or ".join(str(r) if str(r) != "." else "<repo root>" for r in _PATH_ROOTS)
-    pytest.fail(f"{doc} references `{token}`, which does not exist under {tried}")
+    pytest.fail(
+        f"{doc} references `{token}`, which git does not know about under {tried}"
+    )
