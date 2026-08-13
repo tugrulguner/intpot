@@ -101,31 +101,9 @@ Key concepts:
 
 ## Releasing
 
-The version lives in exactly one place: `version` in `pyproject.toml`. `__version__`
-and `intpot --version` both read it back through `importlib.metadata`, and `uv.lock`
-is regenerated from it — never edit any of those by hand.
-
-```bash
-uv version 0.4.2          # or: uv version --bump patch|minor|major
-```
-
-That single command rewrites `pyproject.toml` and re-locks `uv.lock`. Then:
-
-1. `make changelog` — towncrier assembles every fragment in `changelog.d/` into a dated
-   `## [0.4.2]` section and deletes the fragments. Read the result before committing it;
-   `make changelog-draft` renders the same thing without writing. The section is
-   required, not optional — the release is blocked without it.
-2. Open a release PR, merge it once `make check` and CI are green.
-3. Tag it: `git tag v0.4.2 && git push origin v0.4.2`.
-
-The tag triggers `.github/workflows/release.yml`, which gates on two things before it
-publishes anything: the tag must match the `pyproject.toml` version, and `CHANGELOG.md`
-must have a section for it. Once both pass and CI is green it builds, pushes to PyPI,
-then opens a GitHub Release for the tag — notes taken from that changelog section, with
-the built wheel and sdist attached.
-
-Nothing in the release is hand-written twice: the version comes from `pyproject.toml`
-and the release notes come from `CHANGELOG.md`.
+Releases are cut by maintainers — see [`docs/releasing.md`](docs/releasing.md). Nothing in
+that process is yours to run: don't bump the version in a PR, and don't tag. Land your
+change with a changelog fragment and it goes out with the next release.
 
 ## Reporting Issues
 

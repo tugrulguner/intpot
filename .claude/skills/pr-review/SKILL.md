@@ -31,49 +31,12 @@ Read the files the PR touches in their current main-branch state before judging 
 
 ### 3. intpot-specific checks
 
-Apply these in addition to general correctness/security review:
+Read the **Reviewing a change** section of [`AGENTS.md`](../../../AGENTS.md) and apply it,
+along with the **Rules that come from real bugs** section above it. Those are the criteria
+for this codebase and they live there so every agent and every human reviewer reads the
+same list. Don't restate them here — this file would go stale, and it has before.
 
-**Architecture**
-- Inspectors (`src/intpot/core/inspectors/`) must subclass `BaseInspector` and return `list[ToolInfo]` from `inspect()`
-- Generators (`src/intpot/core/generators/`) must subclass `BaseGenerator` and return `str` from `generate()`
-- Commands (`src/intpot/commands/`) should use `typer.Argument` / `typer.Option` and return `None`
-- Conversion commands should delegate to `_convert.py`'s shared `convert()` function
-- New models belong in `src/intpot/core/models.py`
-
-**ToolInfo / ParameterInfo contracts**
-- `ParameterInfo.default` uses `_SENTINEL` for required params — check that new code uses the `.required` property instead of comparing against `_SENTINEL` directly, especially outside of `core/`
-- `ParameterInfo.name` and `ToolInfo.name` are auto-sanitized via `sanitize_identifier()` — don't duplicate that logic
-- Changes to these dataclasses affect all inspectors, generators, and transforms — check ripple effects
-
-**Templates (src/intpot/templates/*.j2)**
-- Templates use custom Jinja2 filters: `repr`, `pascal`, `escape_doc` — verify any new filter usage is registered in `_render.py`
-- Generated code must include correct imports (check the import block logic)
-- Path params in API template should NOT get `= Path(...)` — FastAPI infers them from the route
-
-**Transforms (src/intpot/core/transforms.py)**
-- AST transformations handle `typer.echo` ↔ `return` and `typer.Exit` ↔ `raise` — verify new transforms don't break these
-- Return type adjustments: CLI → `None`, API → `dict`, MCP → preserves or `str`
-
-**Detection and discovery**
-- `detect_source()` raises `DetectionError` — commands must catch this and show a user-friendly message, not a traceback
-- `discover_sources()` silently skips unrecognizable files — this is intentional
-
-**Error handling**
-- Commands should catch `DetectionError` and exit with `typer.Exit(1)` + a message to stderr
-- Never let internal exceptions (DetectionError, import errors, AST errors) leak as tracebacks to CLI users
-
-**Testing patterns**
-- Tests use `tmp_source` fixture from `conftest.py` (factory that writes temp Python files)
-- CLI tests use `typer.testing.CliRunner`
-- Test names follow `test_<scenario>` or `test_<framework>_<scenario>`
-- Tests should assert specific behavior, not just `exit_code == 0` — check that outputs contain expected content
-- Exception tests use `pytest.raises(ErrorClass, match="...")`
-
-**Code style**
-- All files start with `from __future__ import annotations`
-- Ruff handles formatting (line length 88, double quotes, isort with intpot first-party)
-- B008 is suppressed — `typer.Option()` / `typer.Argument()` as defaults are intentional
-- No unnecessary abstractions, docstrings, or type annotations on existing code
+Apply general correctness and security review on top of them.
 
 ### 4. Verify your claims
 

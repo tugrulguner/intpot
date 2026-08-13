@@ -7,6 +7,19 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
+  # .gitignore covers these while they're untracked, but staging a directory
+  # (`git add src/intpot/templates/skills/`) picks them up anyway — that is how
+  # `intpot-cli 2.md` reached a PR in #65.
+  - repo: local
+    hooks:
+      - id: no-conflict-copies
+        name: block file-sync conflict copies
+        language: fail
+        entry: >-
+          looks like an iCloud/Dropbox conflict copy — delete it or rename it,
+          don't commit it
+        files: '(^|/)[^/]* [0-9]+(\.[A-Za-z0-9]+)?$'
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
     hooks:

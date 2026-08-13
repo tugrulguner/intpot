@@ -28,21 +28,10 @@ For each changed file, read enough of the unchanged surrounding code to understa
 
 ### 3. Review
 
-Apply the same intpot-specific checks as the pr-review skill:
-
-**Check for:**
-- Inspector/generator/command contracts (BaseInspector, BaseGenerator, ToolInfo)
-- `_SENTINEL` usage outside core/ (should use `.required` property instead)
-- Commands catching `DetectionError` instead of leaking tracebacks
-- Template import logic correctness
-- AST transform consistency (typer.echo ↔ return, typer.Exit ↔ raise)
-- Test quality (specific assertions, not just exit code checks)
-- `from __future__ import annotations` at top of new files
-
-**Ignore:**
-- Formatting (ruff handles it)
-- Missing docstrings on working code
-- Scope creep suggestions beyond the change's intent
+Read the **Reviewing a change** and **Rules that come from real bugs** sections of
+[`AGENTS.md`](../../../AGENTS.md) and apply them. That file is the single copy of this
+codebase's criteria — it also tells you what *not* to flag (formatting, docstrings on
+untouched code, scope creep).
 
 ### 4. Run tests
 

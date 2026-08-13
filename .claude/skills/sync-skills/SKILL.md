@@ -1,88 +1,60 @@
 ---
 name: sync-skills
-description: Update all .claude/skills/ when intpot's architecture, patterns, or conventions change. TRIGGER when base classes change (BaseInspector, BaseGenerator, ToolInfo, ParameterInfo), new commands/inspectors/generators are added, error handling patterns change, template filters or structure change, test conventions change, or CLAUDE.md is updated.
+description: Update intpot's agent-facing docs when architecture, patterns, or conventions change. TRIGGER when base classes change (BaseInspector, BaseGenerator, ToolInfo, ParameterInfo), new commands/inspectors/generators are added, error handling or return-type rules change, template filters or structure change, test conventions change, or the public API changes.
 user-invocable: true
 allowed-tools: Read Grep Glob Edit Write Agent
-paths: "src/intpot/core/models.py, src/intpot/core/inspectors/base.py, src/intpot/core/generators/base.py, src/intpot/core/generators/_render.py, src/intpot/core/transforms.py, src/intpot/core/detector.py, src/intpot/core/discovery.py, src/intpot/commands/*, src/intpot/templates/*.j2, tests/conftest.py, CLAUDE.md"
+paths: "src/intpot/core/models.py, src/intpot/core/inspectors/base.py, src/intpot/core/generators/base.py, src/intpot/core/generators/_render.py, src/intpot/core/transforms.py, src/intpot/core/detector.py, src/intpot/core/discovery.py, src/intpot/commands/*, src/intpot/templates/*.j2, tests/conftest.py, AGENTS.md"
 ---
 
-# Sync Skills
+# Sync agent docs
 
-When intpot's architecture, patterns, or conventions change, update the review skills in `.claude/skills/` so they stay accurate.
+intpot has two sets of agent-facing docs, and they rot for different reasons.
 
-## When to run
+| What | Who reads it | Goes stale when |
+|------|--------------|-----------------|
+| `AGENTS.md` | Anyone working **on** intpot — every agent, every human | Internal contracts change |
+| `src/intpot/templates/skills/*.md` | **Users'** agents, via `intpot add skills` | The public API changes |
 
-This skill should activate when any of these change:
-
-- **Core models** (`models.py`): New fields on `ToolInfo`/`ParameterInfo`, new enums, sentinel changes
-- **Base classes** (`base.py` in inspectors/generators): Contract changes to `inspect()` or `generate()`
-- **New inspectors/generators/commands**: A new file appears in those directories
-- **Detector/discovery** (`detector.py`, `discovery.py`): New exception types, new detection patterns
-- **Templates** (`*.j2`): New filters, new template variables, structural changes
-- **Transforms** (`transforms.py`): New AST transformations, new return type rules
-- **Test conventions** (`conftest.py`): New fixtures, changed patterns
-- **CLAUDE.md**: New environment or workflow rules
+`.claude/skills/*/SKILL.md` deliberately hold no criteria — only procedure. If you find
+yourself adding a rule to one of them, it belongs in `AGENTS.md` instead. Three copies of
+the same checklist is what this repo had before, and two of them were wrong.
 
 ## Steps
 
 ### 1. Identify what changed
 
-Read the changed files. Determine which category of change occurred:
-- New contract or field (affects architecture checks in skills)
-- New pattern or convention (affects what skills tell Claude to look for)
-- New error type or handling pattern (affects error handling checks)
-- New command/inspector/generator (needs to be referenced in skills)
-- Environment or tooling change (affects allowed-tools or run instructions)
+Read the changed files and decide which side is affected:
 
-### 2. Read current skills
+- **Internal contract** — a field on `ToolInfo`/`ParameterInfo`, a base-class signature, a
+  new inspector/generator/command, a new exception, a new Jinja filter, a return-type
+  rule, a test convention → `AGENTS.md`
+- **Public API** — anything a user writes in their own code: `@app.tool()`, `App.serve`,
+  `App.eject`, `intpot.load`, CLI commands and flags → `templates/skills/*.md`, **and**
+  the README's CLI reference
 
-Read all SKILL.md files:
-- `.claude/skills/pr-review/SKILL.md`
-- `.claude/skills/review-code/SKILL.md`
-- Any other skills in `.claude/skills/`
+Both can be true of one change.
 
-### 3. Determine what's stale
+### 2. Check against reality, not against the old text
 
-Compare the current skill content against the actual codebase state. Look for:
-- References to classes, functions, or patterns that no longer exist
-- Missing references to new classes, functions, or patterns that should be checked during review
-- Outdated test conventions or fixture names
-- Wrong file paths or directory structures
-- Stale allowed-tools lists
-- Outdated architecture descriptions
+For every claim you are about to write or keep, verify it in the source. The two rules
+that went stale here survived a rewrite because nobody re-read the code:
 
-### 4. Update skills
+- "API return type is always `dict`" — false since #56; it is `None` for a body with no
+  top-level return
+- "`discover_sources()` silently skips files" — false since #59; import failures always
+  report to stderr
 
-Edit only the parts that are stale. Do not rewrite entire skills — make targeted edits.
+### 3. Edit
 
-**Common updates:**
+Make targeted edits. Don't rewrite for style. If a rule came from a real bug, say which
+bug — that is what stops someone deleting it later as noise.
 
-| Change | What to update in skills |
-|--------|------------------------|
-| New field on `ParameterInfo`/`ToolInfo` | Add to the contracts section in pr-review |
-| New inspector/generator subclass | Add to the architecture checks |
-| New custom exception | Add to error handling checks |
-| New Jinja2 filter | Add to template checks |
-| New AST transform | Add to transform consistency checks |
-| New test fixture | Add to testing patterns section |
-| New command pattern | Add to command structure checks |
-| CLAUDE.md env change | Update allowed-tools or run instructions |
+### 4. Verify
 
-### 5. Verify
+- `.venv/bin/pytest tests/test_skills_content.py tests/test_docs.py` — these guard the
+  shipped skills against API drift and the docs against dead paths and undocumented flags
+- Confirm no path or symbol you referenced has since moved
 
-After editing, read back each modified skill and confirm:
-- No broken references to files or classes that don't exist
-- No duplicate entries
-- Instructions are still coherent and not contradictory
-- Severity guidance still makes sense
+### 5. Report
 
-### 6. Report
-
-Output a short summary of what changed and which skills were updated.
-
-## Rules
-
-- Only update what's actually stale. Don't rewrite for style.
-- If a change doesn't affect review guidance, don't touch the skills.
-- Keep the same structure and tone as the existing skills.
-- Never remove checks — only update or add. If a pattern is deprecated, note what replaced it.
+One short summary: what changed, which files you updated, what you verified.
