@@ -149,9 +149,30 @@ maintainer task — see `docs/releasing.md`.
 **Do not commit** conflict copies (`file 2.py`), `.venv`, or `.claude/settings.local.json`.
 Stage explicit paths rather than `git add -A`.
 
-## When you change the public API
+## Keeping the docs honest
 
-`src/intpot/templates/skills/*.md` are installed into users' projects and read by their
-agents. They went five months describing an API that no longer existed.
-`tests/test_skills_content.py` guards the obvious cases; update the skills in the same PR
-as the API change.
+Two doc surfaces rot, for different reasons, and both are read by agents rather than by
+people who would notice:
+
+| What | Read by | Update it when |
+|------|---------|----------------|
+| This file, and `docs/reviewing.md` | Anyone working **on** intpot | An internal contract changes: a field on `ToolInfo`/`ParameterInfo`, a base-class signature, a new inspector/generator/command, a new exception, a new Jinja filter, a return-type rule, a test convention |
+| `src/intpot/templates/skills/*.md` | **Users'** agents, via `intpot add skills` | The public API changes: `@app.tool()`, `App.serve`, `App.eject`, `intpot.load`, any CLI command or flag — and update the README's CLI reference in the same PR |
+
+The shipped skills went five months describing an API that no longer existed. Update
+whichever surface applies in the same PR as the change, not afterwards.
+
+**Verify each claim against the source, not against the previous wording.** Two rules in
+this repo's review criteria survived a rewrite while being wrong, because they were edited
+as prose: "the API return type is always `dict`" (false since #56) and "`discover_sources`
+skips files silently" (false since #59). If a rule came from a real bug, name the bug —
+that is what stops the next person deleting it as noise.
+
+`tests/test_skills_content.py` and `tests/test_docs.py` catch the mechanical cases: a
+shipped skill naming a field that no longer exists, a CLI flag missing from the README, a
+path in this file that git doesn't know about. They can't catch a rule that is merely
+wrong.
+
+`.claude/skills/*/SKILL.md` deliberately contain no criteria and no procedure — only the
+Claude-specific wrapper around `docs/reviewing.md`. If you are about to add a rule to one
+of them, it belongs here instead.

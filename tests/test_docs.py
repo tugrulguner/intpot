@@ -57,7 +57,7 @@ def test_readme_documents_every_cli_flag(command: str, flag: str) -> None:
 # A backticked token is treated as a repo path if it looks like one. Prose and
 # code samples in the README use plenty of paths that intentionally don't exist
 # (`app.py`, `mcp_server.py`), so only the two contributor-facing docs are checked.
-_DOC_FILES = ("AGENTS.md", "CONTRIBUTING.md")
+_DOC_FILES = ("AGENTS.md", "CONTRIBUTING.md", "docs/reviewing.md", "docs/releasing.md")
 
 # Paths in AGENTS.md's layout table are relative to the package, not the repo.
 _PATH_ROOTS = (Path(), Path("src/intpot"))
@@ -71,6 +71,11 @@ def _documented_paths() -> list[tuple[str, str]]:
         text = (REPO_ROOT / name).read_text()
         for token in _PATH_TOKEN.findall(text):
             if token.startswith(("http", "//")):
+                continue
+            # A repo-relative path carries an extension or a trailing slash.
+            # Without that rule an org/repo slug like `tugrulguner/intpot`
+            # reads as a path.
+            if "." not in token.rsplit("/", 1)[-1] and not token.endswith("/"):
                 continue
             found.append((name, token))
     return sorted(set(found))
@@ -93,6 +98,9 @@ _TRACKED = _tracked_paths()
 def _git_knows(rel: str) -> bool:
     """Whether git tracks this path, the directory it names, or the glob it spells."""
     if rel in _TRACKED:
+        return True
+    # A doc added in this same commit isn't tracked yet.
+    if (REPO_ROOT / rel).exists():
         return True
     if any(p.startswith(rel.rstrip("/") + "/") for p in _TRACKED):
         return True

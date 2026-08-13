@@ -8,43 +8,11 @@ argument-hint: [file-path]
 
 # intpot Local Code Review
 
-Review uncommitted changes in the working tree before they become a PR.
+Follow [`docs/reviewing.md`](../../../docs/reviewing.md) — the uncommitted-work path in
+step 1, then steps 2 through 6, reporting locally rather than through `gh`.
 
-## Input
+`$ARGUMENTS` is an optional path to scope the review; with no argument, review every
+uncommitted change.
 
-`$ARGUMENTS` is an optional file path to scope the review. If empty, review all uncommitted changes.
-
-## Steps
-
-### 1. Gather the diff
-
-- If `$ARGUMENTS` is provided: `git diff $ARGUMENTS` and `git diff --cached $ARGUMENTS`
-- Otherwise: `git diff` and `git diff --cached` for all changes
-- `git status` to see untracked files
-
-### 2. Read context
-
-For each changed file, read enough of the unchanged surrounding code to understand the intent.
-
-### 3. Review
-
-Read the **Reviewing a change** and **Rules that come from real bugs** sections of
-[`AGENTS.md`](../../../AGENTS.md) and apply them. That file is the single copy of this
-codebase's criteria — it also tells you what *not* to flag (formatting, docstrings on
-untouched code, scope creep).
-
-### 4. Run tests
-
-Run `git diff --name-only` to find changed files, then run relevant tests:
-- Changes in `src/intpot/core/inspectors/` → `.venv/bin/pytest tests/test_inspectors/ -x`
-- Changes in `src/intpot/core/generators/` → `.venv/bin/pytest tests/test_generators/ -x`
-- Changes in `src/intpot/commands/` → `.venv/bin/pytest tests/test_commands/ -x`
-- Changes in `src/intpot/core/transforms.py` → `.venv/bin/pytest tests/test_roundtrip.py -x`
-- Otherwise → `.venv/bin/pytest -x --tb=short`
-
-### 5. Report
-
-Output a short summary:
-- List issues found with severity (High/Medium/Low) and file:line references
-- Test results (pass/fail)
-- One line verdict: ready to commit, or what needs fixing
+The criteria come from [`AGENTS.md`](../../../AGENTS.md). Don't add any here — this file
+is invisible to every agent that isn't Claude Code.

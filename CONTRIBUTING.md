@@ -92,7 +92,8 @@ Key concepts:
    `removed`, or `fixed`. See [`changelog.d/README.md`](changelog.d/README.md). Never
    edit `CHANGELOG.md` directly; it's assembled from these at release time. If the
    change isn't user-facing, ask a maintainer for the `skip-changelog` label instead.
-6. Ensure `make check` passes (lint, typecheck, and tests).
+6. Ensure `make check` passes (lint, typecheck, and tests). [`docs/reviewing.md`](docs/reviewing.md)
+   is what a reviewer will apply to your change — worth reading first.
 7. **Push** to your fork:
    ```bash
    git push origin my-feature
