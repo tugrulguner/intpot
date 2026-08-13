@@ -21,8 +21,11 @@ That single command rewrites `pyproject.toml` and re-locks `uv.lock`.
    `## [0.5.1]` section and deletes the fragments. Read the result before committing it;
    `make changelog-draft` renders the same thing without writing. The section is
    required, not optional — the release is blocked without it.
-2. Check whether anything shipped in this release came off [`ROADMAP.md`](../ROADMAP.md).
-   Move it out of the planned list in the same PR.
+2. Read the assembled section and ask whether anything in it came off
+   [`ROADMAP.md`](../ROADMAP.md) — move those items out of the planned list, and bump the
+   "(current)" heading to the version you are cutting. Nothing enforces this: a test can
+   assert a feature exists, but not that a roadmap still calls it unbuilt. The roadmap
+   once described body transforms as a v2 goal for four months after they shipped.
 3. Open a release PR and merge it once `make check` and CI are green.
 4. Tag the merge commit and push the tag:
 
