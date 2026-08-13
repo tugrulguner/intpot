@@ -108,14 +108,30 @@ def _git_knows(rel: str) -> bool:
 
 
 def _git_ignores(rel: str) -> bool:
-    """Deliberately absent — AGENTS.md names `.claude/settings.local.json` to say
-    *don't commit it*. Asking git rather than the filesystem keeps this test from
-    depending on what happens to be lying around in a given checkout."""
+    """Some paths are named in the docs precisely because they must not be committed.
+    Asking git rather than the filesystem keeps this test from depending on whatever
+    happens to be lying around in a given checkout."""
     return (
         subprocess.run(
             ["git", "check-ignore", "-q", rel], cwd=REPO_ROOT, check=False
         ).returncode
         == 0
+    )
+
+
+# Guidance for agents working on intpot belongs in AGENTS.md and docs/reviewing.md,
+# which every tool reads. It used to live in .claude/skills/, where no other agent
+# could see it and two rules went wrong unnoticed. `intpot add skills` writing these
+# directories into a *user's* project is the product and is unaffected.
+_VENDOR_DIRS = (".claude/", ".cursor/", ".windsurf/", ".clinerules/", ".github/copilot")
+
+
+def test_no_vendor_specific_agent_files_are_tracked() -> None:
+    tracked = sorted(p for p in _TRACKED if p.startswith(_VENDOR_DIRS))
+    assert not tracked, (
+        f"Vendor-specific agent files are tracked: {tracked}. "
+        f"Put the guidance in AGENTS.md or docs/reviewing.md so every agent reads it, "
+        f"and keep any tool-specific wrapper untracked."
     )
 
 

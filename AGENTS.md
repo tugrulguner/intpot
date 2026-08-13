@@ -146,8 +146,8 @@ in `pyproject.toml`; `uv version 0.5.1` updates it and the lockfile together, an
 `__version__` reads it back through `importlib.metadata`. Cutting a release is a
 maintainer task — see `docs/releasing.md`.
 
-**Do not commit** conflict copies (`file 2.py`), `.venv`, or `.claude/settings.local.json`.
-Stage explicit paths rather than `git add -A`.
+**Do not commit** conflict copies (`file 2.py`), `.venv`, or your agent's own config
+directory. Stage explicit paths rather than `git add -A`.
 
 ## Keeping the docs honest
 
@@ -173,6 +173,11 @@ shipped skill naming a field that no longer exists, a CLI flag missing from the 
 path in this file that git doesn't know about. They can't catch a rule that is merely
 wrong.
 
-`.claude/skills/*/SKILL.md` deliberately contain no criteria and no procedure — only the
-Claude-specific wrapper around `docs/reviewing.md`. If you are about to add a rule to one
-of them, it belongs here instead.
+**Nothing vendor-specific is tracked in this repo.** There is no `.claude/`, `.cursor/`,
+or `.windsurf/` directory here, and there was: the review criteria lived in Claude-only
+skill files, where no other agent could read them and nobody noticed two of them going
+wrong. Guidance goes in this file or `docs/reviewing.md`, both of which every tool and
+every human reads. If your agent wants a shortcut wrapping them, keep it untracked.
+
+(`intpot add skills` writing `.claude/skills/` into a *user's* project is the product, and
+unrelated — it emits six formats and privileges none of them.)

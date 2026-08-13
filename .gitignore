@@ -23,8 +23,12 @@ htmlcov/
 # OS
 .DS_Store
 
-# Agent tooling — skills are shared, local permissions are not
-.claude/settings.local.json
+# Agent tooling. Guidance for agents working on intpot lives in AGENTS.md and
+# docs/reviewing.md, which every tool reads; nothing vendor-specific is tracked.
+.claude/
+.cursor/
+.windsurf/
+.clinerules/
 
 # iCloud conflict copies, if the checkout lives under a synced folder
 * 2
