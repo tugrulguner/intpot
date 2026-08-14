@@ -108,19 +108,32 @@ def extract_function_body(fn: Any) -> str | None:
     func_node = tree.body[0]
     lines = source.splitlines()
 
-    # Find where the body starts (skip decorator lines and def line)
-    body_start_line = func_node.body[0].lineno  # 1-indexed
-
-    # If the first body statement is a docstring, skip it
+    # Find the first real statement, skipping a leading docstring
     first_stmt = func_node.body[0]
     if isinstance(first_stmt, ast.Expr) and isinstance(
         first_stmt.value, (ast.Constant, ast.Str)
     ):
         if len(func_node.body) <= 1:
             return None  # Only a docstring, no real body
-        body_start_line = func_node.body[1].lineno
+        first_stmt = func_node.body[1]
 
-    body_lines = lines[body_start_line - 1 :]
+    line_index = first_stmt.lineno - 1  # lineno is 1-indexed
+    if line_index >= len(lines):
+        return None
+
+    # `def double(x): return x * 2` puts the body on the signature's own line, so
+    # slicing whole lines would swallow the `def` and produce a nested function
+    # that nothing ever calls. Anything before the statement on that line that
+    # isn't indentation means the line is shared, so start at the statement.
+    before_stmt = lines[line_index][: first_stmt.col_offset]
+    if before_stmt.strip():
+        body_lines = [
+            lines[line_index][first_stmt.col_offset :],
+            *lines[line_index + 1 :],
+        ]
+    else:
+        body_lines = lines[line_index:]
+
     if not body_lines:
         return None
 
