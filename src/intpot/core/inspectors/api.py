@@ -15,14 +15,6 @@ from intpot.core.inspectors._utils import (
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ParamSource, ToolInfo
 
-_INTERNAL_ROUTES = {
-    "openapi",
-    "swagger_ui_html",
-    "swagger_ui_redirect",
-    "redoc_html",
-    "root",
-}
-
 _PATH_PARAM_RE = re.compile(r"\{(\w+)\}")
 
 
@@ -57,18 +49,23 @@ def _get_param_source(obj: Any) -> ParamSource | None:
 
 class APIInspector(BaseInspector):
     def inspect(self, app: Any) -> list[ToolInfo]:
+        # Local import: fastapi is an optional extra, and this method only runs
+        # once a FastAPI app has already been detected.
+        from fastapi.routing import APIRoute
+
         tools: list[ToolInfo] = []
 
         for route in app.routes:
-            if not hasattr(route, "endpoint"):
+            # Only the user's own endpoints are APIRoute. FastAPI registers its
+            # docs endpoints (/openapi.json, /docs, /redoc) as plain Starlette
+            # Routes, so this excludes them exactly. Filtering by function name
+            # instead used to drop any endpoint the user happened to call
+            # `root` — i.e. the usual handler for `/`.
+            if not isinstance(route, APIRoute):
                 continue
 
             endpoint = route.endpoint
             name = endpoint.__name__
-
-            # Skip FastAPI's built-in routes
-            if name in _INTERNAL_ROUTES:
-                continue
 
             description = endpoint.__doc__ or ""
             description = description.strip()
