@@ -12,7 +12,7 @@ from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
 # are not instances of anything in the standalone `click` package and its
 # parameter types are not click's singletons. Everything here is therefore
-# matched structurally rather than by identity or isinstance.
+# matched structurally rather than by identity or isinstance — see #77.
 _PARAM_TYPE_NAMES = {
     # click's own vocabulary
     "text": "str",
