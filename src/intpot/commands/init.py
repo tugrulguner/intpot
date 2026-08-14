@@ -27,6 +27,18 @@ def init_command(
         typer.echo("Project name must not contain path separators.", err=True)
         raise typer.Exit(1)
 
+    # The name is substituted into a docstring and a string literal in the
+    # scaffolded source, so a quote, newline or control character produced a
+    # project that would not even parse.
+    invalid = {ch for ch in name if ch in "'\"" or ord(ch) < 32}
+    if invalid:
+        shown = ", ".join(repr(ch) for ch in sorted(invalid))
+        typer.echo(
+            f"Project name must not contain quotes or control characters: {shown}",
+            err=True,
+        )
+        raise typer.Exit(1)
+
     target_dir = Path.cwd() / name
     if target_dir.exists():
         typer.echo(f"Directory '{name}' already exists.", err=True)

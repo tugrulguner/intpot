@@ -64,8 +64,13 @@ def sanitize_identifier(name: str) -> str:
     """
     if not name or not name.strip():
         return "_"
-    # Replace any character that is not alphanumeric or underscore
-    name = re.sub(r"[^0-9a-zA-Z_]", "_", name)
+    # Replace any character Python would not accept inside an identifier.
+    # Tested per character rather than against [0-9a-zA-Z_]: Python 3 allows
+    # non-ASCII letters, and mangling `café` into `caf_` both lost information
+    # and invented collisions with a genuine `caf_`. `("a" + ch)` is what makes
+    # this exact — it accepts `é` while still rejecting `²`, which is
+    # alphanumeric but not valid in an identifier.
+    name = "".join(ch if ("a" + ch).isidentifier() else "_" for ch in name)
     # Collapse consecutive underscores
     name = re.sub(r"_+", "_", name)
     if not name:
@@ -112,6 +117,27 @@ class ParameterInfo:
         return self.default is _SENTINEL
 
 
+def deduplicate_identifiers(names: list[str]) -> list[str]:
+    """Make a list of identifiers unique, preserving order and first occurrence.
+
+    Sanitising is per-name, so distinct inputs can land on the same identifier:
+    `a-b` and `a_b` both become `a_b`. Two parameters sharing a name is
+    `SyntaxError: duplicate argument` in the generated function, so later
+    collisions get a numeric suffix.
+    """
+    seen: set[str] = set()
+    result: list[str] = []
+    for name in names:
+        candidate = name
+        counter = 2
+        while candidate in seen:
+            candidate = f"{name}_{counter}"
+            counter += 1
+        seen.add(candidate)
+        result.append(candidate)
+    return result
+
+
 @dataclass
 class ToolInfo:
     name: str
@@ -127,3 +153,8 @@ class ToolInfo:
 
     def __post_init__(self) -> None:
         self.name = sanitize_identifier(self.name)
+        # Parameter names are sanitised individually, so two distinct source
+        # names can arrive here already collapsed onto one identifier.
+        unique = deduplicate_identifiers([p.name for p in self.parameters])
+        for param, name in zip(self.parameters, unique, strict=True):
+            param.name = name
