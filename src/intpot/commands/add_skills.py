@@ -23,9 +23,6 @@ from intpot.skills.content import (
 # Per-agent writers
 # ---------------------------------------------------------------------------
 
-_WRITERS: dict[Agent, tuple] = {}  # populated below
-
-
 _CLAUDE_SKILLS = (
     (
         "intpot-cli",
@@ -177,24 +174,36 @@ _AGENT_WRITERS: dict[Agent, Callable[..., list[Path]]] = {
     Agent.codex: _write_codex,
 }
 
-# Folders whose presence signals that an agent is in use
+# Paths whose presence means the agent is actually configured for this project.
+# These are deliberately specific. `.github/` only means the project is on
+# GitHub, and a bare `AGENTS.md` is a cross-tool convention that most repos now
+# have for reasons unrelated to Codex — detecting on either matched ordinary
+# repositories using no agent at all, and both writers *append*, so a plain CI
+# repo had hundreds of lines added to its own AGENTS.md.
 _AGENT_MARKERS: dict[Agent, str] = {
     Agent.claude: ".claude",
     Agent.cursor: ".cursor",
     Agent.windsurf: ".windsurf",
-    Agent.copilot: ".github",
+    Agent.copilot: ".github/copilot-instructions.md",
     Agent.cline: ".clinerules",
-    Agent.codex: "AGENTS.md",
 }
+
+# Codex reads AGENTS.md, but so does nearly everything else, so its presence is
+# not evidence of Codex. There is no project-level marker that is: the Codex CLI
+# keeps its configuration in the user's home directory. Ask for it by name.
+_REQUIRES_EXPLICIT_REQUEST = (Agent.codex,)
 
 
 def _detect_agents(root: Path) -> list[Agent]:
-    """Auto-detect which agents are configured in the project."""
-    found: list[Agent] = []
-    for agent, marker in _AGENT_MARKERS.items():
-        if (root / marker).exists():
-            found.append(agent)
-    return found
+    """Auto-detect which agents are configured in the project.
+
+    Only agents with an unambiguous project-level marker are detected. Missing
+    one is recoverable with --agent; guessing wrong silently edits files the
+    user never asked to touch.
+    """
+    return [
+        agent for agent, marker in _AGENT_MARKERS.items() if (root / marker).exists()
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -232,9 +241,12 @@ def add_skills(
     else:
         agents = _detect_agents(root)
         if not agents:
+            explicit = ", ".join(a.value for a in _REQUIRES_EXPLICIT_REQUEST)
             typer.echo(
                 "No AI coding agents detected. Use --agent to specify one "
-                "(claude, cursor, windsurf, copilot, cline, codex).",
+                "(claude, cursor, windsurf, copilot, cline, codex).\n"
+                f"Note: {explicit} is never auto-detected — AGENTS.md is a "
+                "cross-tool convention, so its presence does not imply it.",
                 err=True,
             )
             raise typer.Exit(1)
