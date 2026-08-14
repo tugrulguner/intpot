@@ -12,8 +12,8 @@ import re
 import subprocess
 from fnmatch import fnmatch
 from pathlib import Path
+from typing import Any
 
-import click
 import pytest
 from typer.main import get_command
 
@@ -29,17 +29,51 @@ def _cli_flags() -> list[tuple[str, str]]:
     """Every long option the CLI exposes, as (command path, flag)."""
     found: list[tuple[str, str]] = []
 
-    def walk(command: click.Command, path: list[str]) -> None:
+    def walk(command: Any, path: list[str]) -> None:
         for param in command.params:
             for opt in getattr(param, "opts", []):
                 if opt.startswith("--") and opt not in _GENERATED_FLAGS:
                     found.append((" ".join(path), opt))
-        if isinstance(command, click.Group):
-            for name, sub in command.commands.items():
+        # Duck-typed: typer vendors its own click, so `isinstance(command,
+        # click.Group)` matches nothing and this walk silently stopped
+        # descending into subcommands. See test_cli_flag_discovery_is_not_vacuous.
+        children = getattr(command, "commands", None)
+        if isinstance(children, dict):
+            for name, sub in children.items():
                 walk(sub, [*path, name])
 
     walk(get_command(app), ["intpot"])
     return sorted(set(found))
+
+
+# Every command that exposes at least one long flag. Hard-coded on purpose:
+# deriving it from the same walk being tested would make the check circular.
+_COMMANDS_WITH_FLAGS = [
+    "intpot serve",
+    "intpot inspect",
+    "intpot eject",
+    "intpot init",
+    "intpot to cli",
+    "intpot to mcp",
+    "intpot to api",
+    "intpot add skills",
+]
+
+
+def test_cli_flag_discovery_is_not_vacuous():
+    """A parametrised test that collects nothing still reports green.
+
+    The walk above used to gate on `isinstance(command, click.Group)`. typer
+    0.27 vendors click, so that matched nothing, the walk never descended, and
+    this file quietly went from 22 flag assertions to 1 — with the whole suite
+    still passing. A silently empty guard is worse than no guard.
+    """
+    flags = _cli_flags()
+    discovered = {command for command, _ in flags}
+
+    assert len(flags) >= 15, f"only {len(flags)} flags discovered: {flags}"
+    missing = [c for c in _COMMANDS_WITH_FLAGS if c not in discovered]
+    assert not missing, f"not discovered: {missing} (found {sorted(discovered)})"
 
 
 @pytest.mark.parametrize(("command", "flag"), _cli_flags())
