@@ -44,3 +44,15 @@ def test_init_existing_dir(tmp_path, monkeypatch):
     (tmp_path / "existing").mkdir()
     result = runner.invoke(app, ["init", "existing", "--type", "mcp"])
     assert result.exit_code == 1
+
+
+def test_scaffolded_api_binds_loopback_not_every_interface(tmp_path, monkeypatch):
+    """`intpot init --type api` must not scaffold a network-exposed server."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["init", "my-api", "--type", "api"])
+
+    assert result.exit_code == 0
+    content = (tmp_path / "my-api" / "main.py").read_text()
+    assert 'host="127.0.0.1"' in content
+    assert 'uvicorn.run(app, host="0.0.0.0"' not in content

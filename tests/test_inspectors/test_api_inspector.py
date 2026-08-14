@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import FastAPI
 
 from intpot.core.inspectors.api import APIInspector
@@ -162,3 +164,74 @@ def test_generator_output_correct_fastapi_types():
     assert "Header" in output
     assert "q: str = Query(" in output
     assert "token: str = Header(" in output
+
+
+def test_an_endpoint_named_root_is_not_dropped():
+    """`@app.get("/") def root()` is the usual handler for `/`.
+
+    Built-in routes used to be filtered by function name, and `root` was on that
+    list, so the most common endpoint in FastAPI silently vanished from every
+    conversion.
+    """
+    app = FastAPI()
+
+    @app.get("/")
+    def root() -> dict:
+        """The landing endpoint."""
+        return {"message": "hello"}
+
+    @app.get("/health")
+    def health() -> dict:
+        """Health check."""
+        return {"ok": True}
+
+    tools = APIInspector().inspect(app)
+
+    assert sorted(t.name for t in tools) == ["health", "root"]
+
+
+def test_fastapi_own_documentation_routes_are_excluded():
+    """/openapi.json, /docs and /redoc are FastAPI's, not the user's."""
+    app = FastAPI()
+
+    @app.post("/work")
+    def work(x: int) -> dict:
+        """Do work."""
+        return {"x": x}
+
+    tools = APIInspector().inspect(app)
+
+    assert [t.name for t in tools] == ["work"]
+    assert not {"openapi", "swagger_ui_html", "redoc_html"} & {t.name for t in tools}
+
+
+def test_a_root_endpoint_survives_conversion_and_runs():
+    """The generated CLI must actually expose and execute the root command."""
+    import typer
+    from typer.testing import CliRunner
+
+    from intpot.core.generators.cli import CLIGenerator
+    from intpot.core.models import SourceType
+    from intpot.core.transforms import transform_tools
+
+    app = FastAPI()
+
+    @app.get("/")
+    def root(name: str) -> dict:
+        """Greet from the landing endpoint."""
+        return {"message": f"hello {name}"}
+
+    @app.get("/health")
+    def health() -> dict:
+        """Second command, so Typer keeps a named command group."""
+        return {"ok": True}
+
+    tools = transform_tools(APIInspector().inspect(app), SourceType.API, SourceType.CLI)
+    namespace: dict[str, Any] = {}
+    exec(compile(CLIGenerator().generate(tools), "<generated>", "exec"), namespace)
+
+    result = CliRunner().invoke(namespace["app"], ["root", "world"])
+
+    assert result.exit_code == 0, result.output
+    assert "hello world" in result.output
+    assert isinstance(namespace["app"], typer.Typer)

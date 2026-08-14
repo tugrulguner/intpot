@@ -103,3 +103,47 @@ def test_blank_lines_between_top_level_defs_are_capped():
     code = APIGenerator().generate(tools)
 
     assert "\n\n\n\n" not in code
+
+
+def _one_tool() -> list[ToolInfo]:
+    return [
+        ToolInfo(
+            name="echo",
+            description="Echo.",
+            parameters=[ParameterInfo(name="msg", type_annotation="str")],
+            return_type="dict",
+            function_body='return {"msg": msg}',
+        )
+    ]
+
+
+def test_generated_api_binds_loopback_not_every_interface():
+    """Generated code must not put the user on the network without asking.
+
+    `serve --api` has defaulted to 127.0.0.1 since #60, but the generated file
+    still called uvicorn with host="0.0.0.0" — so ejecting and running it
+    exposed the tools on every interface, which is the opposite of what the
+    docs promise.
+    """
+    output = APIGenerator().generate(_one_tool())
+
+    assert '"127.0.0.1"' in output
+    assert "0.0.0.0" not in output.replace(
+        '# Loopback only. Change to "0.0.0.0" to expose this on the network.', ""
+    )
+
+
+def test_generated_host_matches_the_serve_default():
+    """Whatever `App.serve` defaults to, the generated file must agree.
+
+    They are the same app in two forms; a divergence here is how the last one
+    went unnoticed.
+    """
+    import inspect as _inspect
+
+    from intpot.runtime import App
+
+    serve_default = _inspect.signature(App.serve).parameters["host"].default
+    output = APIGenerator().generate(_one_tool())
+
+    assert f'host="{serve_default}"' in output
