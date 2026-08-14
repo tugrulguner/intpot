@@ -1,0 +1,46 @@
+name: Changelog
+
+on:
+  pull_request:
+    branches: [main]
+    # `labeled`/`unlabeled` matter: applying `skip-changelog` has to re-run this
+    # check. Living in ci.yml with the default types, it did not, so a labelled
+    # PR stayed red until someone happened to push again.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read # Required to inspect the pull request's changed files.
+
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    name: changelog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Skip non-user-facing changes
+        if: contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+        run: echo "skip-changelog label present"
+      - name: Require this PR's changelog fragment
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Anchored to this PR's own number: a fragment belonging to some other
+          # PR used to satisfy the check.
+          pattern="^changelog\.d/${PR_NUMBER}\.(added|changed|deprecated|removed|fixed)\.md$"
+          if gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --paginate --jq '.[].filename' | grep -Eq "$pattern"; then
+            echo "changelog fragment found for PR #${PR_NUMBER}"
+            exit 0
+          fi
+          echo "::error::no changelog fragment for PR #${PR_NUMBER} — add changelog.d/${PR_NUMBER}.<type>.md (see changelog.d/README.md), or apply the 'skip-changelog' label if this change is not user-facing"
+          exit 1

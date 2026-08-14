@@ -1,0 +1,46 @@
+# Keep dependencies up to date.
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Workflow actions are pinned to commit SHAs, which nothing else will ever move.
+# Without this file those pins silently rot, security fixes included.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "skip-changelog"
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "skip-changelog"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "pyright"
+          - "pre-commit"
+          - "towncrier"
+      runtime-dependencies:
+        patterns:
+          - "typer"
+          - "jinja2"
+          - "fastapi*"
+          - "fastmcp"
+          - "uvicorn"

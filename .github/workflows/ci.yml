@@ -7,50 +7,102 @@ on:
     branches: [main]
   workflow_call:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
+    name: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --all-extras
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - run: uv sync --all-extras --locked
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
 
   typecheck:
+    name: typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --all-extras
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - run: uv sync --all-extras --locked
       - run: uv run pyright src/ tests/
 
-  changelog:
-    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: PR must touch a changelog fragment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh pr diff ${{ github.event.pull_request.number }} --name-only \
-             | grep -Eq '^changelog\.d/[0-9]+\.(added|changed|deprecated|removed|fixed)\.md$'; then
-            echo "changelog fragment found"
-            exit 0
-          fi
-          echo "::error::no changelog fragment in this PR — add changelog.d/${{ github.event.pull_request.number }}.<type>.md (see changelog.d/README.md), or apply the 'skip-changelog' label if this change isn't user-facing"
-          exit 1
-
   test:
+    name: test (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --all-extras
-      - run: uv run pytest tests/ -v --cov=src/intpot --cov-report=term-missing
+      - run: uv sync --all-extras --locked
+      - run: >-
+          uv run pytest tests/ -v
+          --cov=src/intpot
+          --cov-report=term-missing
+          --cov-fail-under=80
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - run: uv build
+      # Packaging breaks are otherwise only discovered while cutting a release.
+      - name: Verify distribution artifacts
+        run: |
+          python3 - <<'PY'
+          import glob
+          import tarfile
+          import zipfile
+
+          wheels = glob.glob("dist/*.whl")
+          sdists = glob.glob("dist/*.tar.gz")
+          assert len(wheels) == 1, f"expected one wheel, found {wheels}"
+          assert len(sdists) == 1, f"expected one sdist, found {sdists}"
+
+          with zipfile.ZipFile(wheels[0]) as archive:
+              names = archive.namelist()
+              assert "intpot/__init__.py" in names, names
+              # Template data backs three different commands, and a wheel that
+              # drops any of them still imports cleanly — the failure only shows
+              # up when a user runs the command.
+              for required, breaks in [
+                  ("intpot/templates/cli_app.py.j2", "every generator"),
+                  ("intpot/templates/scaffold/", "intpot init"),
+                  ("intpot/templates/skills/", "intpot add skills"),
+              ]:
+                  assert any(n.startswith(required) for n in names), (
+                      f"{required} missing from the wheel — {breaks} would fail"
+                  )
+
+          with tarfile.open(sdists[0]) as archive:
+              names = archive.getnames()
+              assert any(n.endswith("/src/intpot/__init__.py") for n in names), names
+
+          print(f"verified {wheels[0]} and {sdists[0]}")
+          PY
