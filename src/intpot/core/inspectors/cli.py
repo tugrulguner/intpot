@@ -5,25 +5,42 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-import click
-
 from intpot.core.inspectors._utils import extract_function_body, extract_source_imports
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 
+# Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
+# are not instances of anything in the standalone `click` package and its
+# parameter types are not click's singletons. Everything here is therefore
+# matched structurally rather than by identity or isinstance — see #77.
+_PARAM_TYPE_NAMES = {
+    # click's own vocabulary
+    "text": "str",
+    "integer": "int",
+    "float": "float",
+    "boolean": "bool",
+    # typer's vendored click reports Python names directly
+    "str": "str",
+    "int": "int",
+    "bool": "bool",
+    "string": "str",
+}
+
 
 def _click_type_to_str(param_type: Any) -> str:
-    """Map Click parameter types to Python type name strings."""
-    type_map = {
-        click.STRING: "str",
-        click.INT: "int",
-        click.FLOAT: "float",
-        click.BOOL: "bool",
-    }
-    for click_type, name in type_map.items():
-        if param_type is click_type or isinstance(param_type, type(click_type)):
-            return name
-    return "str"
+    """Map a Click/Typer parameter type to a Python type name."""
+    name = getattr(param_type, "name", None)
+    if isinstance(name, str) and name.lower() in _PARAM_TYPE_NAMES:
+        return _PARAM_TYPE_NAMES[name.lower()]
+    # Fall back to the class name: IntParamType -> "int".
+    cls_name = type(param_type).__name__.removesuffix("ParamType").lower()
+    return _PARAM_TYPE_NAMES.get(cls_name, "str")
+
+
+def _child_commands(obj: Any) -> dict[str, Any] | None:
+    """The sub-commands of a group, or None if this is a leaf command."""
+    commands = getattr(obj, "commands", None)
+    return commands if isinstance(commands, dict) else None
 
 
 class CLIInspector(BaseInspector):
@@ -53,16 +70,15 @@ class CLIInspector(BaseInspector):
 
     def _extract_commands(
         self,
-        group: click.BaseCommand,  # type: ignore[reportGeneralTypeIssues]
+        group: Any,
         tools: list[ToolInfo],
         prefix: str = "",
     ) -> None:
-        """Recursively extract commands from Click groups."""
-        commands: dict[str, click.Command] = {}
-        if isinstance(group, click.Group):
-            commands = group.commands
-        elif isinstance(group, click.Command):
-            commands = {group.name or "main": group}
+        """Recursively extract commands from Click/Typer groups."""
+        commands = _child_commands(group)
+        if commands is None:
+            # A single command rather than a group.
+            commands = {getattr(group, "name", None) or "main": group}
 
         for cmd_name, cmd in commands.items():
             if cmd_name is None:
@@ -71,7 +87,7 @@ class CLIInspector(BaseInspector):
             full_name = f"{prefix}{cmd_name}".replace("-", "_")
 
             # Recurse into sub-groups
-            if isinstance(cmd, click.Group):
+            if _child_commands(cmd) is not None:
                 self._extract_commands(cmd, tools, prefix=f"{full_name}_")
                 continue
 
@@ -79,7 +95,7 @@ class CLIInspector(BaseInspector):
 
     def _extract_single_command(
         self,
-        cmd: click.Command,
+        cmd: Any,
         name: str,
         tools: list[ToolInfo],
     ) -> None:
