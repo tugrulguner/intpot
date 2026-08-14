@@ -35,8 +35,8 @@ app = FastAPI()
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
 {%- set fa_type = param.param_source.fastapi_class if param.param_source else "Body" %}
-{%- if not param.required %} = {{ fa_type }}(default={{ param.default | repr }}{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
-{%- else %} = {{ fa_type }}(...{% if param.description %}, description="{{ param.description | escape_doc }}"{% endif %})
+{%- if not param.required %} = {{ fa_type }}(default={{ param.default | repr }}{% if param.description %}, description={{ param.description | repr }}{% endif %})
+{%- else %} = {{ fa_type }}(...{% if param.description %}, description={{ param.description | repr }}{% endif %})
 {%- endif %},
 {%- endfor %}
 {% endif -%}

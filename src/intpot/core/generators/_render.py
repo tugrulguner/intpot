@@ -61,8 +61,22 @@ def _to_pascal_case(name: str) -> str:
 
 
 def _escape_docstring(text: str) -> str:
-    """Escape triple quotes in docstrings to prevent syntax errors."""
-    return text.replace('"""', '\\"\\"\\"')
+    """Make text safe to drop between triple quotes.
+
+    Backslashes are escaped first, or escaping the quotes would re-introduce
+    them. Text ending in a double quote is escaped too, otherwise it runs into
+    the closing delimiter and starts a fourth quote.
+
+    This is only for docstrings. Where a string *literal* is needed, use the
+    `repr` filter instead: hand-written quotes around arbitrary text produced
+    'SyntaxError: unterminated string literal' for any description containing a
+    quote or a newline.
+    """
+    text = text.replace("\\", "\\\\")
+    text = text.replace('"""', '\\"\\"\\"')
+    if text.endswith('"'):
+        text = text[:-1] + '\\"'
+    return text
 
 
 _FRAMEWORK_IMPORT_MARKERS = {
