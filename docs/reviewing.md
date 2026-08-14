@@ -40,10 +40,30 @@ From `AGENTS.md`, then general correctness and security review on top.
 
 Always `make check` before signing off. While iterating, the narrower runs are:
 
+`make check` resolves from `uv.lock`, so it proves the change works against the pinned
+dependencies — not against what a user installing today would get. If you touch code that
+reaches into a third-party framework's internals, run it against current releases too:
+
+```bash
+PYTHONPATH=$PWD/src uv run --no-project \
+  --with typer --with fastapi --with fastmcp --with uvicorn --with jinja2 \
+  --with pytest --with pytest-cov --with httpx \
+  pytest tests/ -q
+```
+
+`--with <name>` resolves the newest release, and `--no-project` keeps the lockfile out of
+it. As of 0.5.1 that passes: 340 tests against typer 0.27.1, fastapi 0.141.1 and
+fastmcp 3.4.7.
+
+A pinned lockfile is why the typer 0.26 breakage sat undetected for two and a half months
+while CI stayed green.
+
+
 | Changed | Run |
 |---|---|
 | `src/intpot/core/inspectors/` | `.venv/bin/pytest tests/test_inspectors/ -x` |
-| `src/intpot/core/generators/` or `src/intpot/templates/` | `.venv/bin/pytest tests/test_generators/ -x` |
+| `src/intpot/core/generators/` or `src/intpot/templates/` | `.venv/bin/pytest tests/test_generators/ tests/test_generated_code_is_valid.py -x` |
+| `src/intpot/core/inspectors/_utils.py` | `.venv/bin/pytest tests/test_inspectors/test_utils.py -x` |
 | `src/intpot/commands/` or `src/intpot/cli.py` | `.venv/bin/pytest tests/test_commands/ -x` |
 | `src/intpot/core/transforms.py` | `.venv/bin/pytest tests/test_roundtrip.py tests/test_transforms.py -x` |
 | `src/intpot/runtime.py`, `src/intpot/runtime_builders.py` | `.venv/bin/pytest tests/test_runtime.py tests/test_runtime_builders.py -x` |

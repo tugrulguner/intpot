@@ -544,14 +544,23 @@ intpot add skills [--agent <name>] [--path <dir>]
 
 **Supported agents and output locations:**
 
-| Agent | Files created |
-|-------|--------------|
-| Claude Code | `.claude/skills/intpot-cli/SKILL.md`, `.claude/skills/intpot-python/SKILL.md` |
-| Cursor | `.cursor/rules/intpot-cli.mdc`, `.cursor/rules/intpot-python.mdc` |
-| Windsurf | `.windsurf/rules/intpot-cli.md`, `.windsurf/rules/intpot-python.md` |
-| GitHub Copilot | `.github/copilot-instructions.md` (appended) |
-| Cline | `.clinerules/intpot-cli.md`, `.clinerules/intpot-python.md` |
-| OpenAI Codex | `AGENTS.md` (appended) |
+| Agent | Detected by | Files created |
+|-------|-------------|--------------|
+| Claude Code | `.claude/` | `.claude/skills/intpot-cli/SKILL.md`, `.claude/skills/intpot-python/SKILL.md` |
+| Cursor | `.cursor/` | `.cursor/rules/intpot-cli.mdc`, `.cursor/rules/intpot-python.mdc` |
+| Windsurf | `.windsurf/` | `.windsurf/rules/intpot-cli.md`, `.windsurf/rules/intpot-python.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.md` (appended) |
+| Cline | `.clinerules/` | `.clinerules/intpot-cli.md`, `.clinerules/intpot-python.md` |
+| OpenAI Codex | never auto-detected | `AGENTS.md` (appended) |
+
+**Codex has to be asked for by name** — `intpot add skills --agent codex`. It reads
+`AGENTS.md`, but so does nearly every other tool now, so the presence of that file says
+nothing about whether you use Codex. Since installing appends to it, guessing wrong would
+edit your own documentation. The same reasoning is why Copilot keys off
+`.github/copilot-instructions.md` rather than `.github/`, which only means the project is
+on GitHub.
+
+Running with no `--agent` and no detected marker exits without writing anything.
 
 ## Development
 

@@ -96,6 +96,8 @@ Prefer `--json` when you need to reason about the result programmatically.
   module to find the app instance, so module-level code runs. Use `--dry-run` on
   unfamiliar code.
 - **`serve --api` binds `127.0.0.1`.** Pass `--host 0.0.0.0` to expose it on the network.
+  Code from `eject --to api` and `init --type api` binds loopback too; change the `host=`
+  argument in the generated file to opt in.
 - **`serve --api` reads arguments from a JSON body**, not the query string — the same
   shape `eject --to api` generates.
 - **Converted code carries the original body over** where the frameworks agree, and

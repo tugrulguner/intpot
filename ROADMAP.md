@@ -9,7 +9,9 @@ existing Typer, FastMCP, and FastAPI apps.
 ### Remaining polish
 
 - [ ] Handle `Annotated[str, Body(...)]` style FastAPI parameters ([#1](https://github.com/tugrulguner/intpot/issues/1))
-- [ ] Support Click groups / Typer sub-apps, i.e. nested command hierarchies ([#2](https://github.com/tugrulguner/intpot/issues/2))
+- [ ] Emit nested command hierarchies. Reading them works; see "Already shipped". What's
+      missing is the other direction — generating a Typer sub-app rather than a flat
+      command ([#2](https://github.com/tugrulguner/intpot/issues/2))
 - [ ] Preserve parameter descriptions through all conversion directions ([#3](https://github.com/tugrulguner/intpot/issues/3), [#9](https://github.com/tugrulguner/intpot/issues/9))
 - [ ] `--all` mode for `intpot serve` — serve CLI, API, and MCP simultaneously ([#32](https://github.com/tugrulguner/intpot/issues/32))
 
@@ -24,6 +26,9 @@ than planned:
 - **Return-type coercion for FastAPI** — a scalar return is wrapped as
   `{"result": ...}` so the generated handler matches the response model FastAPI validates
   against.
+- **Reading nested command hierarchies** — `app.add_typer(db, name="db")` is walked to any
+  depth and each command extracted, named by its path: `db migrate` becomes `db_migrate`.
+  Generating a nested hierarchy back out is still open (#2).
 - **Round-trip fidelity tests** — `tests/test_roundtrip.py` covers all three pairings.
 - **Direct import resolution** — imports referenced by a function body are carried into
   the generated file. Transitive dependencies are not yet followed.

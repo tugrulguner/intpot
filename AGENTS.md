@@ -60,6 +60,27 @@ runtime 500, not a type-checker complaint.
 **Detection executes user code.** `detect_source` imports the module. Anything that scans
 many files must tolerate one of them raising — see `core/discovery.py`.
 
+**Identify framework objects structurally, never with `isinstance`.** typer 0.26 vendored
+its own copy of click as `typer._click`, so a Typer app stopped being an instance of
+anything in the standalone `click` package. Every check written against click failed at
+once: the inspector found zero tools in any Typer app, silently, for two and a half
+months. Match on what an object *has* — a `commands` mapping, a type's `name` — the way
+`detector.py` and `_is_depends` already do. The same applies to any framework we don't
+control, which is all of them.
+
+**Generated code must parse whatever the source contains.** Descriptions, parameter names
+and project names all come from someone else's code. A quote or newline in a description
+produced an unterminated string literal; two parameter names sanitising onto one
+identifier produced a duplicate argument. Never hand-write quotes around interpolated
+text — use the `repr` filter, which is Python's own literal writer. Tests must `compile()`
+the output, not inspect it.
+
+**A guard that can collect nothing must assert it found something.** The test asserting
+every CLI flag appears in the README derives its cases by walking the command tree. When
+that walk broke, the test quietly went from 22 assertions to 1 and kept reporting green —
+worse than having no test, because it still looked like coverage. Any parametrised test
+whose inputs come from introspection needs a floor on what discovery returns.
+
 ## Reviewing a change
 
 The rules above came from bugs that shipped — check those first. Beyond them, these are
