@@ -10,6 +10,63 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.5.1] - 2026-08-14
+
+### Added
+
+- `AGENTS.md` documents the codebase for coding agents working on intpot — the pipeline,
+  the `ToolInfo` contract, the contribution workflow, the review criteria, and the
+  conventions that exist because breaking them shipped real bugs. `docs/reviewing.md`
+  covers the review procedure itself. Both are read by every agent and by humans; nothing
+  tool-specific is kept in the repository. ([#66](https://github.com/tugrulguner/intpot/pull/66))
+
+### Changed
+
+- The roadmap now reflects what is built. It described basic body transforms, return-type
+  coercion, round-trip tests and import resolution as future v2 work months after they
+  shipped, and still labelled 0.4 as current. Remaining items link to their issues. ([#68](https://github.com/tugrulguner/intpot/pull/68))
+
+### Fixed
+
+- The CLI reference in the README now covers every command and flag. `intpot inspect` had
+  no section at all, `--dry-run` and `--verbose` went unmentioned on the conversion
+  commands, and `serve --cli` was still documented as though it could not take arguments. ([#64](https://github.com/tugrulguner/intpot/pull/64))
+- The skills installed by `intpot add skills` now describe the current API. They had not
+  been updated since 0.3.0 and covered only the conversion commands — an agent reading them
+  learned nothing about `intpot.App`, `@app.tool`, `serve` or `eject`, and one example
+  referenced a `ParameterInfo.annotation` field that does not exist. ([#65](https://github.com/tugrulguner/intpot/pull/65))
+- `intpot add skills --agent claude` now installs skills Claude Code can actually find. It
+  wrote a flat `.claude/skills/intpot-cli.md` with no YAML frontmatter; Claude Code
+  discovers skills as `.claude/skills/<name>/SKILL.md` and reads the frontmatter to decide
+  relevance, so the installed files were never loaded. The other five agents were
+  unaffected. ([#67](https://github.com/tugrulguner/intpot/pull/67))
+- FastAPI endpoints named `root` are no longer dropped during conversion. Built-in routes
+  were filtered by function name and `root` was on that list, so the usual handler for `/`
+  silently disappeared from every conversion. FastAPI's own documentation routes are now
+  excluded by route type instead, which is exact. ([#70](https://github.com/tugrulguner/intpot/pull/70))
+- Tools written on a single line — `def double(x: int) -> int: return x * 2` — now convert
+  correctly. The extracted body included the `def` line itself, so the generated command or
+  endpoint defined a nested function and never called it, producing no output at all. ([#71](https://github.com/tugrulguner/intpot/pull/71))
+- `intpot add skills` no longer installs into projects that use no AI agent. `.github/` was
+  treated as evidence of Copilot and `AGENTS.md` as evidence of Codex, so an ordinary repo
+  with a CI workflow had intpot's skills appended to its own AGENTS.md. Copilot is now
+  detected from `.github/copilot-instructions.md`, and Codex must be requested with
+  `--agent codex`. ([#72](https://github.com/tugrulguner/intpot/pull/72))
+- Generated and scaffolded FastAPI servers now bind `127.0.0.1` instead of `0.0.0.0`.
+  `intpot serve --api` already defaulted to loopback, but `eject --to api` and
+  `init --type api` produced files that listened on every network interface. ([#73](https://github.com/tugrulguner/intpot/pull/73))
+- Typer apps are readable again on typer 0.27, which vendors its own copy of click. Every
+  `isinstance` and identity check against the standalone `click` package stopped matching,
+  so `intpot inspect`, `to mcp`, `to api` and `to cli` found no tools at all in any Typer
+  source, and would have typed every parameter `str` had they found them. ([#77](https://github.com/tugrulguner/intpot/pull/77))
+- Generated code now parses regardless of what the source app contains. A parameter
+  description holding a quote, newline or backslash produced an unterminated string literal
+  from `to cli` and `to api`; two parameters whose names sanitised onto the same identifier
+  produced a duplicate argument; non-ASCII names like `café` were mangled to `caf_`; and
+  `intpot init` accepted project names containing quotes, scaffolding a project that would
+  not parse. ([#79](https://github.com/tugrulguner/intpot/pull/79))
+
+
 ## [0.5.0] - 2026-08-10
 
 ### Changed
