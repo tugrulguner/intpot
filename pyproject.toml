@@ -101,6 +101,11 @@ reportAssignmentType = false
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+# ruff 0.16 formats Python code blocks inside Markdown. The skills under
+# templates/skills/ are documentation shipped to users, and their examples use
+# deliberate comment alignment that reads better than the formatter's output.
+# Their content is guarded by tests/test_skills_content.py, not by the formatter.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
