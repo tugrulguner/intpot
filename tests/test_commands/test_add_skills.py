@@ -70,9 +70,10 @@ def test_add_skills_auto_detect_windsurf(tmp_path: Path, monkeypatch):
 
 
 def test_add_skills_auto_detect_copilot(tmp_path: Path, monkeypatch):
-    """Auto-detect Copilot when .github/ exists."""
+    """Auto-detect Copilot from its instructions file, not from `.github/`."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "copilot-instructions.md").write_text("# Existing\n")
 
     result = runner.invoke(app, ["add", "skills"])
     assert result.exit_code == 0
@@ -97,14 +98,21 @@ def test_add_skills_auto_detect_cline(tmp_path: Path, monkeypatch):
     assert (tmp_path / ".clinerules" / "intpot-python.md").exists()
 
 
-def test_add_skills_auto_detect_codex(tmp_path: Path, monkeypatch):
-    """Auto-detect Codex when AGENTS.md exists."""
+def test_add_skills_codex_requires_an_explicit_request(tmp_path: Path, monkeypatch):
+    """AGENTS.md is a cross-tool convention, so it cannot imply Codex.
+
+    It used to, and because the Codex writer appends, any project with an
+    AGENTS.md had intpot's skills added to its own documentation.
+    """
     monkeypatch.chdir(tmp_path)
     (tmp_path / "AGENTS.md").write_text("# Existing agents\n")
 
-    result = runner.invoke(app, ["add", "skills"])
-    assert result.exit_code == 0
-    assert "codex" in result.output
+    auto = runner.invoke(app, ["add", "skills"])
+    assert auto.exit_code == 1
+    assert (tmp_path / "AGENTS.md").read_text() == "# Existing agents\n"
+
+    explicit = runner.invoke(app, ["add", "skills", "--agent", "codex"])
+    assert explicit.exit_code == 0
 
     content = (tmp_path / "AGENTS.md").read_text()
     assert "# Existing agents" in content  # preserved
@@ -276,3 +284,73 @@ def test_claude_skills_carry_discoverable_frontmatter(tmp_path: Path, monkeypatc
         assert len(description) > 60, f"{name} description is too thin to match on"
         assert "intpot" in description
         assert body.strip().startswith("# intpot")
+
+
+# ---------------------------------------------------------------------------
+# Detection must not fire on ordinary repositories
+# ---------------------------------------------------------------------------
+
+
+def test_an_ordinary_github_repo_is_not_mistaken_for_copilot_and_codex(
+    tmp_path: Path, monkeypatch
+):
+    """A CI workflow and an AGENTS.md are not evidence of any agent.
+
+    `.github/` was the Copilot marker and `AGENTS.md` the Codex one, so a repo
+    using no AI tooling at all matched both — and since both writers append,
+    248 lines were added to the project's own AGENTS.md.
+    """
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".github" / "workflows").mkdir(parents=True)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text("name: ci\n")
+    original = "# AGENTS.md\n\nMy project guidance.\n"
+    (tmp_path / "AGENTS.md").write_text(original)
+
+    result = runner.invoke(app, ["add", "skills"])
+
+    assert result.exit_code == 1
+    assert "No AI coding agents detected" in result.output
+    assert (tmp_path / "AGENTS.md").read_text() == original
+    assert not (tmp_path / ".github" / "copilot-instructions.md").exists()
+
+
+def test_a_github_directory_alone_does_not_imply_copilot(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".github").mkdir()
+
+    result = runner.invoke(app, ["add", "skills"])
+
+    assert result.exit_code == 1
+    assert not (tmp_path / ".github" / "copilot-instructions.md").exists()
+
+
+def test_every_auto_detected_marker_is_agent_specific(tmp_path: Path, monkeypatch):
+    """Each marker must appear only when that agent is configured.
+
+    Creating one marker must select exactly one agent — no marker may be a path
+    that projects create for unrelated reasons.
+    """
+    from intpot.commands.add_skills import _AGENT_MARKERS, _detect_agents
+
+    for agent, marker in _AGENT_MARKERS.items():
+        root = tmp_path / agent.value
+        target = root / marker
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if Path(marker).suffix:
+            target.write_text("# marker\n")
+        else:
+            target.mkdir(exist_ok=True)
+
+        assert _detect_agents(root) == [agent], f"{marker} selected the wrong agents"
+
+
+def test_explicitly_requested_agents_still_bypass_detection(
+    tmp_path: Path, monkeypatch
+):
+    """--agent is the escape hatch for anything detection misses."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["add", "skills", "--agent", "copilot"])
+
+    assert result.exit_code == 0
+    assert (tmp_path / ".github" / "copilot-instructions.md").exists()
