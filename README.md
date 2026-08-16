@@ -53,7 +53,7 @@ pip install "intpot[all]"
 
 ### Write once, serve everywhere
 
-Define your tools once, serve as CLI, API, or MCP:
+Save this as `app.py`:
 
 ```python
 from intpot import App
@@ -88,7 +88,7 @@ $ intpot serve app.py --cli greet World --greeting Hi
 Hi, World!
 ```
 
-API mode exposes the same names as POST routes with JSON request bodies:
+With API mode running, call the same names as POST routes with JSON request bodies:
 
 ```bash
 $ curl -s -X POST http://127.0.0.1:8000/add \
