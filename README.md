@@ -1,7 +1,7 @@
 # intpot
 
 <p align="center">
-  <img src="intpot_image.png" alt="intpot: Python tools served as CLI, API, or MCP" width="520">
+  <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="520">
 </p>
 
 <p align="center">
