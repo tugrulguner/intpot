@@ -1,58 +1,59 @@
 # intpot
 
 <p align="center">
-  <img src="intpot_image.png" alt="IntPot" width="600">
+  <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="520">
 </p>
 
-[![CI](https://github.com/tugrulguner/intpot/actions/workflows/ci.yml/badge.svg)](https://github.com/tugrulguner/intpot/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/intpot)](https://pypi.org/project/intpot/)
-[![Python versions](https://img.shields.io/pypi/pyversions/intpot)](https://pypi.org/project/intpot/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <strong>One Python tool definition. A Typer CLI, FastAPI app, or FastMCP server.</strong>
+</p>
 
-**Write once, serve as CLI, API, or MCP. Plus convert between all three.**
+<p align="center">
+  Use it live, eject standalone framework code, or convert an existing app in any of six directions.
+</p>
 
-intpot bridges three popular Python frameworks:
+<p align="center">
+  <a href="https://pypi.org/project/intpot/"><img src="https://img.shields.io/pypi/v/intpot" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/intpot/"><img src="https://img.shields.io/pypi/pyversions/intpot" alt="Python versions"></a>
+  <a href="https://github.com/tugrulguner/intpot/actions/workflows/ci.yml"><img src="https://github.com/tugrulguner/intpot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/tugrulguner/intpot/stargazers"><img src="https://img.shields.io/github/stars/tugrulguner/intpot?style=flat" alt="GitHub stars"></a>
+  <a href="https://github.com/tugrulguner/intpot/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+</p>
 
-- **[Typer](https://typer.tiangolo.com/)** — CLI applications
-- **[FastMCP](https://github.com/jlowin/fastmcp)** — Model Context Protocol servers
-- **[FastAPI](https://fastapi.tiangolo.com/)** — REST API applications
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#convert-an-existing-app">Convert an app</a> ·
+  <a href="#what-conversion-preserves">Conversion scope</a> ·
+  <a href="#cli-reference">CLI reference</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
 
-Define your tools once with `@app.tool()` and serve them as any framework — or convert existing code between all three.
+## Why intpot
 
-## Features
+A useful Python function often needs three interfaces: a command for people, an HTTP
+endpoint for applications, and an MCP tool for AI agents. Maintaining three copies means
+three signatures, three sets of descriptions, and three places for behavior to drift.
 
-- **Write once, serve everywhere** — `intpot.App` lets you define tools once and serve as CLI, API, or MCP with a single command
-- **6 conversion directions** — CLI to MCP, CLI to API, MCP to CLI, MCP to API, API to CLI, API to MCP
-- **Eject to standalone code** — `intpot eject` exports your universal app as standalone Typer, FastAPI, or FastMCP code
-- **Python API** — `intpot.load()` accepts file paths or live app instances for programmatic conversion
-- **Directory auto-discovery** — scan an entire directory and convert all found apps at once
-- **Auto-detection** — automatically identifies the source framework by analyzing imports and patterns
-- **HTTP method preservation** — API routes keep their GET/POST/PUT/DELETE methods through conversion
-- **Parameter source preservation** — FastAPI `Query`, `Header`, `Path`, and `Body` parameters stay where they were, instead of collapsing into a request body
-- **Project scaffolding** — `intpot init` creates new CLI, MCP, or API projects from templates
-- **Jinja2 templates** — clean, readable generated code with proper type hints
-- **Fully typed** — PEP 561 compatible with `py.typed` marker
-- **AI agent skills** — `intpot add skills` installs skills/rules for Claude Code, Cursor, Windsurf, Copilot, Cline, and Codex
-- **Zero config** — just point at a Python file and specify the target
+intpot gives you two ways out:
 
-## Installation
+| Starting point | What intpot does |
+|---|---|
+| Plain Python functions | Register them once with `@app.tool()`, then serve or eject CLI, API, and MCP interfaces |
+| An existing Typer, FastAPI, or FastMCP app | Inspect it, normalize its tools, and generate either of the other two frameworks |
+
+The output is ordinary Python. Ejected and converted apps do not depend on intpot.
+
+## Quick start
+
+Install every runtime for the complete experience:
 
 ```bash
-pip install intpot            # core: init, inspect, add skills, and Typer CLI output
-pip install intpot[mcp]       # + FastMCP support
-pip install intpot[api]       # + FastAPI support
-pip install intpot[all]       # everything
+pip install "intpot[all]"
 ```
-
-Install an extra when intpot must inspect/load a source using that framework or when you
-serve, import, or run that target. Emitting source text alone does not require the target
-extra, but verifying or executing the emitted program does.
-
-## Quick Start
 
 ### Write once, serve everywhere
 
-Define your tools once, serve as CLI, API, or MCP:
+Save this as `app.py`:
 
 ```python
 from intpot import App
@@ -68,17 +69,6 @@ def add(a: int, b: int) -> int:
 def greet(name: str, greeting: str = "Hello") -> str:
     """Greet someone by name."""
     return f"{greeting}, {name}!"
-```
-
-The tool name and description default to the function name and its docstring. Override
-either when the two audiences want different things — the docstring explains the code to
-whoever maintains it, the description tells an agent when to call the tool:
-
-```python
-@app.tool(name="lookup", description="Look up a customer by their account number.")
-def fetch_customer_record(account_id: str) -> dict:
-    """Hit the accounts table. Assumes the caller already validated account_id."""
-    ...
 ```
 
 Then serve in any mode:
@@ -98,6 +88,18 @@ $ intpot serve app.py --cli greet World --greeting Hi
 Hi, World!
 ```
 
+With API mode running, call the same names as POST routes with JSON request bodies:
+
+```bash
+$ curl -s -X POST http://127.0.0.1:8000/add \
+    -H "Content-Type: application/json" \
+    -d '{"a": 2, "b": 3}'
+5
+```
+
+MCP mode exposes `add` and `greet` as FastMCP tools with schemas derived from their type
+annotations and defaults.
+
 Or eject to standalone framework code:
 
 ```bash
@@ -114,7 +116,18 @@ intpot init my-app --type cli
 intpot init my-api --type api
 ```
 
-### Convert between frameworks
+Install only the frameworks you need if you do not want the full extra:
+
+```bash
+pip install intpot          # Core commands and Typer output
+pip install "intpot[mcp]"   # Add FastMCP support
+pip install "intpot[api]"   # Add FastAPI support
+```
+
+## Convert an existing app
+
+intpot detects Typer, FastAPI, and FastMCP apps from a Python file and supports every
+conversion between them:
 
 ```bash
 # MCP server -> Typer CLI
@@ -134,7 +147,14 @@ intpot to cli ./myproject/
 intpot to mcp ./myproject/ --output ./converted/
 ```
 
-### Install AI agent skills
+Use `intpot inspect app.py` first when you want to see the normalized tool definitions
+before generating code. Converted output is readable Python that you can review, test,
+and change.
+
+## Give your coding agent intpot context
+
+Install project-local instructions for Claude Code, Cursor, Windsurf, GitHub Copilot,
+Cline, or OpenAI Codex:
 
 ```bash
 # Auto-detect agents in your project
@@ -151,6 +171,22 @@ intpot add skills --agent codex
 # Specify a project directory
 intpot add skills --path ./myproject/
 ```
+
+## What intpot handles
+
+- **One definition, three live interfaces:** serve an `intpot.App` through Typer,
+  FastAPI, or FastMCP.
+- **Six conversion directions:** move existing apps between all three frameworks.
+- **Standalone output:** eject or convert to normal framework code with no intpot runtime
+  dependency.
+- **Behavior-aware transforms:** preserve function bodies and imports, and translate
+  framework conventions such as `typer.echo()` into return values.
+- **Interface fidelity:** carry types, defaults, and async functions through supported
+  conversions, and apply FastAPI parameter sources when generating an API.
+- **Programmatic access:** use `intpot.load()` and normalized `ToolInfo` objects from
+  Python.
+- **Project tooling:** scan directories, scaffold projects, and install agent guidance
+  for six coding agents.
 
 ## Python API
 
@@ -219,6 +255,30 @@ app.write("output/api_app.py", "api")
 - `.tools` — list of normalized `ToolInfo` objects
 - `.source_type` — detected framework type
 
+## What conversion preserves
+
+intpot is designed to produce code you can own, rather than hide conversion behind a
+runtime adapter. Its normalized `ToolInfo` schema carries the parts that the three
+frameworks share:
+
+- tool names, descriptions, types, defaults, and async behavior;
+- recoverable function bodies and the direct imports they reference;
+- framework metadata that has a target equivalent, including supported `Query`, `Header`,
+  `Path`, and `Body` parameter sources when generating FastAPI;
+- scalar returns translated into a shape the target framework can serve correctly.
+
+Frameworks do not have one-to-one equivalents for every feature. Review generated code
+when a source uses nested Typer command groups, `Annotated[..., Body(...)]`, FastAPI
+`Depends()`, Pydantic model parameters, streaming, background tasks, or framework-specific
+error handling. Transitive imports, external services, and configuration are not
+provisioned for you. If intpot cannot recover a body, it emits a `# TODO: implement` stub
+instead of inventing behavior.
+
+> [!IMPORTANT]
+> Detection imports the source module, so only inspect or convert code you trust. intpot
+> is alpha software: compile the generated file, import it with its dependencies, and
+> exercise a real CLI command, API request, or MCP tool before shipping it.
+
 ## Architecture
 
 Both halves of intpot meet at one normalized schema, `ToolInfo`. Everything upstream
@@ -242,176 +302,24 @@ produces it; everything downstream consumes it.
                                     (to cli/mcp/api, eject)
 ```
 
-The conversion side is a three-stage pipeline:
+Conversion follows three stages: detect the framework, inspect its tools into
+`ToolInfo[]`, then render the target framework. The runtime side starts at the same schema:
+`@app.tool()` creates `ToolInfo` directly, then `serve` builds a live framework instance
+or `eject` sends it through the generators.
 
-```
-                    +-----------+
-                    |  SOURCE   |
-                    | (.py file)|
-                    +-----+-----+
-                          |
-                    1. DETECT
-                    (identify framework)
-                          |
-                    +-----v-----+
-                    | SourceType|
-                    | cli/mcp/api|
-                    +-----+-----+
-                          |
-                    2. INSPECT
-                    (extract functions)
-                          |
-                    +-----v-----+
-                    | ToolInfo[] |
-                    | (normalized|
-                    |  schema)  |
-                    +-----+-----+
-                          |
-                    3. GENERATE
-                    (render template)
-                          |
-                    +-----v-----+
-                    |  OUTPUT   |
-                    | (.py code)|
-                    +-----------+
-```
+## Conversion examples
 
-1. **DETECT** — `core/detector.py` imports the source file and identifies whether it's a Typer app, FastMCP server, or FastAPI app
-2. **INSPECT** — Framework-specific inspectors (`core/inspectors/`) extract function signatures, parameters, types, defaults, and docstrings into a normalized `ToolInfo` schema
-3. **GENERATE** — Framework-specific generators (`core/generators/`) render the normalized schema into target code using Jinja2 templates
+The repository includes checked-in source and generated output for every direction:
 
-The runtime side skips detection and inspection: `@app.tool()` builds `ToolInfo`
-directly from the function signature, then either constructs a live framework instance
-(`serve`) or hands the same schema to the same generators (`eject`).
+| Source | Typer target | FastAPI target | FastMCP target |
+|---|---|---|---|
+| Typer | — | [`cli_to_api.py`](examples/conversions/cli_to_api.py) | [`cli_to_mcp.py`](examples/conversions/cli_to_mcp.py) |
+| FastAPI | [`api_to_cli.py`](examples/conversions/api_to_cli.py) | — | [`api_to_mcp.py`](examples/conversions/api_to_mcp.py) |
+| FastMCP | [`mcp_to_cli.py`](examples/conversions/mcp_to_cli.py) | [`mcp_to_api.py`](examples/conversions/mcp_to_api.py) | — |
 
-> **Detection imports your source file.** `intpot to ...` and `intpot inspect` execute
-> the module to find the app instance, so any module-level code in it runs. Point them
-> at code you trust.
-
-## Examples
-
-### MCP server to CLI app
-
-**Input** (`mcp_server.py`):
-```python
-from fastmcp import FastMCP
-
-mcp = FastMCP("example-server")
-
-@mcp.tool()
-def greet(name: str, greeting: str = "Hello") -> str:
-    """Greet someone by name."""
-    return f"{greeting}, {name}!"
-```
-
-**Command**: `intpot to cli mcp_server.py`
-
-**Output**:
-```python
-import typer
-
-app = typer.Typer()
-
-
-def _greet_impl(
-    name: str,
-    greeting: str,
-) -> None:
-    """Greet someone by name."""
-    typer.echo(f'{greeting}, {name}!')
-
-
-@app.command()
-def greet(
-    name: str = typer.Argument(..., help=""),
-    greeting: str = typer.Option('Hello', help=""),
-) -> None:
-    """Greet someone by name."""
-    result = _greet_impl(name, greeting)
-    if result is not None:
-        typer.echo(result)
-```
-
-The body lives in a separate function so the command can print what it returns —
-Typer discards return values, so the generated command has to echo explicitly.
-
-### CLI app to FastAPI
-
-**Input** (`cli_app.py`):
-```python
-import typer
-
-app = typer.Typer()
-
-@app.command()
-def add(
-    a: int = typer.Argument(..., help="First number"),
-    b: int = typer.Argument(..., help="Second number"),
-) -> None:
-    """Add two numbers together."""
-    typer.echo(a + b)
-```
-
-**Command**: `intpot to api cli_app.py`
-
-**Output**:
-```python
-from fastapi import FastAPI, Body
-
-app = FastAPI()
-
-
-@app.post("/add")
-def add(
-    a: int = Body(..., description="First number"),
-    b: int = Body(..., description="Second number"),
-) -> dict:
-    """Add two numbers together."""
-
-    return {'result': a + b}
-```
-
-`typer.echo(a + b)` becomes a return, wrapped so the response matches the `dict`
-annotation FastAPI validates against.
-
-### API app to MCP server
-
-**Input** (`api_app.py`):
-```python
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.post("/greet")
-def greet(name: str, greeting: str = "Hello") -> dict:
-    """Greet someone by name."""
-    return {"message": f"{greeting}, {name}!"}
-```
-
-**Command**: `intpot to mcp api_app.py`
-
-**Output**:
-```python
-from fastmcp import FastMCP
-
-mcp = FastMCP("generated-server")
-
-
-@mcp.tool()
-def greet(
-    name: str,
-    greeting: str = 'Hello',
-) -> dict:
-    """Greet someone by name."""
-
-    return {"message": f"{greeting}, {name}!"}
-```
-
-Bodies carry over where the two frameworks agree on conventions. Where they don't —
-a Typer command echoing instead of returning — the body is rewritten to match the
-target. Tools whose body can't be recovered generate a `# TODO: implement` stub.
-
-See the [`examples/`](examples/) directory for all conversion outputs, including advanced examples with `import json`, `Body(...)`, `Depends()`, async tools, and more. Run `bash scripts/demo.sh` to regenerate them all.
+[`examples/`](examples/) also contains advanced inputs and outputs with direct imports,
+async tools, request bodies, `Depends()`, path parameters, and multiple HTTP methods.
+Run `bash scripts/demo.sh` to regenerate all twelve conversions locally.
 
 ## CLI Reference
 
@@ -568,7 +476,19 @@ command updates or repairs intpot guidance while preserving surrounding project 
 For Codex, intpot warns when the resulting `AGENTS.md` exceeds Codex's default 32 KiB
 instruction limit.
 
-## Development
+## Contributing
+
+intpot has a small core with clear extension points: inspectors turn frameworks into
+`ToolInfo`, generators turn `ToolInfo` into source, and runtime builders expose live
+interfaces. Contributions can improve conversion fidelity, add real-world examples,
+strengthen generated-code tests, or make the developer experience clearer.
+
+- Start with a [good first issue](https://github.com/tugrulguner/intpot/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+- Browse work where [help is wanted](https://github.com/tugrulguner/intpot/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) for the pull request process and
+  [`docs/reviewing.md`](docs/reviewing.md) for the contracts changes must preserve.
+
+### Development setup
 
 Requires [uv](https://docs.astral.sh/uv/).
 
@@ -600,11 +520,16 @@ Changelog entries are written as one fragment file per PR in
 [`changelog.d/`](changelog.d/) rather than by editing `CHANGELOG.md`, and CI asks every
 PR for one. See [`changelog.d/README.md`](changelog.d/README.md) — it's short.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
-
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for what's planned for v2 (full AST transform pipeline).
+See [ROADMAP.md](ROADMAP.md) for the current polish backlog and the planned full AST
+transform pipeline.
+
+## Support intpot
+
+If intpot removes a duplicate interface from your project, consider
+[starring the repository](https://github.com/tugrulguner/intpot). Stars help other Python
+developers find the project, while issues and pull requests make it better.
 
 ## License
 
