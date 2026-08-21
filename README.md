@@ -147,6 +147,10 @@ intpot to cli ./myproject/
 intpot to mcp ./myproject/ --output ./converted/
 ```
 
+Directory output mirrors the source tree, so `myproject/alpha/tools.py` becomes
+`converted/alpha/tools_mcp.py`. Sources sharing a filename in different packages stay
+separate files.
+
 Use `intpot inspect app.py` first when you want to see the normalized tool definitions
 before generating code. Converted output is readable Python that you can review, test,
 and change.
@@ -407,7 +411,9 @@ intpot init <name> --type <mcp|cli|api>
 
 ### `intpot to cli` / `to mcp` / `to api`
 
-Convert a source file — or every app in a directory — to the target framework.
+Convert a source file — or every app in a directory — to the target framework. For a
+directory, the output mirrors the source tree: each generated file keeps its source's
+position, with only the filename changing.
 
 ```
 intpot to cli <source> [--output <path>] [--dry-run] [--verbose]

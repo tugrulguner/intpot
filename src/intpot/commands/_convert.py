@@ -12,6 +12,59 @@ from intpot.core.models import SourceType
 from intpot.core.transforms import transform_tools
 
 
+def _mirrored_destination(
+    file_path: Path,
+    source_root: Path,
+    output: Path | None,
+    suffix: str,
+) -> Path:
+    """Where one discovered source's output belongs, mirroring the source tree.
+
+    Only the filename changes; the directories between the scanned root and the
+    source are preserved. Naming outputs after the basename alone meant
+    `alpha/tools.py` and `beta/tools.py` both wrote `tools_mcp.py`, and the
+    second silently replaced the first.
+    """
+    # discover_sources resolves the directory it scans and yields absolute
+    # paths, so the root has to be resolved too or relative_to raises.
+    relative = file_path.resolve().relative_to(source_root.resolve())
+    mirrored = relative.parent / f"{relative.stem}{suffix}.py"
+    return (output / mirrored) if output else mirrored
+
+
+def _plan_destinations(
+    sources: list[tuple[Path, SourceType, object]],
+    source_root: Path,
+    output: Path | None,
+    suffix: str,
+) -> list[Path]:
+    """Resolve every destination before writing any of them.
+
+    Mirroring makes the source-to-destination mapping injective, so a collision
+    here means an assumption broke rather than a project being unusual. Either
+    way, finding out before the first write beats finding out after the last.
+    """
+    destinations = [
+        _mirrored_destination(file_path, source_root, output, suffix)
+        for file_path, _, _ in sources
+    ]
+
+    claimed: dict[Path, Path] = {}
+    for (file_path, _, _), destination in zip(sources, destinations, strict=True):
+        previous = claimed.get(destination)
+        if previous is not None:
+            typer.echo(
+                f"Refusing to write: {previous} and {file_path} both map to "
+                f"{destination}. Please report this — mirroring the source tree "
+                f"is meant to make that impossible.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        claimed[destination] = file_path
+
+    return destinations
+
+
 def convert(
     source: Path,
     output: Path | None,
@@ -56,26 +109,29 @@ def convert(
             typer.echo("No convertible sources found.", err=True)
             raise typer.Exit(1)
 
-        for file_path, source_type, app_instance in sources:
+        # Every destination is resolved up front, and dry-run reports exactly
+        # the paths a real run would write.
+        destinations = _plan_destinations(sources, source, output, suffix)
+
+        for (file_path, source_type, app_instance), destination in zip(
+            sources, destinations, strict=True
+        ):
             tools = inspect_app(source_type, app_instance)
             tools = transform_tools(tools, source_type, target)
             code = generator.generate(tools)
 
             if dry_run:
-                out_path = (
-                    (output / f"{file_path.stem}{suffix}.py")
-                    if output
-                    else Path(f"{file_path.stem}{suffix}.py")
-                )
-                typer.echo(f"# --- Would generate: {out_path} ---")
+                typer.echo(f"# --- Would generate: {destination} ---")
                 typer.echo(code)
             elif output:
-                output.mkdir(parents=True, exist_ok=True)
-                out_file = output / f"{file_path.stem}{suffix}.py"
-                out_file.write_text(code)
-                typer.echo(f"Generated {label}: {out_file}")
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(code)
+                typer.echo(f"Generated {label}: {destination}")
             else:
-                typer.echo(f"# --- {file_path.name} ---")
+                # The relative path, not the basename: two `tools.py` in
+                # different packages are indistinguishable otherwise.
+                relative = file_path.resolve().relative_to(source.resolve())
+                typer.echo(f"# --- {relative} ---")
                 typer.echo(code)
         return
 
