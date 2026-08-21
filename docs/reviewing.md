@@ -1,7 +1,8 @@
 # Reviewing a change to intpot
 
-The procedure. The criteria are in [`AGENTS.md`](../AGENTS.md) — read the **Reviewing a
-change** and **Rules that come from real bugs** sections before you start.
+The procedure. The criteria are in
+[`src/intpot/AGENTS.md`](../src/intpot/AGENTS.md) — read the **Reviewing a change** and
+**Rules that come from real bugs** sections before you start.
 
 This is written for whoever is doing the review: a person, or an agent of any kind. It
 assumes nothing beyond a shell, `git`, and `gh` for the pull-request case.
