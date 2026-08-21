@@ -7,14 +7,19 @@ from pathlib import Path
 
 import typer
 
-from intpot.core.detector import _import_module_from_path
+from intpot.core.detector import DetectionError, _import_module_from_path
 
 
 def _find_intpot_app(source_path: Path) -> object:
     """Import a module and find the intpot App instance."""
     from intpot.runtime import App
 
-    module = _import_module_from_path(source_path)
+    try:
+        module = _import_module_from_path(source_path)
+    except DetectionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+
     for attr_name in dir(module):
         if attr_name.startswith("_"):
             continue

@@ -332,3 +332,27 @@ def test_build_typer_app_runs_async_tool():
 
     assert result.exit_code == 0
     assert "Hello, World!" in result.output
+
+
+def test_a_parameter_named_like_the_wrapper_internal_still_works():
+    """`_fn` was the wrapper's own default argument, so Typer overrode it.
+
+    The wrapper then called the user's value: `'str' object is not callable`.
+    Binding by closure keeps the wrapper's signature to the tool's parameters.
+    """
+    from typer.testing import CliRunner
+
+    from intpot import App
+    from intpot.runtime_builders import build_typer_app
+
+    app = App("collision")
+
+    @app.tool()
+    def pick(_fn: str) -> str:
+        """A parameter that shadowed the wrapper's own."""
+        return f"got {_fn}"
+
+    result = CliRunner().invoke(build_typer_app("collision", app._tools), ["hello"])
+
+    assert result.exit_code == 0, result.exception or result.output
+    assert "got hello" in result.output

@@ -77,21 +77,29 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
 
     import typer
 
-    cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
-    for tool in tools:
-        # Wrap so return values are printed — plain functions return values,
-        # but Typer commands need explicit output via typer.echo().
-        fn = _restore_positional_only(tool.func)
+    def _echoing(fn: Callable[..., Any]) -> Callable[..., None]:
+        """Print what the tool returns; Typer discards return values.
+
+        `fn` is bound by closure rather than as a default argument. As a
+        default it sat in the wrapper's own signature, so a tool with a
+        parameter of that name overrode it and the wrapper tried to call the
+        user's value: `TypeError: 'str' object is not callable`.
+        """
 
         @functools.wraps(fn)
-        def _cli_wrapper(*args: object, _fn: object = fn, **kwargs: object) -> None:
-            result = _fn(*args, **kwargs)  # type: ignore[operator]
+        def _cli_wrapper(*args: object, **kwargs: object) -> None:
+            result = fn(*args, **kwargs)
             if inspect.iscoroutine(result):
                 result = asyncio.run(result)
             if result is not None:
                 typer.echo(result)
 
-        cli_app.command(name=tool.info.name, help=tool.info.description)(_cli_wrapper)
+        return _cli_wrapper
+
+    cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
+    for tool in tools:
+        wrapped = _echoing(_restore_positional_only(tool.func))
+        cli_app.command(name=tool.info.name, help=tool.info.description)(wrapped)
     return cli_app
 
 
