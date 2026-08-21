@@ -295,3 +295,49 @@ def test_load_still_raises_a_detection_error_for_a_non_app(tmp_source):
 
     with pytest.raises(DetectionError):
         load(tmp_source("value = 42\n"))
+
+
+def _cause_chain(exc: BaseException) -> tuple[list[str], bool]:
+    """Walk __cause__ defensively, reporting whether it loops."""
+    seen: set[int] = set()
+    node: BaseException | None = exc
+    names: list[str] = []
+    while node is not None and id(node) not in seen:
+        seen.add(id(node))
+        names.append(type(node).__name__)
+        node = node.__cause__
+    return names, node is not None
+
+
+def test_load_does_not_build_a_circular_cause_chain(tmp_source):
+    """`raise original from e` when e.__cause__ is already original loops.
+
+    The helper-level identity test cannot see this: the cycle is created by the
+    raise, not by the mapping. Anything walking __cause__ — a logger, a
+    debugger, Sentry — would spin.
+    """
+    from intpot import load
+
+    source = tmp_source(
+        "import totally_absent_module\n"
+        "from fastmcp import FastMCP\n"
+        'mcp = FastMCP("probe")\n'
+    )
+
+    with pytest.raises(ModuleNotFoundError) as caught:
+        load(source)
+
+    names, cyclic = _cause_chain(caught.value)
+    assert not cyclic, f"cause chain loops: {names}"
+    assert caught.value.__cause__ is not caught.value
+
+
+def test_load_keeps_the_original_missing_module_reachable(tmp_source):
+    """A newly mapped framework error must still chain to what actually failed."""
+    from intpot.converter import _missing_module_error
+
+    original = ModuleNotFoundError("No module named 'fastmcp'", name="fastmcp")
+    mapped = _missing_module_error(original)
+
+    assert mapped is not original
+    assert mapped.name == "fastmcp"

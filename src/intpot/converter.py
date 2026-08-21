@@ -151,8 +151,16 @@ def load(source: Any) -> IntpotApp:
         # detect_source wraps whatever the user's module raised so the CLI can
         # report it. This is the Python API, which documents ModuleNotFoundError
         # — unwrap it back so callers catching that keep working.
-        if isinstance(e.__cause__, ModuleNotFoundError):
-            raise _missing_module_error(e.__cause__) from e
+        original = e.__cause__
+        if isinstance(original, ModuleNotFoundError):
+            mapped = _missing_module_error(original)
+            if mapped is original:
+                # Handing the original back means exactly that. `raise original
+                # from e` would set original.__cause__ = e while e.__cause__ is
+                # already original, so the chain points at itself and anything
+                # walking __cause__ loops forever.
+                raise mapped from None
+            raise mapped from original
         raise
     except ModuleNotFoundError as e:
         # The live-instance path: inspectors import fastmcp/fastapi themselves,
