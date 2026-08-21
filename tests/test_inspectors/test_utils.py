@@ -13,7 +13,10 @@ from typing import Any
 from typer.testing import CliRunner
 
 from intpot.core.generators.cli import CLIGenerator
-from intpot.core.inspectors._utils import extract_function_body
+from intpot.core.inspectors._utils import (
+    extract_function_body,
+    extract_source_imports,
+)
 from intpot.core.models import SourceType
 from intpot.core.transforms import transform_tools
 
@@ -116,3 +119,95 @@ def test_the_generated_body_contains_no_nested_definition(tmp_source):
 
     assert body is not None
     assert "def " not in body
+
+
+# ---------------------------------------------------------------------------
+# Import bindings
+#
+# `import os.path` binds `os`, not `os.path`. Recording the dotted path meant
+# the binding never matched what the body referenced, the import was dropped,
+# and the generated module raised NameError at runtime.
+# ---------------------------------------------------------------------------
+
+
+def _imports_for(tmp_source, body_source: str) -> list[str]:
+    path = tmp_source(body_source)
+    return extract_source_imports(_load(path, "tool"))
+
+
+def test_a_dotted_import_is_kept_when_the_body_uses_it(tmp_source):
+    imports = _imports_for(
+        tmp_source,
+        "import os.path\n\n\ndef tool(name: str) -> str:\n"
+        '    return os.path.join("/tmp", name)\n',
+    )
+
+    assert imports == ["import os.path"]
+
+
+def test_a_dotted_import_with_an_alias_binds_the_alias(tmp_source):
+    imports = _imports_for(
+        tmp_source,
+        "import xml.etree.ElementTree as ET\n\n\ndef tool(raw: str) -> str:\n"
+        "    return ET.fromstring(raw).tag\n",
+    )
+
+    assert imports == ["import xml.etree.ElementTree as ET"]
+
+
+def test_from_import_binding_is_unchanged(tmp_source):
+    imports = _imports_for(
+        tmp_source,
+        "from os import path\n\n\ndef tool(name: str) -> str:\n"
+        '    return path.join("/tmp", name)\n',
+    )
+
+    assert imports == ["from os import path"]
+
+
+def test_an_unused_dotted_import_is_still_dropped(tmp_source):
+    """The fix must not turn the filter into "keep everything"."""
+    imports = _imports_for(
+        tmp_source,
+        "import os.path\nimport json\n\n\ndef tool(value: str) -> str:\n"
+        '    return json.dumps({"v": value})\n',
+    )
+
+    assert imports == ["import json"]
+
+
+def test_only_the_first_segment_binds(tmp_source):
+    """`import a.b.c` binds `a`; a body mentioning `b` or `c` must not match."""
+    imports = _imports_for(
+        tmp_source,
+        "import xml.etree.ElementTree\n\n\ndef tool(value: str) -> str:\n"
+        "    return etree(value)\n",
+    )
+
+    assert imports == []
+
+
+def test_a_generated_command_using_a_dotted_import_runs(tmp_source):
+    """The failure was at runtime, so the test has to reach runtime."""
+    path = tmp_source(
+        "import os.path\n"
+        "from fastmcp import FastMCP\n"
+        "\n"
+        'mcp = FastMCP("probe")\n'
+        "\n"
+        "@mcp.tool()\n"
+        "def where(name: str) -> str:\n"
+        '    """Join a path."""\n'
+        '    return os.path.join("/tmp", name)\n'
+    )
+
+    from intpot import load
+
+    tools = transform_tools(load(path).tools, SourceType.MCP, SourceType.CLI)
+    namespace: dict[str, Any] = {}
+    exec(compile(CLIGenerator().generate(tools), "<generated>", "exec"), namespace)
+
+    result = CliRunner().invoke(namespace["app"], ["hello"])
+
+    assert result.exit_code == 0, result.output
+    assert "/tmp/hello" in result.output

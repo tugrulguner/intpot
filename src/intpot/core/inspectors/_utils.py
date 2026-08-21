@@ -40,6 +40,23 @@ def python_return_type_name(annotation: Any) -> str:
     return python_type_name(annotation)
 
 
+def _bound_names(node: ast.Import | ast.ImportFrom) -> set[str]:
+    """The names an import statement actually binds in the module namespace.
+
+    `import os.path` binds `os`, not `os.path` — the body that uses it says
+    `os.path.join(...)`, whose root name is `os`. Recording the dotted path
+    meant the binding never matched anything the body referenced, so the import
+    was dropped and the generated module raised `NameError: name 'os' is not
+    defined` at runtime.
+
+    `import os.path as p` binds `p`, and `from os import path` binds `path`;
+    both are already the full alias name.
+    """
+    if isinstance(node, ast.ImportFrom):
+        return {alias.asname or alias.name for alias in node.names}
+    return {alias.asname or alias.name.split(".", 1)[0] for alias in node.names}
+
+
 def extract_source_imports(fn: Any) -> list[str]:
     """Extract imports from the source file that are referenced in the function body.
 
@@ -64,8 +81,7 @@ def extract_source_imports(fn: Any) -> list[str]:
     import_nodes: list[tuple[ast.stmt, set[str]]] = []
     for node in module_tree.body:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            names = {alias.asname or alias.name for alias in node.names}
-            import_nodes.append((node, names))
+            import_nodes.append((node, _bound_names(node)))
 
     if not import_nodes:
         return []
