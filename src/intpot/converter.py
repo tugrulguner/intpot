@@ -125,13 +125,16 @@ def load(source: Any) -> IntpotApp:
         source_type, app_instance = detect_instance(source)
         return IntpotApp(source_type, app_instance)
     except ModuleNotFoundError as e:
-        module = e.name or ""
-        if "fastmcp" in module:
+        # Match the top-level module exactly. `"fastapi" in module` also matched
+        # a user's own missing `myfastapi_helper`, sending them to install
+        # intpot[api] — which would not have helped and hid the real cause.
+        top_level = (e.name or "").split(".", 1)[0]
+        if top_level == "fastmcp":
             raise ModuleNotFoundError(
                 "FastMCP is required for MCP support. "
                 "Install it with: pip install intpot[mcp]"
             ) from e
-        if "fastapi" in module:
+        if top_level in ("fastapi", "uvicorn"):
             raise ModuleNotFoundError(
                 "FastAPI is required for API support. "
                 "Install it with: pip install intpot[api]"
