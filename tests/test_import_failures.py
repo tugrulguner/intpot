@@ -341,3 +341,85 @@ def test_load_keeps_the_original_missing_module_reachable(tmp_source):
 
     assert mapped is not original
     assert mapped.name == "fastmcp"
+
+
+# ---------------------------------------------------------------------------
+# Malformed Python
+#
+# The AST pre-check swallowed SyntaxError and returned False, so a file that
+# does not parse got the same message as a valid file with no app in it — and a
+# directory scan dropped it without a word. Broken is not the same as
+# uninteresting, and only the user can fix it.
+# ---------------------------------------------------------------------------
+
+_MALFORMED = 'from fastmcp import FastMCP\nmcp = FastMCP("d"\n\ndef broken(:\n'
+
+
+def test_a_malformed_source_reports_the_parse_error(tmp_source):
+    source = tmp_source(_MALFORMED)
+
+    result = runner.invoke(app, ["inspect", str(source)])
+
+    assert result.exit_code == 1, result.output
+    assert "Cannot parse" in result.output
+    assert "SyntaxError" in result.output
+    assert "No FastMCP, Typer, or FastAPI app instance found" not in result.output
+
+
+def test_a_valid_file_with_no_app_is_still_reported_as_having_no_app(tmp_source):
+    """The two must stay distinguishable — that is the whole point."""
+    result = runner.invoke(app, ["inspect", str(tmp_source("value = 42\n"))])
+
+    assert result.exit_code == 1
+    assert "No FastMCP, Typer, or FastAPI app instance found" in result.output
+    assert "Cannot parse" not in result.output
+
+
+def test_a_directory_scan_reports_a_malformed_file_and_continues(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "malformed.py").write_text(_MALFORMED)
+    (project / "good.py").write_text(
+        textwrap.dedent("""\
+            from fastmcp import FastMCP
+            mcp = FastMCP("probe")
+
+            @mcp.tool()
+            def echo(value: str) -> str:
+                "Echo."
+                return value
+            """)
+    )
+    out = tmp_path / "out"
+
+    result = runner.invoke(app, ["to", "cli", str(project), "-o", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert "SKIP (import failed)" in result.output
+    assert "Cannot parse" in result.output
+    assert (out / "good_cli.py").exists(), "the good file was not converted"
+
+
+def test_a_directory_scan_stays_quiet_about_valid_non_app_files(tmp_path: Path):
+    """Reporting parse failures must not make ordinary modules noisy."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "helpers.py").write_text("VALUE = 42\n")
+    (project / "good.py").write_text(
+        textwrap.dedent("""\
+            from fastmcp import FastMCP
+            mcp = FastMCP("probe")
+
+            @mcp.tool()
+            def echo(value: str) -> str:
+                "Echo."
+                return value
+            """)
+    )
+
+    result = runner.invoke(
+        app, ["to", "cli", str(project), "-o", str(tmp_path / "out")]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "SKIP" not in result.output

@@ -50,7 +50,8 @@ def discover_sources(
         except SourceImportError as exc:
             # Must precede DetectionError: SourceImportError subclasses it, and
             # matching the parent first would silence import failures again (#59).
-            print(f"SKIP (import failed): {py_file}: {exc}", file=sys.stderr)
+            # The exception already names the file and the problem.
+            print(f"SKIP (import failed): {exc}", file=sys.stderr)
             continue
         except DetectionError:
             # Ordinary: most files in a project are not framework apps.

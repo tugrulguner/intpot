@@ -67,8 +67,15 @@ def _has_framework_app_ast(source_path: Path) -> bool:
     try:
         source = source_path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(source_path))
-    except (SyntaxError, UnicodeDecodeError, ValueError):
-        return False
+    except (SyntaxError, UnicodeDecodeError, ValueError) as exc:
+        # Returning False here reported malformed Python as "no app instance
+        # found" — the same message a perfectly valid non-app file gets — and a
+        # directory scan skipped it without a word. A file that cannot be parsed
+        # is broken, not uninteresting, and the user is the only one who can
+        # fix it.
+        raise SourceImportError(
+            f"Cannot parse {source_path}: {type(exc).__name__}: {exc}"
+        ) from exc
 
     for node in ast.iter_child_nodes(tree):
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):
