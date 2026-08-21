@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from intpot.core.detector import DetectionError, detect_source
+from intpot.core.detector import DetectionError, SourceImportError, detect_source
 from intpot.core.models import SourceType
 
 _SKIP_DIRS = {
@@ -47,6 +47,12 @@ def discover_sources(
 
         try:
             source_type, app_instance = detect_source(py_file)
+        except SourceImportError as exc:
+            # Must precede DetectionError: SourceImportError subclasses it, and
+            # matching the parent first would silence import failures again (#59).
+            # The exception already names the file and the problem.
+            print(f"SKIP (import failed): {exc}", file=sys.stderr)
+            continue
         except DetectionError:
             # Ordinary: most files in a project are not framework apps.
             if verbose:
