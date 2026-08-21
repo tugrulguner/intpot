@@ -10,6 +10,42 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.7.0] - 2026-08-21
+
+### Changed
+
+- `AGENTS.md` is no longer included in the installed wheel. It documents the repository for contributors and was never useful to installed packages. ([#97](https://github.com/tugrulguner/intpot/pull/97))
+- Directory conversion now mirrors the source tree. `myproject/alpha/tools.py`
+  becomes `converted/alpha/tools_mcp.py` rather than `converted/tools_mcp.py`, so output
+  paths change for any nested directory conversion.
+
+  This also fixes data loss: outputs were named from the source basename alone, so two
+  sources sharing a filename in different packages wrote to the same path and the second
+  silently replaced the first — while the command printed a success line for each, so the
+  count looked right unless you listed the directory. `tools.py`, `main.py` and `cli.py`
+  are exactly the names projects repeat across packages. ([#99](https://github.com/tugrulguner/intpot/pull/99))
+
+### Fixed
+
+- Imports are no longer dropped from generated code. `import os.path` binds `os`, but the
+  scan recorded the binding as `os.path`, so it never matched a body using
+  `os.path.join(...)`. A statement importing several names was also kept or dropped as a
+  whole, so `import os.path, typer` lost `os.path` when the framework import was filtered
+  out. Both left a file that compiled cleanly and raised `NameError` when the command ran.
+  Imports are now tracked per bound name, and only the names a body actually uses are
+  emitted. ([#100](https://github.com/tugrulguner/intpot/pull/100))
+- A source that cannot be imported or parsed is now reported instead of crashing or
+  vanishing. `intpot inspect`, `to *`, `eject` and `serve` dumped a full traceback and
+  exited 2 when the source raised during import; a source calling `sys.exit()` at import
+  made intpot exit with that source's own code and print nothing, and stopped a directory
+  scan dead; and a file with a syntax error was reported as simply having no app in it,
+  indistinguishable from a valid module, and skipped silently during a scan. All of these
+  now say what went wrong, name the file, and exit 1, while a scan reports the bad file and
+  converts the rest. Missing-framework hints also stopped guessing: a module merely
+  containing "fastapi" in its name no longer advises installing `intpot[api]`. Separately, a
+  tool with a parameter named `_fn` no longer breaks `serve --cli`. ([#101](https://github.com/tugrulguner/intpot/pull/101))
+
+
 ## [0.6.0] - 2026-08-15
 
 ### Changed

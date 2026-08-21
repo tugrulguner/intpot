@@ -1,6 +1,6 @@
 # Roadmap
 
-## v0.6 (current) — Write Once, Serve Everywhere
+## v0.7 (current) — Write Once, Serve Everywhere
 
 Define tools once with `@app.tool()` and serve them as a CLI, API, or MCP server, or
 eject them to standalone framework code. The converter handles all six directions between
