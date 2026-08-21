@@ -6,7 +6,7 @@ import functools
 from pathlib import Path
 from typing import Any
 
-from intpot.core.detector import detect_instance, detect_source
+from intpot.core.detector import SourceImportError, detect_instance, detect_source
 from intpot.core.models import SourceType, ToolInfo
 
 
@@ -102,6 +102,29 @@ class IntpotApp:
         return out.resolve()
 
 
+def _missing_module_error(exc: ModuleNotFoundError) -> ModuleNotFoundError:
+    """Point at the right extra, or hand the original error back unchanged.
+
+    The top-level module is matched exactly. `"fastapi" in module` also matched
+    a user's own missing `myfastapi_helper`, sending them to install
+    intpot[api] — which would not have helped and hid the real cause.
+    """
+    top_level = (exc.name or "").split(".", 1)[0]
+    if top_level == "fastmcp":
+        return ModuleNotFoundError(
+            "FastMCP is required for MCP support. "
+            "Install it with: pip install intpot[mcp]",
+            name=exc.name,
+        )
+    if top_level in ("fastapi", "uvicorn"):
+        return ModuleNotFoundError(
+            "FastAPI is required for API support. "
+            "Install it with: pip install intpot[api]",
+            name=exc.name,
+        )
+    return exc
+
+
 def load(source: Any) -> IntpotApp:
     """Load a source for conversion.
 
@@ -124,19 +147,14 @@ def load(source: Any) -> IntpotApp:
 
         source_type, app_instance = detect_instance(source)
         return IntpotApp(source_type, app_instance)
-    except ModuleNotFoundError as e:
-        # Match the top-level module exactly. `"fastapi" in module` also matched
-        # a user's own missing `myfastapi_helper`, sending them to install
-        # intpot[api] — which would not have helped and hid the real cause.
-        top_level = (e.name or "").split(".", 1)[0]
-        if top_level == "fastmcp":
-            raise ModuleNotFoundError(
-                "FastMCP is required for MCP support. "
-                "Install it with: pip install intpot[mcp]"
-            ) from e
-        if top_level in ("fastapi", "uvicorn"):
-            raise ModuleNotFoundError(
-                "FastAPI is required for API support. "
-                "Install it with: pip install intpot[api]"
-            ) from e
+    except SourceImportError as e:
+        # detect_source wraps whatever the user's module raised so the CLI can
+        # report it. This is the Python API, which documents ModuleNotFoundError
+        # — unwrap it back so callers catching that keep working.
+        if isinstance(e.__cause__, ModuleNotFoundError):
+            raise _missing_module_error(e.__cause__) from e
         raise
+    except ModuleNotFoundError as e:
+        # The live-instance path: inspectors import fastmcp/fastapi themselves,
+        # and that never goes through detect_source.
+        raise _missing_module_error(e) from e

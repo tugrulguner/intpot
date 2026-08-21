@@ -31,8 +31,14 @@ class SourceImportError(DetectionError):
 _EXTRA_FOR_MODULE = {"fastmcp": "mcp", "fastapi": "api", "uvicorn": "api"}
 
 
-def _import_failure_message(source_path: Path, exc: Exception) -> str:
+def _import_failure_message(source_path: Path, exc: BaseException) -> str:
     """Explain an import failure in terms the user can act on."""
+    if isinstance(exc, SystemExit):
+        return (
+            f"Cannot import {source_path}: it called sys.exit({exc.code!r}) while "
+            f"being imported. Detection has to import the file, so module-level "
+            f"exits run too — guard them with `if __name__ == '__main__':`."
+        )
     detail = f"Cannot import {source_path}: {type(exc).__name__}: {exc}"
     missing = (
         getattr(exc, "name", None) if isinstance(exc, ModuleNotFoundError) else None
@@ -93,9 +99,15 @@ def _import_module_from_path(source_path: Path) -> Any:
     sys.modules[unique_name] = module
     try:
         spec.loader.exec_module(module)
-    except Exception as exc:
+    except (Exception, SystemExit) as exc:
         # The user's own module raised. Every command funnels through here, so
         # wrapping once is what stops a traceback reaching the terminal.
+        #
+        # SystemExit is listed separately because it derives from BaseException,
+        # not Exception: a source calling sys.exit() at import — argparse on a
+        # bad parse does exactly this — otherwise propagated, and intpot exited
+        # with the source's own code and printed nothing at all. Catching
+        # BaseException instead would also swallow KeyboardInterrupt.
         raise SourceImportError(_import_failure_message(source_path, exc)) from exc
     finally:
         # Clean up sys.modules to avoid leaking imported modules

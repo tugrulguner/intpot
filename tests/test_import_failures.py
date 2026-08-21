@@ -175,3 +175,123 @@ def test_directory_scan_stays_quiet_about_files_that_are_not_apps(tmp_path: Path
 
     assert result.exit_code == 0, result.output
     assert "SKIP (import failed)" not in result.output
+
+
+# ---------------------------------------------------------------------------
+# sys.exit() during import
+#
+# SystemExit derives from BaseException, not Exception, so `except Exception`
+# never saw it. intpot exited with the *source's* code and printed nothing —
+# and a directory scan terminated instead of skipping the file and continuing.
+# argparse calls sys.exit() on a bad parse, so this is reachable by accident.
+# ---------------------------------------------------------------------------
+
+_EXITS_ON_IMPORT = """\
+import sys
+from fastmcp import FastMCP
+
+mcp = FastMCP("probe")
+sys.exit(3)
+"""
+
+
+def test_a_source_that_exits_during_import_is_reported(tmp_source):
+    source = tmp_source(_EXITS_ON_IMPORT)
+
+    result = runner.invoke(app, ["inspect", str(source)])
+
+    assert result.exit_code == 1, (
+        f"inherited the source's exit code: {result.exit_code}"
+    )
+    assert "sys.exit(3)" in result.output
+    assert "__main__" in result.output, "no guidance on how to avoid it"
+
+
+def test_a_directory_scan_survives_a_source_that_exits(tmp_path: Path):
+    """The scan must skip the file and keep going, not abort at exit code 3."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "exiter.py").write_text(_EXITS_ON_IMPORT)
+    (project / "server.py").write_text(
+        textwrap.dedent("""\
+            from fastmcp import FastMCP
+            mcp = FastMCP("probe")
+
+            @mcp.tool()
+            def echo(value: str) -> str:
+                "Echo."
+                return value
+            """)
+    )
+    out = tmp_path / "out"
+
+    result = runner.invoke(app, ["to", "cli", str(project), "-o", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert "SKIP (import failed)" in result.output
+    assert (out / "server_cli.py").exists(), "the good file was not converted"
+
+
+def test_keyboard_interrupt_is_not_swallowed(tmp_source, monkeypatch):
+    """Catching BaseException would trap Ctrl-C too; only SystemExit is caught."""
+    from intpot.core import detector
+
+    source = tmp_source('from fastmcp import FastMCP\nmcp = FastMCP("probe")\n')
+
+    def _interrupt(self, module):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        "importlib.machinery.SourceFileLoader.exec_module", _interrupt, raising=False
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        detector.detect_source(source)
+
+
+# ---------------------------------------------------------------------------
+# The documented Python-API contract
+# ---------------------------------------------------------------------------
+
+
+def test_load_still_raises_module_not_found_for_a_path(tmp_source):
+    """`load()` documents ModuleNotFoundError; wrapping made it unreachable."""
+    from intpot import load
+
+    source = tmp_source(
+        "import totally_absent_module\n"
+        "from fastmcp import FastMCP\n"
+        'mcp = FastMCP("probe")\n'
+    )
+
+    with pytest.raises(ModuleNotFoundError) as caught:
+        load(source)
+
+    assert "totally_absent_module" in str(caught.value)
+    assert caught.value.name == "totally_absent_module"
+
+
+def test_load_keeps_the_install_hint_for_a_missing_extra():
+    from intpot.converter import _missing_module_error
+
+    hinted = _missing_module_error(ModuleNotFoundError(name="fastmcp"))
+
+    assert "intpot[mcp]" in str(hinted)
+    assert hinted.name == "fastmcp"
+
+
+def test_load_hands_back_an_unrelated_missing_module_unchanged():
+    from intpot.converter import _missing_module_error
+
+    original = ModuleNotFoundError(
+        "No module named 'myfastapi_helper'", name="myfastapi_helper"
+    )
+
+    assert _missing_module_error(original) is original
+
+
+def test_load_still_raises_a_detection_error_for_a_non_app(tmp_source):
+    from intpot import load
+
+    with pytest.raises(DetectionError):
+        load(tmp_source("value = 42\n"))
