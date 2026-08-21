@@ -42,6 +42,14 @@ identifier produced a duplicate argument. Never hand-write quotes around interpo
 text — use the `repr` filter, which is Python's own literal writer. Tests must `compile()`
 the output, not inspect it.
 
+**Error paths need their own probes.** Exercising the happy path never reaches them, so
+they are where this codebase's bugs survive longest. #101 took three review rounds and
+every finding was in an `except` branch: `SystemExit` slipping past `except Exception`, a
+documented exception a wrapper had made unreachable, and a cause chain pointing at
+itself. When you touch error handling, enumerate what can actually be raised and run each
+one — a source that exits, a source that raises, a missing dependency, a missing sibling
+module — rather than reasoning about them.
+
 **A guard that can collect nothing must assert it found something.** The test asserting
 every CLI flag appears in the README derives its cases by walking the command tree. When
 that walk broke, the test quietly went from 22 assertions to 1 and kept reporting green —
@@ -99,6 +107,25 @@ the contracts a change has to keep.
 - `discover_sources()` stays quiet about files that simply aren't apps (verbose only),
   but always reports an import failure to stderr. A scan has to survive one bad file
   without going silent about it (#59).
+- **`except Exception` does not catch everything.** `SystemExit` and `KeyboardInterrupt`
+  derive from `BaseException`. A source calling `sys.exit()` at import — which
+  `argparse.parse_args()` does on a bad parse — went straight through detection: intpot
+  exited with *that source's* code and printed nothing, and a directory scan stopped
+  there. Catch `SystemExit` explicitly alongside `Exception`; widening to `BaseException`
+  instead would swallow Ctrl-C.
+- **An exception subclass rewires every `except` for its parent.** Subclassing
+  `DetectionError` is how a new failure kind reaches existing handlers unchanged — and
+  also how it reaches the ones that should have treated it differently. Any site that
+  tells the two apart has to catch the subclass *first*, or the parent matches and the
+  distinction silently disappears. Adding a subclass means auditing every existing
+  handler for the parent, `discover_sources()` above being the one that matters.
+- **`raise X from Y` mutates X.** It sets `X.__cause__ = Y`. When `Y.__cause__` is
+  already `X` — which it is whenever you unwrap and re-raise — the chain points at itself
+  and anything walking it loops. Re-raise an untouched original `from None`; chain a
+  newly built error from what actually failed.
+- **Wrapping an exception can break a documented contract.** `load()` documents that it
+  raises `ModuleNotFoundError`; wrapping import failures made its own handler
+  unreachable. Check `Raises:` docstrings and callers before introducing a wrapper.
 
 **Tests**
 
