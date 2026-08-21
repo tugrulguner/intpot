@@ -40,6 +40,48 @@ def python_return_type_name(annotation: Any) -> str:
     return python_type_name(annotation)
 
 
+def _bound_name(node: ast.Import | ast.ImportFrom, alias: ast.alias) -> str:
+    """The name one alias binds in the module namespace.
+
+    `import os.path` binds `os`, not `os.path` — the body that uses it says
+    `os.path.join(...)`, whose root name is `os`. Recording the dotted path
+    meant the binding never matched anything the body referenced, so the import
+    was dropped and the generated module raised `NameError: name 'os' is not
+    defined` at runtime.
+
+    `import os.path as p` binds `p`, and `from os import path` binds `path`;
+    both are already the full alias name.
+    """
+    if alias.asname:
+        return alias.asname
+    if isinstance(node, ast.ImportFrom):
+        return alias.name
+    return alias.name.split(".", 1)[0]
+
+
+def _split_aliases(
+    node: ast.Import | ast.ImportFrom,
+) -> list[tuple[ast.stmt, str]]:
+    """One single-alias statement per name the import binds.
+
+    `import os.path, typer` binds two unrelated names, and downstream filtering
+    works on the rendered *string*: it sees `typer` in it and drops the whole
+    statement, taking `os.path` with it. Splitting first means each name is kept
+    or dropped on its own merit.
+    """
+    split: list[tuple[ast.stmt, str]] = []
+    for alias in node.names:
+        if isinstance(node, ast.ImportFrom):
+            single: ast.stmt = ast.ImportFrom(
+                module=node.module, names=[alias], level=node.level
+            )
+        else:
+            single = ast.Import(names=[alias])
+        ast.copy_location(single, node)
+        split.append((single, _bound_name(node, alias)))
+    return split
+
+
 def extract_source_imports(fn: Any) -> list[str]:
     """Extract imports from the source file that are referenced in the function body.
 
@@ -60,12 +102,12 @@ def extract_source_imports(fn: Any) -> list[str]:
     except (OSError, SyntaxError):
         return []
 
-    # Collect all top-level import nodes and the names they bind
-    import_nodes: list[tuple[ast.stmt, set[str]]] = []
+    # One entry per bound name, so a statement importing several names can be
+    # kept for one and dropped for another.
+    import_nodes: list[tuple[ast.stmt, str]] = []
     for node in module_tree.body:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            names = {alias.asname or alias.name for alias in node.names}
-            import_nodes.append((node, names))
+            import_nodes.extend(_split_aliases(node))
 
     if not import_nodes:
         return []
@@ -92,8 +134,8 @@ def extract_source_imports(fn: Any) -> list[str]:
     # Keep only imports whose bound name appears in body
     result: list[str] = []
     seen: set[str] = set()
-    for node, bound_names in import_nodes:
-        if bound_names & body_names:
+    for node, bound_name in import_nodes:
+        if bound_name in body_names:
             line = ast.unparse(node)
             if line not in seen:
                 seen.add(line)
