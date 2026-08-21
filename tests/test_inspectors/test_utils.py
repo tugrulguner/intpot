@@ -211,3 +211,56 @@ def test_a_generated_command_using_a_dotted_import_runs(tmp_source):
 
     assert result.exit_code == 0, result.output
     assert "/tmp/hello" in result.output
+
+
+def test_a_mixed_import_statement_keeps_the_name_the_body_uses(tmp_source):
+    """`import os.path, typer` binds two unrelated names in one statement.
+
+    Downstream framework filtering works on the rendered string: it saw `typer`
+    and dropped the whole statement, taking `os.path` with it.
+    """
+    imports = _imports_for(
+        tmp_source,
+        "import os.path, typer\n\n\ndef tool(name: str) -> str:\n"
+        '    return os.path.join("/tmp", name)\n',
+    )
+
+    assert imports == ["import os.path"]
+
+
+def test_a_mixed_from_import_keeps_only_the_name_in_use(tmp_source):
+    imports = _imports_for(
+        tmp_source,
+        "from os.path import join, dirname\n\n\ndef tool(name: str) -> str:\n"
+        '    return join("/tmp", name)\n',
+    )
+
+    assert imports == ["from os.path import join"]
+
+
+def test_a_mixed_import_survives_into_a_running_command(tmp_source):
+    """The reviewer's case, end to end: the failure was a runtime NameError."""
+    path = tmp_source(
+        "import os.path, typer\n"
+        "from fastmcp import FastMCP\n"
+        "\n"
+        'mcp = FastMCP("probe")\n'
+        "\n"
+        "@mcp.tool()\n"
+        "def where(name: str) -> str:\n"
+        '    """Join a path."""\n'
+        '    return os.path.join("/tmp", name)\n'
+    )
+
+    from intpot import load
+
+    tools = transform_tools(load(path).tools, SourceType.MCP, SourceType.CLI)
+    source = CLIGenerator().generate(tools)
+    namespace: dict[str, Any] = {}
+    exec(compile(source, "<generated>", "exec"), namespace)
+
+    result = CliRunner().invoke(namespace["app"], ["hello"])
+
+    assert result.exit_code == 0, result.output
+    assert "/tmp/hello" in result.output
+    assert "import os.path" in source
