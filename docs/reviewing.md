@@ -83,6 +83,19 @@ Don't raise anything you can't back with evidence. Four of the bugs this project
 shipped looked correct as text; if a claim is about generated code, run the generated
 code.
 
+**Then check that your check could have failed.** A verification that cannot detect the
+problem reports success just as confidently as one that can, and this has produced two
+false "all clear" results here:
+
+- grepping command output for `Traceback` to prove no traceback leaked — Typer renders
+  them through rich, as a box that never contains that word. Four commands were reported
+  clean while all four were dumping tracebacks.
+- reading `$?` after a shell pipeline rather than the command, which reports the exit
+  status of `tail`.
+
+Before trusting a negative result, break the thing on purpose and confirm the check goes
+red. If it doesn't, you have learned nothing about the code — only about the check.
+
 ## 6. Report
 
 Classify:
