@@ -10,6 +10,17 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.7.1] - 2026-08-24
+
+### Changed
+
+- The README, roadmap, and installed coding-agent guidance now state the converter's current fidelity limits and planned correctness work. ([#107](https://github.com/tugrulguner/intpot/pull/107))
+
+### Fixed
+
+- Function body extraction no longer crashes on Python 3.14, which removed the deprecated `ast.Str` alias. ([#108](https://github.com/tugrulguner/intpot/pull/108))
+
+
 ## [0.7.0] - 2026-08-21
 
 ### Changed
