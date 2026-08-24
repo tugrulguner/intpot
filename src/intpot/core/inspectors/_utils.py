@@ -171,9 +171,7 @@ def extract_function_body(fn: Any) -> str | None:
 
     # Find the first real statement, skipping a leading docstring
     first_stmt = func_node.body[0]
-    if isinstance(first_stmt, ast.Expr) and isinstance(
-        first_stmt.value, (ast.Constant, ast.Str)
-    ):
+    if isinstance(first_stmt, ast.Expr) and isinstance(first_stmt.value, ast.Constant):
         if len(func_node.body) <= 1:
             return None  # Only a docstring, no real body
         first_stmt = func_node.body[1]
