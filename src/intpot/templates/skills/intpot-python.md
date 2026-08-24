@@ -96,13 +96,20 @@ other two.
 
 Generated strings still need runtime verification. Successful generation does not prove
 the result works: compile it, import it with its runtime dependencies installed, then
-invoke a real CLI command, API request, or MCP tool. intpot does not discover or install
-transitive dependencies, reproduce configuration, or provision external services.
+invoke a real CLI command, API request, or MCP tool.
 
-Current unsupported or lossy conversions include nested Typer sub-apps, some FastAPI
-`Annotated[..., Body(...)]` parameters, and `Depends()` when targeting CLI or MCP. A body
-that cannot be recovered becomes a `# TODO: implement` stub; inspect and implement it
-before treating the output as complete.
+Current unsupported or lossy conversions include nested Typer sub-apps, repeatable CLI
+options, some FastAPI `Annotated[..., Body(...)]` parameters, `Depends()` when targeting
+CLI or MCP, factory-created apps, and routes with multiple HTTP methods. A body that cannot
+be recovered becomes a `# TODO: implement` stub; inspect and implement it before treating
+the output as complete.
+
+intpot carries direct import statements referenced by a tool body. It does not yet copy
+same-module helpers, constants, classes, models, or closure values. It does not discover
+or install transitive dependencies across imported modules. Direct file loading does not
+add the source directory to `sys.path`, so sibling imports may require installing the
+package or setting `PYTHONPATH`. intpot does not reproduce configuration or provision
+external services.
 
 ## Normalized tool data
 

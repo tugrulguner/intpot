@@ -124,12 +124,18 @@ conversion or eject:
    `TestClient`, or call a generated MCP tool. Checking text or `--help` alone is not a
    behavioral test.
 
-Current unsupported or lossy cases include nested Typer sub-apps, some FastAPI
-`Annotated[..., Body(...)]` parameters, and `Depends()` (recorded in a comment but
-stripped from non-API targets). A missing recoverable body becomes a `# TODO: implement`
-stub. intpot carries source imports it can identify, but it does not discover or install
-transitive dependencies, reproduce configuration, or provision external services; verify
-those explicitly rather than assuming generated code is standalone.
+Current unsupported or lossy cases include nested Typer sub-apps, repeatable CLI options,
+some FastAPI `Annotated[..., Body(...)]` parameters, `Depends()` (recorded in a comment
+but stripped from non-API targets), factory-created apps, and routes with multiple HTTP
+methods. A missing recoverable body becomes a `# TODO: implement` stub.
+
+intpot carries direct import statements referenced by a tool body. It does not yet copy
+same-module helpers, constants, classes, models, or closure values. It does not discover
+or install transitive dependencies across imported modules. Direct file loading does not
+add the source directory to `sys.path`, so sibling imports may require installing the
+package or setting `PYTHONPATH`. intpot does not reproduce configuration or provision
+external services; verify those explicitly rather than assuming generated code is
+standalone.
 
 ## Installation
 

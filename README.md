@@ -183,8 +183,9 @@ intpot add skills --path ./myproject/
 - **Six conversion directions:** move existing apps between all three frameworks.
 - **Standalone output:** eject or convert to normal framework code with no intpot runtime
   dependency.
-- **Behavior-aware transforms:** preserve function bodies and imports, and translate
-  framework conventions such as `typer.echo()` into return values.
+- **Behavior-aware transforms:** preserve recoverable function bodies and the direct
+  imports they use, and translate framework conventions such as `typer.echo()` into
+  return values.
 - **Interface fidelity:** carry types, defaults, and async functions through supported
   conversions, and apply FastAPI parameter sources when generating an API.
 - **Programmatic access:** use `intpot.load()` and normalized `ToolInfo` objects from
@@ -272,16 +273,25 @@ frameworks share:
 - scalar returns translated into a shape the target framework can serve correctly.
 
 Frameworks do not have one-to-one equivalents for every feature. Review generated code
-when a source uses nested Typer command groups, `Annotated[..., Body(...)]`, FastAPI
-`Depends()`, Pydantic model parameters, streaming, background tasks, or framework-specific
-error handling. Transitive imports, external services, and configuration are not
-provisioned for you. If intpot cannot recover a body, it emits a `# TODO: implement` stub
-instead of inventing behavior.
+when a source uses nested Typer command groups, repeatable CLI options,
+`Annotated[..., Body(...)]`, FastAPI `Depends()`, Pydantic model parameters, routes with
+multiple HTTP methods, streaming, background tasks, or framework-specific error handling.
+
+intpot carries direct import statements referenced by a tool body. It does not yet copy
+same-module helpers, constants, classes, models, or closure values that the body
+references, and it does not follow dependencies across imported modules. Factory-created
+apps are not detected by the current AST pre-check. Loading a source file directly also
+does not add its directory to `sys.path`, so a sibling import such as
+`from helpers import normalize` may require installing the package or setting
+`PYTHONPATH`. External services and configuration are not provisioned for you. If intpot
+cannot recover a body, it emits a `# TODO: implement` stub instead of inventing behavior.
 
 > [!IMPORTANT]
-> Detection imports the source module, so only inspect or convert code you trust. intpot
-> is alpha software: compile the generated file, import it with its dependencies, and
-> exercise a real CLI command, API request, or MCP tool before shipping it.
+> Detection imports the source module, so only inspect or convert code you trust. A source
+> that cannot be parsed or imported is reported cleanly; during a directory conversion,
+> intpot reports the bad file and continues with the rest. intpot is alpha software:
+> compile the generated file, import it with its dependencies, and exercise a real CLI
+> command, API request, or MCP tool before shipping it.
 
 ## Architecture
 
@@ -322,8 +332,10 @@ The repository includes checked-in source and generated output for every directi
 | FastMCP | [`mcp_to_cli.py`](examples/conversions/mcp_to_cli.py) | [`mcp_to_api.py`](examples/conversions/mcp_to_api.py) | — |
 
 [`examples/`](examples/) also contains advanced inputs and outputs with direct imports,
-async tools, request bodies, `Depends()`, path parameters, and multiple HTTP methods.
-Run `bash scripts/demo.sh` to regenerate all twelve conversions locally.
+async tools, request bodies, `Depends()`, and path parameters. The FastAPI input includes
+routes with multiple HTTP methods; that case is intentionally visible even though current
+conversion keeps only one method. Run `bash scripts/demo.sh` to regenerate all twelve
+conversions locally.
 
 ## CLI Reference
 
