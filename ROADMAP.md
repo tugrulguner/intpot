@@ -6,7 +6,22 @@ Define tools once with `@app.tool()` and serve them as a CLI, API, or MCP server
 eject them to standalone framework code. The converter handles all six directions between
 existing Typer, FastMCP, and FastAPI apps.
 
-### Remaining polish
+### Conversion correctness
+
+- [ ] Carry the complete dependency closure within one source module: referenced helper
+      functions, constants, classes, models, defaults, decorators, annotations, and base
+      classes. This stops generated tools raising `NameError` without following imports
+      into other modules.
+- [ ] Preserve repeatable Typer/Click options and collection cardinality when converting
+      to API or MCP schemas.
+- [ ] Support package and sibling imports when detecting a source file directly. Detection
+      currently imports by file path without adding the source directory to `sys.path`.
+- [ ] Detect apps created by factories such as `app = create_app()` without broadening
+      directory discovery into importing every Python file.
+- [ ] Define and preserve multi-method FastAPI route semantics. `ToolInfo` currently stores
+      one HTTP method, so a route registered for several methods is lossy.
+
+### Framework polish
 
 - [ ] Handle `Annotated[str, Body(...)]` style FastAPI parameters ([#1](https://github.com/tugrulguner/intpot/issues/1))
 - [ ] Emit nested command hierarchies. Reading them works; see "Already shipped". What's
@@ -34,7 +49,13 @@ than planned:
   Generating a nested hierarchy back out is still open (#2).
 - **Round-trip fidelity tests** — `tests/test_roundtrip.py` covers all three pairings.
 - **Direct import resolution** — imports referenced by a function body are carried into
-  the generated file. Transitive dependencies are not yet followed.
+  the generated file, including dotted and mixed import statements. Same-module
+  declarations and dependencies across imported modules are not yet followed.
+- **Collision-safe directory output** — directory conversion mirrors the source tree, so
+  files with the same basename in separate packages cannot overwrite each other.
+- **Actionable source failures** — import errors, syntax errors, and import-time
+  `sys.exit()` calls are reported without a traceback. Directory scans report a bad file,
+  continue, and convert the remaining apps.
 
 ## v2 — Full AST Transform Pipeline
 
@@ -52,8 +73,8 @@ transformations that need real understanding of what a function body does.
 - **Pydantic model parameters** ([#17](https://github.com/tugrulguner/intpot/issues/17)) —
   expand a model argument into individual CLI/MCP parameters instead of treating it as one
   opaque value
-- **Transitive import resolution** — follow what the body's own dependencies need, not
-  just the names it mentions directly
+- **Cross-module dependency resolution** — after same-module dependency closure is
+  reliable, follow dependencies through imported project modules and packages
 - **Full error-handling conversion** — Typer exits are mapped today; HTTP exceptions and
   MCP error patterns are not
 
@@ -67,7 +88,8 @@ transformations that need real understanding of what a function body does.
 
 ---
 
-Every item above is tracked as an issue. If something here interests you,
+Linked items above are tracked as issues; unlinked items are directional roadmap work and
+should get a focused issue before implementation. If something here interests you,
 [CONTRIBUTING.md](CONTRIBUTING.md) has the setup and
 [good first issues](https://github.com/tugrulguner/intpot/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 are a gentler place to start.
