@@ -8,8 +8,17 @@ from pathlib import Path
 import typer
 
 from intpot.converter import inspect_app
+from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
 from intpot.core.transforms import transform_tools
+
+
+def _inspect_or_exit(source_type: SourceType, app_instance: object):
+    try:
+        return inspect_app(source_type, app_instance)
+    except InspectionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from None
 
 
 def _mirrored_destination(
@@ -116,7 +125,7 @@ def convert(
         for (file_path, source_type, app_instance), destination in zip(
             sources, destinations, strict=True
         ):
-            tools = inspect_app(source_type, app_instance)
+            tools = _inspect_or_exit(source_type, app_instance)
             tools = transform_tools(tools, source_type, target)
             code = generator.generate(tools)
 
@@ -153,7 +162,7 @@ def convert(
         typer.echo(f"Source is already a {label}.", err=True)
         raise typer.Exit(1)
 
-    tools = inspect_app(source_type, app_instance)
+    tools = _inspect_or_exit(source_type, app_instance)
     tools = transform_tools(tools, source_type, target)
     code = generator.generate(tools)
 

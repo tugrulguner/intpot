@@ -10,7 +10,16 @@ from pathlib import Path
 import typer
 
 from intpot.converter import inspect_app
+from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
+
+
+def _inspect_or_exit(source_type: SourceType, app_instance: object):
+    try:
+        return inspect_app(source_type, app_instance)
+    except InspectionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from None
 
 
 def _serialize_tool(tool):
@@ -55,7 +64,7 @@ def inspect_command(
 
         all_results = []
         for file_path, source_type, app_instance in sources:
-            tools = inspect_app(source_type, app_instance)
+            tools = _inspect_or_exit(source_type, app_instance)
             all_results.append((file_path, source_type, tools))
 
         if as_json:
@@ -89,7 +98,7 @@ def inspect_command(
     if verbose:
         print(f"FOUND: {source} ({source_type.value})", file=sys.stderr)
 
-    tools = inspect_app(source_type, app_instance)
+    tools = _inspect_or_exit(source_type, app_instance)
 
     if as_json:
         out = [

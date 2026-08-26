@@ -102,3 +102,20 @@ def test_inspect_nonexistent_file():
     result = runner.invoke(app, ["inspect", "/tmp/no_such_file_xyz.py"])
     assert result.exit_code != 0
     assert "Traceback" not in result.output
+
+
+def test_inspect_unknown_mcp_registry_reports_compatibility_error(tmp_source):
+    source = tmp_source("""
+        class FastMCP:
+            pass
+
+        FastMCP.__module__ = "fastmcp.future"
+        mcp = FastMCP()
+    """)
+
+    result = runner.invoke(app, ["inspect", str(source)])
+
+    assert result.exit_code == 1
+    assert "Unsupported FastMCP registry shape" in result.stderr
+    assert "supported FastMCP 2.x or 3.x" in result.stderr
+    assert "Traceback" not in result.output
