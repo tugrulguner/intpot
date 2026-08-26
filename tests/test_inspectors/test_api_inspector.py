@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
 from intpot.core.inspectors.api import APIInspector
+
+
+def annotated_guard() -> str:
+    return "annotated"
 
 
 def test_inspect_fastapi_endpoints():
@@ -203,6 +207,119 @@ def test_fastapi_own_documentation_routes_are_excluded():
 
     assert [t.name for t in tools] == ["work"]
     assert not {"openapi", "swagger_ui_html", "redoc_html"} & {t.name for t in tools}
+
+
+def test_all_normalized_fastapi_dependency_forms_are_represented():
+    from fastapi import APIRouter, Depends, Security
+
+    def app_guard() -> None:
+        pass
+
+    def router_guard() -> None:
+        pass
+
+    def route_guard() -> None:
+        pass
+
+    def leaf_guard() -> str:
+        return "leaf"
+
+    def nested_guard(value: str = Depends(leaf_guard)) -> str:
+        return value
+
+    def security_guard() -> str:
+        return "secure"
+
+    app = FastAPI(dependencies=[Depends(app_guard)])
+    router = APIRouter(dependencies=[Depends(router_guard)])
+
+    @router.get("/protected", dependencies=[Depends(route_guard)])
+    def protected(
+        annotated: Annotated[str, Depends(annotated_guard)],
+        nested: str = Depends(nested_guard),
+        secure: str = Security(security_guard),
+    ) -> dict:
+        return {"nested": nested, "annotated": annotated, "secure": secure}
+
+    app.include_router(router)
+
+    tools = APIInspector().inspect(app)
+
+    assert [tool.name for tool in tools] == ["protected"]
+    assert tools[0].dependencies == [
+        "app_guard",
+        "router_guard",
+        "route_guard",
+        "annotated_guard",
+        "nested_guard",
+        "leaf_guard",
+        "security_guard",
+    ]
+    assert tools[0].parameters == []
+
+
+def test_distinct_dependencies_with_the_same_name_are_preserved():
+    def first_dependency() -> None:
+        pass
+
+    def second_dependency() -> None:
+        pass
+
+    first_dependency.__name__ = "duplicate_name"
+    second_dependency.__name__ = "duplicate_name"
+    app = FastAPI(dependencies=[Depends(first_dependency), Depends(second_dependency)])
+
+    @app.get("/work")
+    def work() -> dict:
+        return {"ok": True}
+
+    tool = APIInspector().inspect(app)[0]
+
+    assert tool.dependencies == ["duplicate_name", "duplicate_name"]
+
+
+def test_ordinary_included_router_endpoint_is_inspected():
+    from fastapi import APIRouter
+
+    app = FastAPI()
+    router = APIRouter(prefix="/users")
+
+    @router.get("/{user_id}")
+    def get_user(user_id: int) -> dict:
+        return {"user_id": user_id}
+
+    app.include_router(router)
+
+    tools = APIInspector().inspect(app)
+
+    assert [tool.name for tool in tools] == ["get_user"]
+    assert tools[0].route_path == "/users/{user_id}"
+    assert [parameter.name for parameter in tools[0].parameters] == ["user_id"]
+    assert tools[0].dependencies == []
+
+
+def test_nested_included_router_dependency_is_inspected():
+    from fastapi import APIRouter
+
+    def nested_guard() -> None:
+        pass
+
+    inner = APIRouter(prefix="/inner", dependencies=[Depends(nested_guard)])
+
+    @inner.get("/work")
+    def work() -> dict:
+        return {"ok": True}
+
+    outer = APIRouter(prefix="/outer")
+    outer.include_router(inner)
+    app = FastAPI()
+    app.include_router(outer)
+
+    tools = APIInspector().inspect(app)
+
+    assert [tool.name for tool in tools] == ["work"]
+    assert tools[0].route_path == "/outer/inner/work"
+    assert tools[0].dependencies == ["nested_guard"]
 
 
 def test_a_root_endpoint_survives_conversion_and_runs():

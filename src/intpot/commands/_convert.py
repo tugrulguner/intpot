@@ -7,9 +7,11 @@ from pathlib import Path
 
 import typer
 
-from intpot.converter import inspect_app
+from intpot.converter import (
+    UnsupportedFastAPIDependencyError,
+    tools_for_target,
+)
 from intpot.core.models import SourceType
-from intpot.core.transforms import transform_tools
 
 
 def _mirrored_destination(
@@ -113,13 +115,18 @@ def convert(
         # the paths a real run would write.
         destinations = _plan_destinations(sources, source, output, suffix)
 
+        planned: list[tuple[Path, Path, str]] = []
         for (file_path, source_type, app_instance), destination in zip(
             sources, destinations, strict=True
         ):
-            tools = inspect_app(source_type, app_instance)
-            tools = transform_tools(tools, source_type, target)
-            code = generator.generate(tools)
+            try:
+                tools = tools_for_target(source_type, app_instance, target)
+            except UnsupportedFastAPIDependencyError as exc:
+                typer.echo(str(exc), err=True)
+                raise typer.Exit(1) from None
+            planned.append((file_path, destination, generator.generate(tools)))
 
+        for file_path, destination, code in planned:
             if dry_run:
                 typer.echo(f"# --- Would generate: {destination} ---")
                 typer.echo(code)
@@ -153,8 +160,11 @@ def convert(
         typer.echo(f"Source is already a {label}.", err=True)
         raise typer.Exit(1)
 
-    tools = inspect_app(source_type, app_instance)
-    tools = transform_tools(tools, source_type, target)
+    try:
+        tools = tools_for_target(source_type, app_instance, target)
+    except UnsupportedFastAPIDependencyError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from None
     code = generator.generate(tools)
 
     if dry_run:

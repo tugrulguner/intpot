@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-from typing import Any
+from collections.abc import Iterable, Iterator
+from typing import Any, cast
 
 from intpot.core.inspectors._utils import (
     extract_function_body,
@@ -22,13 +23,6 @@ _PATH_PARAM_RE = re.compile(r"\{(\w+)\}")
 def _is_pydantic_undefined(obj: Any) -> bool:
     """Check if an object is PydanticUndefined (used by Body(...) etc.)."""
     return type(obj).__name__ == "PydanticUndefinedType"
-
-
-def _is_depends(obj: Any) -> bool:
-    """Check if an object is a FastAPI Depends() instance."""
-    cls_name = type(obj).__name__
-    module = type(obj).__module__ or ""
-    return cls_name == "Depends" and "fastapi" in module
 
 
 def _get_param_source(obj: Any) -> ParamSource | None:
@@ -48,23 +42,69 @@ def _get_param_source(obj: Any) -> ParamSource | None:
     return mapping.get(cls_name)
 
 
+def _is_normalized_api_route(route: Any) -> bool:
+    """Recognize the FastAPI route shape consumed by this inspector."""
+    return all(hasattr(route, attr) for attr in ("endpoint", "dependant", "methods"))
+
+
+def _iter_api_routes(app: Any) -> Iterator[Any]:
+    """Yield normalized FastAPI routes, including lazily included routers."""
+    seen: set[int] = set()
+
+    def visit(route: Any) -> Iterator[Any]:
+        identity = id(route)
+        if identity in seen:
+            return
+        seen.add(identity)
+
+        if _is_normalized_api_route(route):
+            yield route
+            return
+
+        effective_candidates: Any = getattr(route, "effective_candidates", None)
+        if not callable(effective_candidates):
+            return
+        for candidate in cast(Iterable[Any], effective_candidates()):
+            yield from visit(candidate)
+
+    for route in app.routes:
+        yield from visit(route)
+
+
+def _dependency_names(route: Any) -> list[str]:
+    """Collect FastAPI's normalized dependency graph in traversal order."""
+    names: list[str] = []
+    seen: set[int] = set()
+
+    def visit(dependant: Any) -> None:
+        for dependency in getattr(dependant, "dependencies", ()):
+            identity = id(dependency)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            call = getattr(dependency, "call", None)
+            name = (
+                getattr(call, "__name__", None)
+                or getattr(type(call), "__name__", None)
+                or repr(call)
+            )
+            names.append(name)
+            visit(dependency)
+
+    visit(route.dependant)
+    return names
+
+
 class APIInspector(BaseInspector):
     def inspect(self, app: Any) -> list[ToolInfo]:
-        # Local import: fastapi is an optional extra, and this method only runs
-        # once a FastAPI app has already been detected.
-        from fastapi.routing import APIRoute
-
         tools: list[ToolInfo] = []
 
-        for route in app.routes:
+        for route in _iter_api_routes(app):
             # Only the user's own endpoints are APIRoute. FastAPI registers its
             # docs endpoints (/openapi.json, /docs, /redoc) as plain Starlette
             # Routes, so this excludes them exactly. Filtering by function name
             # instead used to drop any endpoint the user happened to call
             # `root` — i.e. the usual handler for `/`.
-            if not isinstance(route, APIRoute):
-                continue
-
             endpoint = route.endpoint
             name = endpoint.__name__
 
@@ -91,15 +131,16 @@ class APIInspector(BaseInspector):
                 pass
 
             params: list[ParameterInfo] = []
-            dependencies: list[str] = []
+            dependencies = _dependency_names(route)
+            dependency_params = {
+                dependency.name
+                for dependency in route.dependant.dependencies
+                if dependency.name is not None
+            }
             for param_name, param in sig.parameters.items():
-                # Skip Depends() parameters — record as dependencies
-                if param.default is not inspect.Parameter.empty and _is_depends(
-                    param.default
-                ):
-                    dep_fn = getattr(param.default, "dependency", None)
-                    dep_name = getattr(dep_fn, "__name__", None) or param_name
-                    dependencies.append(dep_name)
+                # FastAPI's dependant graph normalizes default Depends,
+                # Annotated Depends, Security, and nested dependencies.
+                if param_name in dependency_params:
                     continue
 
                 annotation = type_hints.get(param_name, param.annotation)

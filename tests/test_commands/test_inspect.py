@@ -59,6 +59,28 @@ def test_inspect_api_source(tmp_source):
     assert "api" in result.output
 
 
+def test_inspect_api_dependencies_remains_available(tmp_source):
+    source = tmp_source("""
+        from fastapi import Depends, FastAPI
+
+        app = FastAPI()
+
+        def current_user() -> str:
+            return "Ada"
+
+        @app.get("/greet")
+        def greet(user: str = Depends(current_user)) -> dict:
+            return {"message": f"Hello, {user}!"}
+    """)
+
+    result = runner.invoke(app, ["inspect", str(source), "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data[0]["tools"][0]["name"] == "greet"
+    assert data[0]["tools"][0]["dependencies"] == ["current_user"]
+
+
 def test_inspect_json_output(tmp_source):
     source = tmp_source('''
         from fastmcp import FastMCP

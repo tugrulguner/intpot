@@ -22,7 +22,7 @@ This directory contains example source files and their generated conversions.
 
 ## Generated Conversions
 
-The `conversions/` directory contains all conversion outputs — 6 basic + 6 advanced.
+The `conversions/` directory contains 6 basic outputs and 4 supported advanced outputs.
 
 ### Basic
 
@@ -43,12 +43,15 @@ The `conversions/` directory contains all conversion outputs — 6 basic + 6 adv
 | `conversions/advanced_cli_to_api.py` | `intpot to api examples/advanced_cli.py` |
 | `conversions/advanced_mcp_to_cli.py` | `intpot to cli examples/advanced_mcp.py` |
 | `conversions/advanced_mcp_to_api.py` | `intpot to api examples/advanced_mcp.py` |
-| `conversions/advanced_api_to_cli.py` | `intpot to cli examples/advanced_api.py` |
-| `conversions/advanced_api_to_mcp.py` | `intpot to mcp examples/advanced_api.py` |
+
+`advanced_api.py` deliberately exercises FastAPI `Depends()`. It remains runnable and
+inspectable, but conversion to CLI or MCP is expected to fail before writing output until
+[dependency mapping](https://github.com/tugrulguner/intpot/issues/20) is implemented. The
+demo verifies both rejection paths instead of checking in misleading generated files.
 
 ## Regenerating
 
-To regenerate all conversions:
+To regenerate every supported conversion and verify the expected dependency rejections:
 
 ```bash
 bash scripts/demo.sh

@@ -107,10 +107,11 @@ async def summarize(
 
 ## What happens to `Depends()`
 
-FastAPI's dependency injection (`Depends()`) doesn't have a direct equivalent in Typer or MCP. intpot handles this by:
-
-1. **Stripping** the `Depends()` parameter from the converted function signature
-2. **Adding a comment** noting which dependencies were used
+FastAPI dependency injection has no direct equivalent in Typer or MCP. intpot preserves
+normalized dependency metadata during inspection, including `Depends()`, `Security()`,
+nested dependencies, and route/router/application dependency lists. API-to-CLI or
+API-to-MCP conversion then stops with `UnsupportedFastAPIDependencyError` instead of
+emitting a function whose body can reference a missing injected value.
 
 ```python
 # FastAPI source
@@ -121,16 +122,18 @@ def create_user(
 ) -> dict:
     return {"username": username}
 
-# Generated CLI output
-# NOTE: Original used dependency injection: get_db
-@app.command()
-def create_user(
-    username: str = typer.Argument(..., help="Unique username"),
-) -> None:
-    typer.echo({'username': username})
+# Inspection remains available
+loaded = intpot.load("api.py")
+assert loaded.tools[0].dependencies == ["get_db"]
+
+# Conversion fails before any output is written
+loaded.to_cli()
+# UnsupportedFastAPIDependencyError: Cannot convert FastAPI dependencies ...
 ```
 
-You'll need to manually wire up your database/service layer after conversion. This is a known limitation (see the [roadmap](https://github.com/tugrulguner/intpot/blob/main/ROADMAP.md) for v2 plans around dependency injection mapping).
+Remove or replace the dependency semantics deliberately before conversion. Executable
+dependency mapping remains a v2 plan on the
+[roadmap](https://github.com/tugrulguner/intpot/blob/main/ROADMAP.md).
 
 ## Body transforms: `typer.echo()` vs `return`
 
@@ -215,7 +218,7 @@ Converting from A to B and back to A won't give you identical code. Things that 
 
 - **HTTP methods** default to POST after a round trip through CLI/MCP
 - **Route paths** may change (e.g. `/users/{user_id}` becomes `/users_user_id` or similar)
-- **`Depends()` calls** are stripped and replaced with comments
+- **FastAPI dependencies** stop API-to-CLI/MCP conversion until they can be mapped safely
 - **Formatting** will differ (intpot generates from templates, not from your original formatting)
 - **Parameter descriptions** from MCP are empty, so a round trip MCP -> API -> MCP loses descriptions that existed in the API version
 
@@ -242,6 +245,6 @@ app.write("out.py", "cli") # write to file
 
 - `Annotated[str, Body(...)]` style FastAPI parameters aren't fully supported yet
 - Nested Typer sub-apps and Click groups are not handled
-- `Depends()` is stripped, not converted to an equivalent pattern
+- FastAPI dependency injection cannot be converted to CLI or MCP yet; intpot refuses the conversion instead of stripping it
 - Generated code has `# TODO: implement` when the function body can't be carried over
 - `format` as a parameter name gets sanitized (it's a Python builtin) — watch for `format_` in output

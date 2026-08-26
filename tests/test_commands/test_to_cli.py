@@ -53,6 +53,34 @@ def test_api_to_cli(tmp_source):
     assert "def add(" in result.output
 
 
+@pytest.mark.parametrize("target", ["cli", "mcp"])
+def test_api_dependency_conversion_fails_cleanly(target, tmp_source):
+    source = tmp_source("""
+        from typing import Annotated
+
+        from fastapi import Depends, FastAPI
+
+        app = FastAPI()
+
+        def current_user() -> str:
+            return "Ada"
+
+        @app.get("/greet")
+        def greet(user: Annotated[str, Depends(current_user)]) -> dict:
+            return {"message": f"Hello, {user}!"}
+    """)
+
+    result = runner.invoke(app, ["to", target, str(source)])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "/greet" in result.stderr
+    assert "current_user" in result.stderr
+    assert "Depends/Security" in result.stderr
+    assert "issue #20" in result.stderr
+    assert "Traceback" not in result.output
+
+
 def test_single_file_output_creates_parent_directories(tmp_source, tmp_path):
     source = tmp_source("""
         from fastmcp import FastMCP

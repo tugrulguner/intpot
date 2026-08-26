@@ -2,7 +2,12 @@
 
 from importlib.metadata import version
 
-from intpot.converter import IntpotApp, inspect_app, load
+from intpot.converter import (
+    IntpotApp,
+    UnsupportedFastAPIDependencyError,
+    inspect_app,
+    load,
+)
 from intpot.runtime import App
 
 try:
@@ -14,4 +19,10 @@ except Exception:
     # import or a --version call over.
     __version__ = "0.0.0+unknown"
 
-__all__ = ["App", "IntpotApp", "inspect_app", "load"]
+__all__ = [
+    "App",
+    "IntpotApp",
+    "UnsupportedFastAPIDependencyError",
+    "inspect_app",
+    "load",
+]
