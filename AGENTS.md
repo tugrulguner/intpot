@@ -54,11 +54,14 @@ make check               # ruff + pyright + pytest — must pass before a PR
 
 Run Python through `.venv/bin/python` or `uv run`.
 
-**Every PR needs a changelog fragment**: one file at `changelog.d/<pr-number>.<type>.md`
-where type is `added`, `changed`, `deprecated`, `removed`, or `fixed`. Write one sentence
-about what changed *for a user*, not what you did to the code. CI fails without it; a
-maintainer applies the `skip-changelog` label for refactors and CI-only work. Never edit
-`CHANGELOG.md` by hand — it is assembled at release time. See `changelog.d/README.md`.
+**Every user-facing change needs a changelog fragment.** Tracked work uses
+`changelog.d/<issue-number>.<type>.md`. For a small direct change without an issue, run
+`uv run towncrier create +.changed.md` and replace `changed` with `added`, `deprecated`,
+`removed`, or `fixed` when appropriate. Numeric fragments refer to issues, never pull
+requests. Write one sentence about what changed *for a user*, not what you did to the code.
+CI rejects removed-only fragments and PR-number identifiers; a maintainer applies the
+`skip-changelog` label for genuinely internal work. Never edit `CHANGELOG.md` by hand—it is
+assembled at release time. See `changelog.d/README.md`.
 
 **Never hand-edit the version**, and never bump it as part of a feature PR. It lives only
 in `pyproject.toml`; `uv version 0.5.1` updates it and the lockfile together, and
