@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import Any
+from typing import Annotated, Any, get_args, get_origin
 
 from intpot.core.inspectors._utils import (
     extract_function_body,
@@ -46,6 +46,41 @@ def _child_commands(obj: Any) -> dict[str, Any] | None:
     """The sub-commands of a group, or None if this is a leaf command."""
     commands = getattr(obj, "commands", None)
     return commands if isinstance(commands, dict) else None
+
+
+def _text_name(value: Any) -> str | None:
+    """Return framework names without accepting placeholder objects."""
+    return value if isinstance(value, str) and value else None
+
+
+def _registered_parameter_details(
+    annotation: Any, signature_default: Any
+) -> tuple[Any, Any, str]:
+    """Normalize callback annotations and Typer metadata without building Click."""
+    metadata = signature_default
+    if get_origin(annotation) is Annotated:
+        annotation, *extras = get_args(annotation)
+        metadata = next(
+            (
+                extra
+                for extra in extras
+                if hasattr(extra, "help") and hasattr(extra, "default")
+            ),
+            signature_default,
+        )
+
+    default_source = (
+        metadata if signature_default is inspect.Parameter.empty else signature_default
+    )
+    raw_default = getattr(default_source, "default", default_source)
+    default = (
+        _SENTINEL
+        if raw_default is inspect.Parameter.empty or raw_default is Ellipsis
+        else raw_default
+    )
+    help_text = getattr(metadata, "help", "")
+    description = help_text if isinstance(help_text, str) else ""
+    return annotation, default, description
 
 
 class CLIInspector(BaseInspector):
@@ -100,7 +135,9 @@ class CLIInspector(BaseInspector):
             if not callable(callback):
                 continue
 
-            command_name = getattr(command, "name", None) or callback.__name__
+            command_name = (
+                _text_name(getattr(command, "name", None)) or callback.__name__
+            )
             name = f"{prefix}{command_name}".replace("-", "_")
             description = (
                 getattr(command, "help", None) or inspect.getdoc(callback) or ""
@@ -113,22 +150,17 @@ class CLIInspector(BaseInspector):
 
             parameters: list[ParameterInfo] = []
             for param in signature.parameters.values():
-                metadata = param.default
-                raw_default = getattr(metadata, "default", metadata)
-                if raw_default is inspect.Parameter.empty or raw_default is Ellipsis:
-                    default: Any = _SENTINEL
-                else:
-                    default = raw_default
-
-                help_text = getattr(metadata, "help", "")
+                annotation, default, parameter_description = (
+                    _registered_parameter_details(
+                        annotations.get(param.name, param.annotation), param.default
+                    )
+                )
                 parameters.append(
                     ParameterInfo(
                         name=param.name,
-                        type_annotation=python_type_name(
-                            annotations.get(param.name, param.annotation)
-                        ),
+                        type_annotation=python_type_name(annotation),
                         default=default,
-                        description=help_text if isinstance(help_text, str) else "",
+                        description=parameter_description,
                     )
                 )
 
@@ -151,7 +183,11 @@ class CLIInspector(BaseInspector):
             nested = getattr(group, "typer_instance", None)
             if nested is None:
                 continue
-            group_name = getattr(group, "name", None)
+            group_name = _text_name(getattr(group, "name", None))
+            if group_name is None:
+                group_name = _text_name(
+                    getattr(getattr(nested, "info", None), "name", None)
+                )
             nested_prefix = f"{prefix}{group_name}_" if group_name else prefix
             self._extract_registered_app(nested, tools, nested_prefix, seen)
 

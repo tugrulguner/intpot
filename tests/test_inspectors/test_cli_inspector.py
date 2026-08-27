@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 
 from intpot.core.inspectors.cli import CLIInspector
@@ -73,6 +75,10 @@ class _StubType:
         self.name = name
 
 
+class _UnrelatedMetadata:
+    default = "wrong default"
+
+
 class _StubParam:
     def __init__(self, name, type_name, required=True, default=None, help_=""):
         self.name = name
@@ -104,9 +110,10 @@ class _StubCommandInfo:
 
 
 class _StubRegisteredApp:
-    def __init__(self, commands, groups=None):
+    def __init__(self, commands, groups=None, name=None):
         self.registered_commands = commands
         self.registered_groups = groups or []
+        self.info = type("Info", (), {"name": name})()
 
 
 class _StubGroupInfo:
@@ -220,3 +227,44 @@ def test_nested_registered_callbacks_survive_click_tree_failure():
     tools = CLIInspector().inspect(root)
 
     assert [tool.name for tool in tools] == ["tasks_search"]
+
+
+def test_registered_callbacks_unwrap_annotated_typer_metadata():
+    def search(
+        query: Annotated[
+            str, _UnrelatedMetadata(), typer.Argument(help="Search query")
+        ],
+        include_done: Annotated[
+            bool, typer.Option(help="Include completed tasks")
+        ] = False,
+    ) -> None:
+        pass
+
+    app = _StubRegisteredApp([_StubCommandInfo(search)])
+
+    tools = CLIInspector().inspect(app)
+
+    assert [(param.name, param.type_annotation) for param in tools[0].parameters] == [
+        ("query", "str"),
+        ("include_done", "bool"),
+    ]
+    assert tools[0].parameters[0].required
+    assert tools[0].parameters[0].description == "Search query"
+    assert tools[0].parameters[1].default is False
+    assert tools[0].parameters[1].description == "Include completed tasks"
+
+
+def test_registered_group_uses_nested_app_name_when_group_name_is_not_text():
+    class _Placeholder:
+        def __bool__(self):
+            return False
+
+    def list_users() -> None:
+        pass
+
+    nested = _StubRegisteredApp([_StubCommandInfo(list_users)], name="admin")
+    root = _StubRegisteredApp([], [_StubGroupInfo(_Placeholder(), nested)])
+
+    tools = CLIInspector().inspect(root)
+
+    assert [tool.name for tool in tools] == ["admin_list_users"]
