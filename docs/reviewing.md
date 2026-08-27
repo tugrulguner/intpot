@@ -20,6 +20,22 @@ gh pr view <pr> --json reviews,comments
 If an earlier review exists and the author has pushed fixes since, review whether the
 fixes address that feedback. Don't re-review unchanged code.
 
+### Pin the exact head
+
+Record the reviewed head SHA before running or publishing anything:
+
+```bash
+HEAD_SHA=$(gh pr view <pr> --json headRefOid --jq .headRefOid)
+git fetch origin "pull/<pr>/head:refs/remotes/review/<pr>"
+test "$(git rev-parse refs/remotes/review/<pr>)" = "$HEAD_SHA"
+```
+
+Run the review from that immutable commit. Immediately before posting findings or merging,
+query GitHub again and confirm the live head still equals the reviewed head SHA. If it
+changed, inspect the old-to-new diff and rerun every affected check. Also compare the
+branch against current main; a green result against an obsolete base is not integration
+evidence.
+
 **Uncommitted work:**
 
 ```bash
@@ -69,6 +85,12 @@ while CI stayed green.
 | `src/intpot/core/transforms.py` | `.venv/bin/pytest tests/test_roundtrip.py tests/test_transforms.py -x` |
 | `src/intpot/runtime.py`, `src/intpot/runtime_builders.py` | `.venv/bin/pytest tests/test_runtime.py tests/test_runtime_builders.py -x` |
 | Anything public-facing | `.venv/bin/pytest tests/test_skills_content.py tests/test_docs.py -x` |
+
+When inspection, transforms, generators, templates, runtime eject, or checked-in generated
+examples change, execute the generated artifact through its real consumer. Invoke the Typer
+command, request the FastAPI operation, or call the FastMCP tool.
+A passing compile step is not behavioral evidence; it proves syntax, not that the generated
+interface works.
 
 ## 5. Verify every claim before you make it
 

@@ -1,0 +1,112 @@
+name: "Feature request"
+description: "Propose a user-facing Intpot capability or contract change"
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the user problem, not a new abstraction. Substantial conversion contracts, normalized-schema changes, framework compatibility changes, or runtime behavior need agreement before implementation. Early ideas belong in [Ideas / Roadmap](https://github.com/tugrulguner/intpot/discussions/categories/ideas-roadmap).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem"
+      description: "What concrete user problem should Intpot solve?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: "What happens now"
+      description: "Describe current Intpot behavior and the limitation it creates."
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "Why I want it"
+      description: "Why is this important in a real conversion, runtime, or generated-artifact workflow?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: "Concrete use case"
+      description: "Show the source application, command or API, target, and expected result."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: "Proposed solution"
+      description: "Describe the smallest public contract that solves the problem."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: "Acceptance criteria"
+      description: "List observable outcomes as Markdown checkboxes, including generated-artifact execution where applicable."
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: open-question
+    attributes:
+      label: "Open question"
+      description: "Name the most important contract or scope decision that still needs maintainer input."
+
+  - type: textarea
+    id: implementation-notes
+    attributes:
+      label: "Implementation notes"
+      description: "Explain WHERE this belongs, HOW it crosses inspector, `ToolInfo`, generator, and runtime boundaries, and which DEPENDENCIES or compatibility floors matter."
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives considered"
+      description: "What can users do today, and why is that insufficient?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope and non-goals"
+      description: "What should this proposal deliberately not change?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution-intent
+    attributes:
+      label: "Contribution intent"
+      description: "Tell maintainers whether you want to implement the agreed contract."
+      options:
+        - "I would like to implement this after contract alignment"
+        - "I can help test the implementation"
+        - "I am proposing the feature only"
+        - "I need guidance before deciding"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: "Confirmations"
+      options:
+        - label: "I searched existing issues, pull requests, and Discussions for this proposal."
+          required: true
+        - label: "I will wait for contract alignment before implementing substantial work."
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Usage questions"
+    url: "https://github.com/tugrulguner/intpot/discussions/categories/q-a"
+    about: "Ask how to use, convert, serve, or debug an Intpot application."
+  - name: "Ideas and early design"
+    url: "https://github.com/tugrulguner/intpot/discussions/categories/ideas-roadmap"
+    about: "Discuss an idea before turning it into a scoped feature request."

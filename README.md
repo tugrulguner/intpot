@@ -510,6 +510,10 @@ strengthen generated-code tests, or make the developer experience clearer.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) for the pull request process and
   [`docs/reviewing.md`](docs/reviewing.md) for the contracts changes must preserve.
 
+Open an issue before substantial public-contract work; focused fixes, tests, documentation,
+and maintenance may be direct pull requests. User-facing work uses an issue-backed or
+Towncrier-generated orphan changelog fragment—never a pull-request-number fragment.
+
 ### Development setup
 
 Requires [uv](https://docs.astral.sh/uv/).
