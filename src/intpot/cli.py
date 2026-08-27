@@ -32,12 +32,14 @@ app = typer.Typer(
 
 @app.callback()
 def main(
-    version: bool | None = typer.Option(
-        None,
+    version: bool = typer.Option(
+        False,
         "--version",
         "-V",
         callback=_version_callback,
         is_eager=True,
+        is_flag=True,
+        flag_value=True,
         help="Show version and exit.",
     ),
 ) -> None:

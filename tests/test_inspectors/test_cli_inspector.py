@@ -96,6 +96,25 @@ class _StubGroup:
         self.commands = commands
 
 
+class _StubCommandInfo:
+    def __init__(self, callback, name=None, help_=None):
+        self.callback = callback
+        self.name = name
+        self.help = help_
+
+
+class _StubRegisteredApp:
+    def __init__(self, commands, groups=None):
+        self.registered_commands = commands
+        self.registered_groups = groups or []
+
+
+class _StubGroupInfo:
+    def __init__(self, name, typer_instance):
+        self.name = name
+        self.typer_instance = typer_instance
+
+
 def test_a_group_that_is_not_a_click_subclass_is_still_walked():
     group = _StubGroup({"greet": _StubCommand("greet", help_="Greet someone.")})
 
@@ -165,3 +184,39 @@ def test_parameter_help_falls_back_to_callback_metadata():
     tools = CLIInspector().inspect(_StubGroup({"show": command}))
 
     assert tools[0].parameters[0].description == "Original callback help"
+
+
+def test_registered_callbacks_are_inspected_when_click_tree_cannot_be_built():
+    def search(
+        query: str = typer.Argument(..., help="Search query"),
+        include_done: bool = typer.Option(False, help="Include completed tasks"),
+    ) -> None:
+        """Search tasks."""
+        pass
+
+    app = _StubRegisteredApp([_StubCommandInfo(search)])
+
+    tools = CLIInspector().inspect(app)
+
+    assert [tool.name for tool in tools] == ["search"]
+    assert tools[0].description == "Search tasks."
+    assert [(param.name, param.type_annotation) for param in tools[0].parameters] == [
+        ("query", "str"),
+        ("include_done", "bool"),
+    ]
+    assert tools[0].parameters[0].required
+    assert tools[0].parameters[0].description == "Search query"
+    assert tools[0].parameters[1].default is False
+    assert tools[0].parameters[1].description == "Include completed tasks"
+
+
+def test_nested_registered_callbacks_survive_click_tree_failure():
+    def search(include_done: bool = typer.Option(False)) -> None:
+        pass
+
+    nested = _StubRegisteredApp([_StubCommandInfo(search)])
+    root = _StubRegisteredApp([], [_StubGroupInfo("tasks", nested)])
+
+    tools = CLIInspector().inspect(root)
+
+    assert [tool.name for tool in tools] == ["tasks_search"]

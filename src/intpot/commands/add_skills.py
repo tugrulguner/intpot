@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -270,14 +271,15 @@ def _detect_agents(root: Path) -> list[Agent]:
 # ---------------------------------------------------------------------------
 
 
+# Typer 0.9 cannot parse PEP 604 unions in command parameter annotations.
 def add_skills(
-    agent: Agent | None = typer.Option(
+    agent: Optional[Agent] = typer.Option(  # noqa: UP045
         None,
         "--agent",
         "-a",
         help="Target agent (claude, cursor, windsurf, copilot, cline, codex). Auto-detects if omitted.",
     ),
-    path: Path | None = typer.Option(
+    path: Optional[Path] = typer.Option(  # noqa: UP045
         None,
         "--path",
         "-p",

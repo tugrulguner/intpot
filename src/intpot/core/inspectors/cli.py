@@ -6,7 +6,11 @@ import asyncio
 import inspect
 from typing import Any
 
-from intpot.core.inspectors._utils import extract_function_body, extract_source_imports
+from intpot.core.inspectors._utils import (
+    extract_function_body,
+    extract_source_imports,
+    python_type_name,
+)
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 
@@ -61,13 +65,95 @@ class CLIInspector(BaseInspector):
 
                 click_group = typer.main.get_group(app)
         except Exception:
-            pass
+            registered = getattr(app, "registered_commands", None)
+            if isinstance(registered, list):
+                self._extract_registered_app(app, tools)
+                return tools
 
         if click_group is None:
             return tools
 
         self._extract_commands(click_group, tools, prefix="")
         return tools
+
+    def _extract_registered_app(
+        self,
+        app: Any,
+        tools: list[ToolInfo],
+        prefix: str = "",
+        seen: set[int] | None = None,
+    ) -> None:
+        """Inspect Typer callbacks when its Click tree cannot be constructed."""
+        if seen is None:
+            seen = set()
+        app_id = id(app)
+        if app_id in seen:
+            return
+        seen.add(app_id)
+
+        commands = getattr(app, "registered_commands", None)
+        if not isinstance(commands, list):
+            return
+
+        for command in commands:
+            callback = getattr(command, "callback", None)
+            if not callable(callback):
+                continue
+
+            command_name = getattr(command, "name", None) or callback.__name__
+            name = f"{prefix}{command_name}".replace("-", "_")
+            description = (
+                getattr(command, "help", None) or inspect.getdoc(callback) or ""
+            )
+            signature = inspect.signature(callback)
+            try:
+                annotations = inspect.get_annotations(callback, eval_str=True)
+            except Exception:
+                annotations = inspect.get_annotations(callback, eval_str=False)
+
+            parameters: list[ParameterInfo] = []
+            for param in signature.parameters.values():
+                metadata = param.default
+                raw_default = getattr(metadata, "default", metadata)
+                if raw_default is inspect.Parameter.empty or raw_default is Ellipsis:
+                    default: Any = _SENTINEL
+                else:
+                    default = raw_default
+
+                help_text = getattr(metadata, "help", "")
+                parameters.append(
+                    ParameterInfo(
+                        name=param.name,
+                        type_annotation=python_type_name(
+                            annotations.get(param.name, param.annotation)
+                        ),
+                        default=default,
+                        description=help_text if isinstance(help_text, str) else "",
+                    )
+                )
+
+            tools.append(
+                ToolInfo(
+                    name=name,
+                    description=description,
+                    parameters=parameters,
+                    return_type="str",
+                    function_body=extract_function_body(callback),
+                    is_async=inspect.iscoroutinefunction(callback),
+                    source_imports=extract_source_imports(callback),
+                )
+            )
+
+        groups = getattr(app, "registered_groups", None)
+        if not isinstance(groups, list):
+            return
+        for group in groups:
+            nested = getattr(group, "typer_instance", None)
+            if nested is None:
+                continue
+            group_name = getattr(group, "name", None)
+            nested_prefix = f"{prefix}{group_name}_" if group_name else prefix
+            self._extract_registered_app(nested, tools, nested_prefix, seen)
 
     def _extract_commands(
         self,
