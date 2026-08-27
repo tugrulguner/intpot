@@ -131,6 +131,9 @@ expect_failure "Dependency API → CLI  (Depends is rejected safely)" \
 expect_failure "Dependency API → MCP  (Depends is rejected safely)" \
     "uv run intpot to mcp examples/dependency_api.py"
 
+run "Execute checked-in generated examples" \
+    "uv run python scripts/verify_generated_examples.py"
+
 # ============================================================
 # 3. Scaffolding
 # ============================================================

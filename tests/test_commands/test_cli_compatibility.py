@@ -1,6 +1,8 @@
 """Public CLI compatibility tests for the declared Typer floor."""
 
+import asyncio
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -57,7 +59,12 @@ app.add_typer(build_admin())
     result = runner.invoke(app, ["to", "mcp", str(source)])
 
     assert result.exit_code == 0, result.exception
-    compile(result.stdout, "<annotated_cli_to_mcp>", "exec")
-    assert "def admin_search(" in result.stdout
-    assert "query: str" in result.stdout
-    assert "include_done: bool = False" in result.stdout
+    namespace: dict[str, Any] = {}
+    exec(compile(result.stdout, "<annotated_cli_to_mcp>", "exec"), namespace)
+    call = asyncio.run(
+        namespace["mcp"].call_tool(
+            "admin_search", {"query": "needle", "include_done": True}
+        )
+    )
+    assert call.is_error is False
+    assert call.structured_content == {"result": "needle:True"}
