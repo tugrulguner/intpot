@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_call:
+  workflow_dispatch:
+  schedule:
+    # Floating dependencies run out of band so a new upstream release cannot
+    # unexpectedly block an otherwise unrelated pull request.
+    - cron: "17 7 * * 1"
 
 permissions:
   contents: read
@@ -61,6 +66,85 @@ jobs:
           --cov=src/intpot
           --cov-report=term-missing
           --cov-fail-under=80
+
+  compatibility-oldest:
+    name: oldest (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Typer 0.9.0
+            editable: "."
+            framework: "typer==0.9.0"
+            package: typer
+            version: "0.9.0"
+            tests: tests/test_inspectors/test_cli_inspector.py
+          - name: FastAPI 0.100.0
+            editable: ".[api]"
+            framework: "fastapi==0.100.0"
+            package: fastapi
+            version: "0.100.0"
+            tests: tests/test_inspectors/test_api_inspector.py
+          - name: FastMCP 2.0.0
+            editable: ".[mcp]"
+            framework: "fastmcp==2.0.0"
+            package: fastmcp
+            version: "2.0.0"
+            tests: tests/test_inspectors/test_mcp_inspector.py
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.11"
+      - name: Exercise declared lower bound
+        env:
+          EDITABLE: ${{ matrix.editable }}
+          FRAMEWORK: ${{ matrix.framework }}
+          PACKAGE: ${{ matrix.package }}
+          VERSION: ${{ matrix.version }}
+          TESTS: ${{ matrix.tests }}
+        run: |
+          run=(uv run --no-project --python 3.11 --with-editable "$EDITABLE" --with "$FRAMEWORK" --with pytest)
+          "${run[@]}" python -c 'from importlib.metadata import version; import os; actual = version(os.environ["PACKAGE"]); expected = os.environ["VERSION"]; assert actual == expected, (actual, expected)'
+          "${run[@]}" pytest "$TESTS" -q
+
+  compatibility-fastmcp-2-latest:
+    name: latest FastMCP 2.x
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.11"
+      - name: Exercise latest FastMCP 2.x
+        run: |
+          run=(uv run --no-project --python 3.11 --with-editable '.[mcp]' --with 'fastmcp>=2,<3' --with pytest)
+          "${run[@]}" python -c 'from importlib.metadata import version; actual = version("fastmcp"); assert actual.startswith("2."), actual'
+          "${run[@]}" pytest tests/test_inspectors/test_mcp_inspector.py -q
+
+  compatibility-latest:
+    name: latest dependencies
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.11"
+      - name: Exercise newest resolvable dependencies
+        run: >-
+          uv run --no-project --python 3.11 --with-editable '.[dev]'
+          pytest tests/ -q
 
   build:
     name: build

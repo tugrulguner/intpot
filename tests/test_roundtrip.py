@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
+from types import ModuleType
+
+from fastapi.testclient import TestClient
 
 from intpot.converter import load
 
@@ -100,6 +103,41 @@ class TestMCPRoundtrips:
         assert compile(api_code, "<string>", "exec")
         assert "def greet" in api_code
         assert "def add" in api_code
+
+    def test_mcp_to_api_preserves_schema_description_and_runs(
+        self, tmp_path: Path
+    ) -> None:
+        source = textwrap.dedent("""\
+            from typing import Annotated
+
+            from fastmcp import FastMCP
+            from pydantic import Field
+
+            mcp = FastMCP("test-server")
+
+            @mcp.tool()
+            def greet(
+                name: Annotated[str, Field(description="Person to greet.")],
+            ) -> str:
+                return f"Hello, {name}!"
+        """)
+        path = tmp_path / "described_mcp.py"
+        path.write_text(source)
+
+        api_code = load(path).to_api()
+
+        assert "name: str" in api_code
+        generated = ModuleType("generated_described_api")
+        exec(
+            compile(api_code, "generated_described_api.py", "exec"), generated.__dict__
+        )
+        client = TestClient(generated.app)
+        operation = client.get("/openapi.json").json()["paths"]["/greet"]["post"]
+        body_schema = operation["requestBody"]["content"]["application/json"]["schema"]
+        assert body_schema["description"] == "Person to greet."
+        response = client.post("/greet", json="Ada")
+        assert response.status_code == 200
+        assert response.json() == {"result": "Hello, Ada!"}
 
 
 class TestCLIRoundtrips:

@@ -162,7 +162,7 @@ Descriptions carry over between frameworks where possible:
 
 - `typer.Argument(..., help="...")` -> `Body(..., description="...")`
 - `Body(..., description="...")` -> `typer.Option(..., help="...")`
-- MCP tools don't have per-parameter descriptions in the decorator, so descriptions are empty when converting *from* MCP
+- FastMCP parameter descriptions exposed in a tool's JSON Schema are preserved when converting from MCP
 
 ## HTTP method preservation
 
@@ -217,7 +217,7 @@ Converting from A to B and back to A won't give you identical code. Things that 
 - **Route paths** may change (e.g. `/users/{user_id}` becomes `/users_user_id` or similar)
 - **`Depends()` calls** are stripped and replaced with comments
 - **Formatting** will differ (intpot generates from templates, not from your original formatting)
-- **Parameter descriptions** from MCP are empty, so a round trip MCP -> API -> MCP loses descriptions that existed in the API version
+- **Parameter descriptions** absent from a source framework's metadata cannot be recovered
 
 The function bodies are generally preserved well though, especially for simple functions.
 

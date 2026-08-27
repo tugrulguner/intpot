@@ -82,3 +82,19 @@ def test_cli_to_cli_fails(tmp_source):
     """)
     result = runner.invoke(app, ["to", "cli", str(source)])
     assert result.exit_code == 1
+
+
+def test_mcp_compatibility_error_does_not_leak_from_conversion(tmp_source):
+    source = tmp_source("""
+        class FastMCP:
+            pass
+
+        FastMCP.__module__ = "fastmcp.future"
+        mcp = FastMCP()
+    """)
+
+    result = runner.invoke(app, ["to", "cli", str(source)])
+
+    assert result.exit_code == 1
+    assert "Unsupported FastMCP registry shape" in result.stderr
+    assert "Traceback" not in result.output
