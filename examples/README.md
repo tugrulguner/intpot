@@ -54,7 +54,8 @@ demo verifies both rejection paths while retaining the complete supported conver
 
 ## Regenerating
 
-To regenerate all conversions and verify the expected dependency rejections:
+To regenerate all conversions, verify the expected dependency rejections, and execute the
+checked-in generated CLI/MCP artifacts plus the dependency FastAPI route:
 
 ```bash
 bash scripts/demo.sh
