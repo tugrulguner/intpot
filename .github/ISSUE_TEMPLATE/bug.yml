@@ -1,0 +1,106 @@
+name: "Bug report"
+description: "Report reproducible incorrect behavior in Intpot"
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove credentials, private source, and sensitive generated output before submitting. Questions about using Intpot belong in [Q&A](https://github.com/tugrulguner/intpot/discussions/categories/q-a).
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: "Current behavior"
+      description: "What happens, including the exact error or incorrect generated/runtime behavior?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "Expected behavior"
+      description: "What should Intpot inspect, generate, serve, or convert instead?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Minimal reproduction"
+      description: "Provide the smallest complete source application and exact command that reproduces the problem."
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: "Command or public API call"
+      placeholder: "intpot to api app.py --output generated.py"
+    validations:
+      required: true
+
+  - type: input
+    id: frameworks
+    attributes:
+      label: "Source and target frameworks"
+      description: "For example: Typer to FastAPI, FastAPI to FastMCP, or intpot.App served as CLI."
+    validations:
+      required: true
+
+  - type: input
+    id: intpot-version
+    attributes:
+      label: "Intpot version or source revision"
+      placeholder: "0.5.1 or commit SHA"
+    validations:
+      required: true
+
+  - type: input
+    id: framework-versions
+    attributes:
+      label: "Framework versions"
+      description: "Include Python plus relevant Typer, FastAPI, FastMCP, Click, and Pydantic versions."
+    validations:
+      required: true
+
+  - type: textarea
+    id: artifact-output
+    attributes:
+      label: "Generated artifact or command output"
+      description: "Include the generated source or complete terminal output needed to observe the failure. Remove secrets first."
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional context"
+      description: "State whether the problem affects inspection, normalized ToolInfo, generation, runtime serving, installed artifacts, or more than one target."
+
+  - type: dropdown
+    id: contribution-intent
+    attributes:
+      label: "Contribution intent"
+      description: "Tell maintainers whether you want to work on the fix after triage."
+      options:
+        - "I would like to implement this after maintainer confirmation"
+        - "I can help test a fix"
+        - "I am reporting the problem only"
+        - "I need guidance before deciding"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: "Confirmations"
+      options:
+        - label: "I searched existing issues and pull requests for this problem."
+          required: true
+        - label: "I reduced the report to a minimal reproduction."
+          required: true
+        - label: "I removed credentials, tokens, private source, and sensitive data from this report."
+          required: true
