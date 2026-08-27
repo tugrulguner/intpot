@@ -117,15 +117,19 @@ run "Advanced MCP → API  (notes server)" \
     "uv run intpot to api examples/advanced_mcp.py" \
     "$OUTDIR/advanced_mcp_to_api.py"
 
-if $SAVE; then
-    rm -f "$OUTDIR/advanced_api_to_cli.py" "$OUTDIR/advanced_api_to_mcp.py"
-fi
+run "Advanced API → CLI  (user management)" \
+    "uv run intpot to cli examples/advanced_api.py" \
+    "$OUTDIR/advanced_api_to_cli.py"
 
-expect_failure "Advanced API → CLI  (Depends is rejected safely)" \
-    "uv run intpot to cli examples/advanced_api.py"
+run "Advanced API → MCP  (user management)" \
+    "uv run intpot to mcp examples/advanced_api.py" \
+    "$OUTDIR/advanced_api_to_mcp.py"
 
-expect_failure "Advanced API → MCP  (Depends is rejected safely)" \
-    "uv run intpot to mcp examples/advanced_api.py"
+expect_failure "Dependency API → CLI  (Depends is rejected safely)" \
+    "uv run intpot to cli examples/dependency_api.py"
+
+expect_failure "Dependency API → MCP  (Depends is rejected safely)" \
+    "uv run intpot to mcp examples/dependency_api.py"
 
 # ============================================================
 # 3. Scaffolding
@@ -148,7 +152,7 @@ run "Scaffold API project" \
 # 4. Directory auto-discovery
 # ============================================================
 
-expect_failure "Directory scan → CLI  (fails atomically on advanced_api.py)" \
+expect_failure "Directory scan → CLI  (fails atomically on dependency_api.py)" \
     "cd $PROJDIR && uv run intpot to cli examples/"
 
 # ============================================================

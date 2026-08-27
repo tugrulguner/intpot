@@ -18,11 +18,12 @@ This directory contains example source files and their generated conversions.
 |------|-----------|-------------|
 | `advanced_cli.py` | Typer CLI | Task manager with `json`, multiple commands, booleans |
 | `advanced_mcp.py` | FastMCP | Notes server with `hashlib`, `datetime`, `json`, async tools |
-| `advanced_api.py` | FastAPI | User CRUD with `Body(...)`, `Depends()`, `Optional`, path params, multiple HTTP methods |
+| `advanced_api.py` | FastAPI | User CRUD with `Body(...)`, `Optional`, path params, multiple HTTP methods |
+| `dependency_api.py` | FastAPI | Authenticated profile route with `Depends()`; intentionally rejected by CLI/MCP conversion |
 
 ## Generated Conversions
 
-The `conversions/` directory contains 6 basic outputs and 4 supported advanced outputs.
+The `conversions/` directory contains all conversion outputs — 6 basic + 6 advanced.
 
 ### Basic
 
@@ -43,15 +44,17 @@ The `conversions/` directory contains 6 basic outputs and 4 supported advanced o
 | `conversions/advanced_cli_to_api.py` | `intpot to api examples/advanced_cli.py` |
 | `conversions/advanced_mcp_to_cli.py` | `intpot to cli examples/advanced_mcp.py` |
 | `conversions/advanced_mcp_to_api.py` | `intpot to api examples/advanced_mcp.py` |
+| `conversions/advanced_api_to_cli.py` | `intpot to cli examples/advanced_api.py` |
+| `conversions/advanced_api_to_mcp.py` | `intpot to mcp examples/advanced_api.py` |
 
-`advanced_api.py` deliberately exercises FastAPI `Depends()`. It remains runnable and
+`dependency_api.py` deliberately exercises FastAPI `Depends()`. It remains runnable and
 inspectable, but conversion to CLI or MCP is expected to fail before writing output until
 [dependency mapping](https://github.com/tugrulguner/intpot/issues/20) is implemented. The
-demo verifies both rejection paths instead of checking in misleading generated files.
+demo verifies both rejection paths while retaining the complete supported conversion set.
 
 ## Regenerating
 
-To regenerate every supported conversion and verify the expected dependency rejections:
+To regenerate all conversions and verify the expected dependency rejections:
 
 ```bash
 bash scripts/demo.sh
