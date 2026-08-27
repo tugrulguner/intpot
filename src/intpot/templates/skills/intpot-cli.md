@@ -125,9 +125,11 @@ conversion or eject:
    behavioral test.
 
 Current unsupported or lossy cases include nested Typer sub-apps, repeatable CLI options,
-some FastAPI `Annotated[..., Body(...)]` parameters, `Depends()` (recorded in a comment
-but stripped from non-API targets), factory-created apps, and routes with multiple HTTP
-methods. A missing recoverable body becomes a `# TODO: implement` stub.
+some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and routes with
+multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and route/router/app-level
+dependencies remain visible to `intpot inspect`, but API-to-CLI/MCP conversion refuses
+them instead of emitting broken code; full mapping remains tracked in issue #20. A missing
+recoverable body becomes a `# TODO: implement` stub.
 
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values. It does not discover

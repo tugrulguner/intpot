@@ -99,10 +99,13 @@ the result works: compile it, import it with its runtime dependencies installed,
 invoke a real CLI command, API request, or MCP tool.
 
 Current unsupported or lossy conversions include nested Typer sub-apps, repeatable CLI
-options, some FastAPI `Annotated[..., Body(...)]` parameters, `Depends()` when targeting
-CLI or MCP, factory-created apps, and routes with multiple HTTP methods. A body that cannot
-be recovered becomes a `# TODO: implement` stub; inspect and implement it before treating
-the output as complete.
+options, some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and
+routes with multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and
+route/router/app-level dependencies remain available through `.tools` and `inspect_app`,
+but `.to_cli()`, `.to_mcp()`, and `.write()` raise
+`intpot.UnsupportedFastAPIDependencyError` rather than emit broken code. Full dependency
+mapping remains tracked in issue #20. A body that cannot be recovered becomes a
+`# TODO: implement` stub; inspect and implement it before treating the output as complete.
 
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values. It does not discover

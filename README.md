@@ -272,10 +272,15 @@ frameworks share:
   `Path`, and `Body` parameter sources when generating FastAPI;
 - scalar returns translated into a shape the target framework can serve correctly.
 
-Frameworks do not have one-to-one equivalents for every feature. Review generated code
-when a source uses nested Typer command groups, repeatable CLI options,
-`Annotated[..., Body(...)]`, FastAPI `Depends()`, Pydantic model parameters, routes with
-multiple HTTP methods, streaming, background tasks, or framework-specific error handling.
+Frameworks do not have one-to-one equivalents for every feature. FastAPI dependencies
+(`Depends`, `Security`, nested dependencies, and route/router/app-level dependencies) are
+preserved by inspection, but API-to-CLI/MCP conversion refuses them with
+`UnsupportedFastAPIDependencyError` rather than emitting code with missing values. Full
+dependency injection mapping remains tracked in
+[#20](https://github.com/tugrulguner/intpot/issues/20). Review generated code when a source
+uses nested Typer command groups, repeatable CLI options, `Annotated[..., Body(...)]`,
+Pydantic model parameters, routes with multiple HTTP methods, streaming, background tasks,
+or framework-specific error handling.
 
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values that the body
@@ -331,11 +336,10 @@ The repository includes checked-in source and generated output for every directi
 | FastAPI | [`api_to_cli.py`](examples/conversions/api_to_cli.py) | — | [`api_to_mcp.py`](examples/conversions/api_to_mcp.py) |
 | FastMCP | [`mcp_to_cli.py`](examples/conversions/mcp_to_cli.py) | [`mcp_to_api.py`](examples/conversions/mcp_to_api.py) | — |
 
-[`examples/`](examples/) also contains advanced inputs and outputs with direct imports,
-async tools, request bodies, `Depends()`, and path parameters. The FastAPI input includes
-routes with multiple HTTP methods; that case is intentionally visible even though current
-conversion keeps only one method. Run `bash scripts/demo.sh` to regenerate all twelve
-conversions locally.
+[`examples/`](examples/) also contains advanced inputs with direct imports, async tools,
+request bodies, `Depends()`, and path parameters. The FastAPI dependency example remains
+inspectable, but API-to-CLI/MCP conversion intentionally refuses it until issue #20 is
+implemented. The FastAPI input also includes routes with multiple HTTP methods.
 
 ## CLI Reference
 

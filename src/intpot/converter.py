@@ -10,6 +10,27 @@ from intpot.core.detector import SourceImportError, detect_instance, detect_sour
 from intpot.core.models import SourceType, ToolInfo
 
 
+class UnsupportedFastAPIDependencyError(Exception):
+    """Raised when FastAPI dependency injection cannot be converted safely."""
+
+
+def _guard_fastapi_dependencies(tools: list[ToolInfo]) -> None:
+    unsupported = [tool for tool in tools if tool.dependencies]
+    if not unsupported:
+        return
+
+    routes = "; ".join(
+        f"route {tool.route_path or '<unknown>'} ({tool.name}): "
+        f"{', '.join(tool.dependencies)}"
+        for tool in unsupported
+    )
+    raise UnsupportedFastAPIDependencyError(
+        "Cannot convert FastAPI dependencies to CLI or MCP safely: "
+        f"{routes}. Depends/Security parameters, nested dependencies, and "
+        "route/router/app-level dependencies are not supported yet; see issue #20."
+    )
+
+
 def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
     """Inspect an app instance and return normalized tool definitions."""
     if source_type == SourceType.MCP:
@@ -24,6 +45,25 @@ def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
     from intpot.core.inspectors.api import APIInspector
 
     return APIInspector().inspect(app_instance)
+
+
+def _prepare_tools_for_target(
+    source_type: SourceType, tools: list[ToolInfo], target: SourceType
+) -> list[ToolInfo]:
+    """Validate and transform an inspected tool snapshot for a target."""
+    from intpot.core.transforms import transform_tools
+
+    if source_type == SourceType.API and target in (SourceType.CLI, SourceType.MCP):
+        _guard_fastapi_dependencies(tools)
+    return transform_tools(tools, source_type, target)
+
+
+def tools_for_target(
+    source_type: SourceType, app_instance: Any, target: SourceType
+) -> list[ToolInfo]:
+    """Inspect an app and prepare tools for a target framework."""
+    tools = inspect_app(source_type, app_instance)
+    return _prepare_tools_for_target(source_type, tools, target)
 
 
 class IntpotApp:
@@ -50,9 +90,7 @@ class IntpotApp:
 
     def _tools_for(self, target: SourceType) -> list[ToolInfo]:
         """Return tools transformed for the target framework."""
-        from intpot.core.transforms import transform_tools
-
-        return transform_tools(self.tools, self.source_type, target)
+        return _prepare_tools_for_target(self.source_type, self.tools, target)
 
     def to_cli(self) -> str:
         """Generate Typer CLI code."""

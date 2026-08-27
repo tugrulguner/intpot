@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+import inspect
+from typing import Annotated, Any, get_args, get_origin
 
-from intpot.core.inspectors._utils import extract_function_body, extract_source_imports
+from intpot.core.inspectors._utils import (
+    extract_function_body,
+    extract_source_imports,
+    python_type_name,
+)
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 
@@ -43,6 +48,41 @@ def _child_commands(obj: Any) -> dict[str, Any] | None:
     return commands if isinstance(commands, dict) else None
 
 
+def _text_name(value: Any) -> str | None:
+    """Return framework names without accepting placeholder objects."""
+    return value if isinstance(value, str) and value else None
+
+
+def _registered_parameter_details(
+    annotation: Any, signature_default: Any
+) -> tuple[Any, Any, str]:
+    """Normalize callback annotations and Typer metadata without building Click."""
+    metadata = signature_default
+    if get_origin(annotation) is Annotated:
+        annotation, *extras = get_args(annotation)
+        metadata = next(
+            (
+                extra
+                for extra in extras
+                if hasattr(extra, "help") and hasattr(extra, "default")
+            ),
+            signature_default,
+        )
+
+    default_source = (
+        metadata if signature_default is inspect.Parameter.empty else signature_default
+    )
+    raw_default = getattr(default_source, "default", default_source)
+    default = (
+        _SENTINEL
+        if raw_default is inspect.Parameter.empty or raw_default is Ellipsis
+        else raw_default
+    )
+    help_text = getattr(metadata, "help", "")
+    description = help_text if isinstance(help_text, str) else ""
+    return annotation, default, description
+
+
 class CLIInspector(BaseInspector):
     def inspect(self, app: Any) -> list[ToolInfo]:
         tools: list[ToolInfo] = []
@@ -60,13 +100,96 @@ class CLIInspector(BaseInspector):
 
                 click_group = typer.main.get_group(app)
         except Exception:
-            pass
+            registered = getattr(app, "registered_commands", None)
+            if isinstance(registered, list):
+                self._extract_registered_app(app, tools)
+                return tools
 
         if click_group is None:
             return tools
 
         self._extract_commands(click_group, tools, prefix="")
         return tools
+
+    def _extract_registered_app(
+        self,
+        app: Any,
+        tools: list[ToolInfo],
+        prefix: str = "",
+        seen: set[int] | None = None,
+    ) -> None:
+        """Inspect Typer callbacks when its Click tree cannot be constructed."""
+        if seen is None:
+            seen = set()
+        app_id = id(app)
+        if app_id in seen:
+            return
+        seen.add(app_id)
+
+        commands = getattr(app, "registered_commands", None)
+        if not isinstance(commands, list):
+            return
+
+        for command in commands:
+            callback = getattr(command, "callback", None)
+            if not callable(callback):
+                continue
+
+            command_name = (
+                _text_name(getattr(command, "name", None)) or callback.__name__
+            )
+            name = f"{prefix}{command_name}".replace("-", "_")
+            description = (
+                getattr(command, "help", None) or inspect.getdoc(callback) or ""
+            )
+            signature = inspect.signature(callback)
+            try:
+                annotations = inspect.get_annotations(callback, eval_str=True)
+            except Exception:
+                annotations = inspect.get_annotations(callback, eval_str=False)
+
+            parameters: list[ParameterInfo] = []
+            for param in signature.parameters.values():
+                annotation, default, parameter_description = (
+                    _registered_parameter_details(
+                        annotations.get(param.name, param.annotation), param.default
+                    )
+                )
+                parameters.append(
+                    ParameterInfo(
+                        name=param.name,
+                        type_annotation=python_type_name(annotation),
+                        default=default,
+                        description=parameter_description,
+                    )
+                )
+
+            tools.append(
+                ToolInfo(
+                    name=name,
+                    description=description,
+                    parameters=parameters,
+                    return_type="str",
+                    function_body=extract_function_body(callback),
+                    is_async=inspect.iscoroutinefunction(callback),
+                    source_imports=extract_source_imports(callback),
+                )
+            )
+
+        groups = getattr(app, "registered_groups", None)
+        if not isinstance(groups, list):
+            return
+        for group in groups:
+            nested = getattr(group, "typer_instance", None)
+            if nested is None:
+                continue
+            group_name = _text_name(getattr(group, "name", None))
+            if group_name is None:
+                group_name = _text_name(
+                    getattr(getattr(nested, "info", None), "name", None)
+                )
+            nested_prefix = f"{prefix}{group_name}_" if group_name else prefix
+            self._extract_registered_app(nested, tools, nested_prefix, seen)
 
     def _extract_commands(
         self,
@@ -101,6 +224,13 @@ class CLIInspector(BaseInspector):
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
         description = cmd.help or ""
+        callback = getattr(cmd, "callback", None)
+        callback_params: dict[str, inspect.Parameter] = {}
+        if callback is not None:
+            try:
+                callback_params = dict(inspect.signature(callback).parameters)
+            except (TypeError, ValueError):
+                pass
 
         params: list[ParameterInfo] = []
         for param in cmd.params:
@@ -117,6 +247,13 @@ class CLIInspector(BaseInspector):
             desc = ""
             if hasattr(param, "help") and param.help:
                 desc = param.help
+            else:
+                original = callback_params.get(param.name)
+                original_help = getattr(
+                    getattr(original, "default", None), "help", None
+                )
+                if isinstance(original_help, str):
+                    desc = original_help
 
             params.append(
                 ParameterInfo(
@@ -128,7 +265,6 @@ class CLIInspector(BaseInspector):
             )
 
         # Extract function body and async status from the callback
-        callback = cmd.callback
         fn_body = extract_function_body(callback) if callback else None
         src_imports = extract_source_imports(callback) if callback else []
         is_async = asyncio.iscoroutinefunction(callback) if callback else False

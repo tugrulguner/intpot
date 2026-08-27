@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 
 from intpot.core.inspectors.cli import CLIInspector
@@ -73,6 +75,10 @@ class _StubType:
         self.name = name
 
 
+class _UnrelatedMetadata:
+    default = "wrong default"
+
+
 class _StubParam:
     def __init__(self, name, type_name, required=True, default=None, help_=""):
         self.name = name
@@ -83,17 +89,37 @@ class _StubParam:
 
 
 class _StubCommand:
-    def __init__(self, name, params=None, help_=""):
+    def __init__(self, name, params=None, help_="", callback=None):
         self.name = name
         self.params = params or []
         self.help = help_
-        self.callback = None
+        self.callback = callback
 
 
 class _StubGroup:
     def __init__(self, commands):
         self.name = "root"
         self.commands = commands
+
+
+class _StubCommandInfo:
+    def __init__(self, callback, name=None, help_=None):
+        self.callback = callback
+        self.name = name
+        self.help = help_
+
+
+class _StubRegisteredApp:
+    def __init__(self, commands, groups=None, name=None):
+        self.registered_commands = commands
+        self.registered_groups = groups or []
+        self.info = type("Info", (), {"name": name})()
+
+
+class _StubGroupInfo:
+    def __init__(self, name, typer_instance):
+        self.name = name
+        self.typer_instance = typer_instance
 
 
 def test_a_group_that_is_not_a_click_subclass_is_still_walked():
@@ -147,3 +173,98 @@ def test_an_unrecognised_parameter_type_falls_back_to_str():
     tools = CLIInspector().inspect(_StubGroup({"pick": command}))
 
     assert tools[0].parameters[0].type_annotation == "str"
+
+
+def test_parameter_help_falls_back_to_callback_metadata():
+    class _HelpMetadata:
+        help = "Original callback help"
+
+    def callback(value=_HelpMetadata()) -> None:
+        pass
+
+    command = _StubCommand(
+        "show",
+        params=[_StubParam("value", "text", help_="")],
+        callback=callback,
+    )
+
+    tools = CLIInspector().inspect(_StubGroup({"show": command}))
+
+    assert tools[0].parameters[0].description == "Original callback help"
+
+
+def test_registered_callbacks_are_inspected_when_click_tree_cannot_be_built():
+    def search(
+        query: str = typer.Argument(..., help="Search query"),
+        include_done: bool = typer.Option(False, help="Include completed tasks"),
+    ) -> None:
+        """Search tasks."""
+        pass
+
+    app = _StubRegisteredApp([_StubCommandInfo(search)])
+
+    tools = CLIInspector().inspect(app)
+
+    assert [tool.name for tool in tools] == ["search"]
+    assert tools[0].description == "Search tasks."
+    assert [(param.name, param.type_annotation) for param in tools[0].parameters] == [
+        ("query", "str"),
+        ("include_done", "bool"),
+    ]
+    assert tools[0].parameters[0].required
+    assert tools[0].parameters[0].description == "Search query"
+    assert tools[0].parameters[1].default is False
+    assert tools[0].parameters[1].description == "Include completed tasks"
+
+
+def test_nested_registered_callbacks_survive_click_tree_failure():
+    def search(include_done: bool = typer.Option(False)) -> None:
+        pass
+
+    nested = _StubRegisteredApp([_StubCommandInfo(search)])
+    root = _StubRegisteredApp([], [_StubGroupInfo("tasks", nested)])
+
+    tools = CLIInspector().inspect(root)
+
+    assert [tool.name for tool in tools] == ["tasks_search"]
+
+
+def test_registered_callbacks_unwrap_annotated_typer_metadata():
+    def search(
+        query: Annotated[
+            str, _UnrelatedMetadata(), typer.Argument(help="Search query")
+        ],
+        include_done: Annotated[
+            bool, typer.Option(help="Include completed tasks")
+        ] = False,
+    ) -> None:
+        pass
+
+    app = _StubRegisteredApp([_StubCommandInfo(search)])
+
+    tools = CLIInspector().inspect(app)
+
+    assert [(param.name, param.type_annotation) for param in tools[0].parameters] == [
+        ("query", "str"),
+        ("include_done", "bool"),
+    ]
+    assert tools[0].parameters[0].required
+    assert tools[0].parameters[0].description == "Search query"
+    assert tools[0].parameters[1].default is False
+    assert tools[0].parameters[1].description == "Include completed tasks"
+
+
+def test_registered_group_uses_nested_app_name_when_group_name_is_not_text():
+    class _Placeholder:
+        def __bool__(self):
+            return False
+
+    def list_users() -> None:
+        pass
+
+    nested = _StubRegisteredApp([_StubCommandInfo(list_users)], name="admin")
+    root = _StubRegisteredApp([], [_StubGroupInfo(_Placeholder(), nested)])
+
+    tools = CLIInspector().inspect(root)
+
+    assert [tool.name for tool in tools] == ["admin_list_users"]

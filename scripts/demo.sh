@@ -41,6 +41,28 @@ run() {
     fi
 }
 
+expect_failure() {
+    local label="$1"
+    local cmd="$2"
+
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "${GREEN}  $label${RESET}"
+    echo -e "${CYAN}  $ $cmd${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+    set +e
+    local output
+    output=$(eval "$cmd" 2>&1)
+    local status=$?
+    set -e
+    printf '%s\n' "$output"
+    if [[ $status -eq 0 ]] || [[ "$output" != *"Cannot convert FastAPI dependencies"* ]]; then
+        echo "Expected an actionable FastAPI dependency rejection." >&2
+        return 1
+    fi
+}
+
 echo -e "${GREEN}"
 echo "  ╔══════════════════════════════════════════════╗"
 echo "  ║         intpot — full conversion demo        ║"
@@ -95,13 +117,19 @@ run "Advanced MCP → API  (notes server)" \
     "uv run intpot to api examples/advanced_mcp.py" \
     "$OUTDIR/advanced_mcp_to_api.py"
 
-run "Advanced API → CLI  (user CRUD with Body, Depends, Optional, json)" \
+run "Advanced API → CLI  (user management)" \
     "uv run intpot to cli examples/advanced_api.py" \
     "$OUTDIR/advanced_api_to_cli.py"
 
-run "Advanced API → MCP  (user CRUD)" \
+run "Advanced API → MCP  (user management)" \
     "uv run intpot to mcp examples/advanced_api.py" \
     "$OUTDIR/advanced_api_to_mcp.py"
+
+expect_failure "Dependency API → CLI  (Depends is rejected safely)" \
+    "uv run intpot to cli examples/dependency_api.py"
+
+expect_failure "Dependency API → MCP  (Depends is rejected safely)" \
+    "uv run intpot to mcp examples/dependency_api.py"
 
 # ============================================================
 # 3. Scaffolding
@@ -124,7 +152,7 @@ run "Scaffold API project" \
 # 4. Directory auto-discovery
 # ============================================================
 
-run "Directory scan → CLI  (auto-discovers all apps in examples/)" \
+expect_failure "Directory scan → CLI  (fails atomically on dependency_api.py)" \
     "cd $PROJDIR && uv run intpot to cli examples/"
 
 # ============================================================
@@ -133,7 +161,7 @@ run "Directory scan → CLI  (auto-discovers all apps in examples/)" \
 
 echo ""
 echo -e "${GREEN}  ╔══════════════════════════════════════════════╗"
-echo -e "  ║              All conversions done!             ║"
+echo -e "  ║       Supported conversions and guards done!    ║"
 echo -e "  ╚══════════════════════════════════════════════╝${RESET}"
 
 if $SAVE; then
