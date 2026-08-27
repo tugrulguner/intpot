@@ -11,7 +11,16 @@ from intpot.converter import (
     UnsupportedFastAPIDependencyError,
     tools_for_target,
 )
+from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
+
+
+def _tools_or_exit(source_type: SourceType, app_instance: object, target: SourceType):
+    try:
+        return tools_for_target(source_type, app_instance, target)
+    except (InspectionError, UnsupportedFastAPIDependencyError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from None
 
 
 def _mirrored_destination(
@@ -119,11 +128,7 @@ def convert(
         for (file_path, source_type, app_instance), destination in zip(
             sources, destinations, strict=True
         ):
-            try:
-                tools = tools_for_target(source_type, app_instance, target)
-            except UnsupportedFastAPIDependencyError as exc:
-                typer.echo(str(exc), err=True)
-                raise typer.Exit(1) from None
+            tools = _tools_or_exit(source_type, app_instance, target)
             planned.append((file_path, destination, generator.generate(tools)))
 
         for file_path, destination, code in planned:
@@ -160,11 +165,7 @@ def convert(
         typer.echo(f"Source is already a {label}.", err=True)
         raise typer.Exit(1)
 
-    try:
-        tools = tools_for_target(source_type, app_instance, target)
-    except UnsupportedFastAPIDependencyError as exc:
-        typer.echo(str(exc), err=True)
-        raise typer.Exit(1) from None
+    tools = _tools_or_exit(source_type, app_instance, target)
     code = generator.generate(tools)
 
     if dry_run:
