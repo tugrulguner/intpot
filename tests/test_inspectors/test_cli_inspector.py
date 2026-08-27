@@ -83,11 +83,11 @@ class _StubParam:
 
 
 class _StubCommand:
-    def __init__(self, name, params=None, help_=""):
+    def __init__(self, name, params=None, help_="", callback=None):
         self.name = name
         self.params = params or []
         self.help = help_
-        self.callback = None
+        self.callback = callback
 
 
 class _StubGroup:
@@ -147,3 +147,21 @@ def test_an_unrecognised_parameter_type_falls_back_to_str():
     tools = CLIInspector().inspect(_StubGroup({"pick": command}))
 
     assert tools[0].parameters[0].type_annotation == "str"
+
+
+def test_parameter_help_falls_back_to_callback_metadata():
+    class _HelpMetadata:
+        help = "Original callback help"
+
+    def callback(value=_HelpMetadata()) -> None:
+        pass
+
+    command = _StubCommand(
+        "show",
+        params=[_StubParam("value", "text", help_="")],
+        callback=callback,
+    )
+
+    tools = CLIInspector().inspect(_StubGroup({"show": command}))
+
+    assert tools[0].parameters[0].description == "Original callback help"

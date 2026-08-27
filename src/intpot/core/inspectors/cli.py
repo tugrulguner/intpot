@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from typing import Any
 
 from intpot.core.inspectors._utils import extract_function_body, extract_source_imports
@@ -101,6 +102,13 @@ class CLIInspector(BaseInspector):
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
         description = cmd.help or ""
+        callback = getattr(cmd, "callback", None)
+        callback_params: dict[str, inspect.Parameter] = {}
+        if callback is not None:
+            try:
+                callback_params = dict(inspect.signature(callback).parameters)
+            except (TypeError, ValueError):
+                pass
 
         params: list[ParameterInfo] = []
         for param in cmd.params:
@@ -117,6 +125,13 @@ class CLIInspector(BaseInspector):
             desc = ""
             if hasattr(param, "help") and param.help:
                 desc = param.help
+            else:
+                original = callback_params.get(param.name)
+                original_help = getattr(
+                    getattr(original, "default", None), "help", None
+                )
+                if isinstance(original_help, str):
+                    desc = original_help
 
             params.append(
                 ParameterInfo(
@@ -128,7 +143,6 @@ class CLIInspector(BaseInspector):
             )
 
         # Extract function body and async status from the callback
-        callback = cmd.callback
         fn_body = extract_function_body(callback) if callback else None
         src_imports = extract_source_imports(callback) if callback else []
         is_async = asyncio.iscoroutinefunction(callback) if callback else False
