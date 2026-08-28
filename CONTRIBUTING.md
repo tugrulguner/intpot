@@ -1,113 +1,164 @@
 # Contributing to intpot
 
-Thanks for your interest in contributing!
+Thanks for helping improve Intpot. Intpot is a framework with two public halves—runtime and
+conversion—that meet at the normalized `ToolInfo` schema. Contributions must preserve that
+boundary and prove behavior at the framework surface users actually run.
 
-## Development Setup
+## Choose the contribution path first
 
-After forking and cloning (see [Pull Request Process](#pull-request-process) below):
+### Substantial contract work: open an issue first
 
-1. Install dependencies (requires [uv](https://docs.astral.sh/uv/)):
+Open a structured [feature request](https://github.com/tugrulguner/intpot/issues/new?template=feature.yml)
+before changing public APIs, normalized models, inspector/generator contracts, runtime
+behavior, framework compatibility floors, conversion guarantees, or cross-target semantics.
+Start with the user problem and wait for contract alignment before implementation.
 
-   ```bash
-   cd intpot
-   uv sync --all-extras
-   ```
+### Small direct changes
 
-2. Install pre-commit hooks:
+A focused bug fix, regression test, documentation correction, example repair, or maintenance
+change may be opened directly when its scope is obvious and it does not introduce a new
+public contract. Explain why a direct PR is appropriate in the pull-request template.
 
-   ```bash
-   uv run pre-commit install
-   ```
+### Questions and early ideas
 
-## Code Style
+Use [Q&A](https://github.com/tugrulguner/intpot/discussions/categories/q-a) for usage help and
+[Ideas / Roadmap](https://github.com/tugrulguner/intpot/discussions/categories/ideas-roadmap)
+for an idea that is not yet a scoped proposal. Do not turn exploratory discussion into an
+implementation before the contract is clear.
 
-- We use [Ruff](https://docs.astral.sh/ruff/) for linting and formatting.
-- Run `make format` to auto-format your code.
-- Run `make lint` to check for issues.
-- Pre-commit hooks will run automatically on each commit.
+### Claimed community work
 
-## Type Checking
+For a `good first issue` or `help wanted` issue, comment and wait for confirmation before
+starting. Check the issue body, every comment, and open pull requests first so two
+contributors do not solve the same problem.
 
-We use [Pyright](https://github.com/microsoft/pyright) for static type analysis.
+## Development setup
 
-- Run `make typecheck` to check types.
-- Add type annotations to all new functions and methods.
-- Use `from __future__ import annotations` for forward references.
-- Pyright is configured in `pyproject.toml` under `[tool.pyright]`.
-
-## Running Tests
-
-```bash
-make test
-```
-
-Or run the full check suite (lint + typecheck + test):
+After forking and cloning:
 
 ```bash
-make check
+git clone https://github.com/YOUR_USERNAME/intpot.git
+cd intpot
+uv sync --all-extras
+uv run pre-commit install
 ```
 
-## Project Structure
+Create a focused branch from current `main`:
 
+```bash
+git checkout -b <type>/<short-description>
 ```
+
+Run Python through `.venv/bin/python` or `uv run`; never install project dependencies
+globally.
+
+## Project structure
+
+```text
 src/intpot/
 ├── __init__.py          # Package exports (App, IntpotApp, load)
 ├── cli.py               # Main CLI entry point
-├── runtime.py           # Universal App class (@app.tool() decorator, serve, eject)
-├── runtime_builders.py  # Build live Typer/FastAPI/FastMCP instances from registered tools
-├── converter.py         # Conversion API (IntpotApp, load())
-├── commands/            # CLI command handlers (serve, eject, to_cli, to_mcp, to_api, init)
+├── runtime.py           # @app.tool(), serve, and eject
+├── runtime_builders.py  # Live Typer/FastAPI/FastMCP builders
+├── converter.py         # IntpotApp and load()
+├── commands/            # CLI command handlers
 ├── core/
-│   ├── models.py        # Shared data models (ToolInfo, ParameterInfo, SourceType)
-│   ├── detector.py      # Auto-detect source type from files or live instances
-│   ├── discovery.py     # Directory scanning for convertible apps
-│   ├── transforms.py    # AST-based body/type transforms between frameworks
-│   ├── inspectors/      # Framework-specific inspectors (extract tools)
-│   └── generators/      # Framework-specific generators (render code)
-└── templates/           # Jinja2 templates for code generation
+│   ├── models.py        # ToolInfo, ParameterInfo, SourceType
+│   ├── detector.py      # Source detection; imports source files
+│   ├── discovery.py     # Directory scanning
+│   ├── transforms.py    # Cross-framework body/type transforms
+│   ├── inspectors/      # Framework objects → ToolInfo
+│   └── generators/      # ToolInfo → generated source
+└── templates/           # Jinja2 source templates
 ```
 
-Key concepts:
-- **Runtime** — `intpot.App` registers tools via `@app.tool()` and serves them as CLI, API, or MCP at runtime
-- **Detection** — identify framework type from a file path or live object
-- **Inspection** — extract normalized `ToolInfo` from framework-specific apps
-- **Generation** — render `ToolInfo` into target framework code via Jinja2 templates
-- **Conversion API** — `intpot.load(source)` returns an `IntpotApp` for programmatic conversion
-- **Eject** — export an `intpot.App` as standalone framework code using existing generators
+The core flow is:
 
-## Pull Request Process
+```text
+source app → detect → inspect → ToolInfo[] → transform/generate → target app
+                              ↘ runtime builders → live target
+```
 
-1. **Fork** the repository on GitHub.
-2. **Clone** your fork locally:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/intpot.git
-   ```
-3. **Create a feature branch** from `main`:
-   ```bash
-   git checkout -b my-feature
-   ```
-4. Make your changes and add tests if applicable.
-5. Add a changelog fragment describing your change for users — one file at
-   `changelog.d/<pr-number>.<type>.md`, where type is `added`, `changed`, `deprecated`,
-   `removed`, or `fixed`. See [`changelog.d/README.md`](changelog.d/README.md). Never
-   edit `CHANGELOG.md` directly; it's assembled from these at release time. If the
-   change isn't user-facing, ask a maintainer for the `skip-changelog` label instead.
-6. Ensure `make check` passes (lint, typecheck, and tests). [`docs/reviewing.md`](docs/reviewing.md)
-   is what a reviewer will apply to your change — worth reading first.
-7. **Push** to your fork:
-   ```bash
-   git push origin my-feature
-   ```
-8. Open a **Pull Request** against `tugrulguner/intpot:main` with a clear description of your changes.
+Read [`src/intpot/AGENTS.md`](src/intpot/AGENTS.md) before changing source. Its rules come
+from real bugs, including generated code that compiled but failed when invoked and framework
+checks that silently stopped discovering tools.
+
+## Implementation expectations
+
+- Preserve Intpot as a full framework, not a thin wrapper around one target.
+- Keep runtime and conversion behavior aligned where they advertise the same contract.
+- Treat `ToolInfo` and `ParameterInfo` as the seam between inspectors, generators,
+  transforms, and runtime builders.
+- Check all source and target frameworks affected by a normalized-schema or template change.
+- Keep the minimum supported versions in `pyproject.toml` honest and exercise structural
+  compatibility generations, not only the lockfile.
+- Add type annotations to new functions and use `from __future__ import annotations`.
+- Let Ruff own formatting; use `make format` rather than hand-formatting around failures.
+
+## Tests and behavioral evidence
+
+Run the complete quality gate:
+
+```bash
+make check
+make build
+```
+
+`make check` runs Ruff, formatting, Pyright, and the complete test suite from `uv.lock`.
+When a change touches framework internals, also run the relevant oldest and newest dependency
+lanes documented in [`docs/reviewing.md`](docs/reviewing.md).
+
+Generated code is only verified when its real consumer executes it:
+
+- invoke generated Typer commands;
+- send requests to generated FastAPI operations;
+- call generated FastMCP tools;
+- exercise checked-in generated examples when their source or contract changes.
+
+A string assertion or successful `compile()` may supplement this evidence, but cannot replace
+it. Record exact commands and results so a reviewer can reproduce them. Include negative
+paths when the change affects detection, validation, rejection, or error reporting.
+
+## Changelog fragments
+
+Every user-facing change needs one Towncrier fragment:
+
+- tracked work: `changelog.d/<issue-number>.<type>.md`;
+- a small direct change without an issue: generate a unique orphan with
+  `uv run towncrier create +.changed.md` and replace `changed` with the appropriate type.
+
+Allowed types are `added`, `changed`, `deprecated`, `removed`, and `fixed`. Numeric fragments
+must refer to the underlying issue, not the pull request. Describe the user-visible result in
+one sentence. See [`changelog.d/README.md`](changelog.d/README.md).
+
+For genuinely internal-only work, ask a maintainer to apply `skip-changelog`. Never remove a
+fragment merely to satisfy CI, and never edit `CHANGELOG.md` directly.
+
+## Pull request process
+
+1. Confirm the contribution path and scope before implementation.
+2. Rebase or merge current `main` before final verification.
+3. Keep the PR focused; list explicit non-goals.
+4. Add tests and behavioral evidence for the changed boundary.
+5. Add the issue-backed or generated orphan changelog fragment.
+6. Run `make check`, `make build`, and applicable compatibility/artifact checks.
+7. Push the branch and open a PR against `tugrulguner/intpot:main`.
+8. Use `Closes #<issue-number>` for tracked work, or explain why a direct PR is appropriate.
+9. Point reviewers to the riskiest files and evidence in the PR template.
+10. Respond to every review finding and wait for the new exact-head checks.
+
+Reviewers follow [`docs/reviewing.md`](docs/reviewing.md). A green old head does not verify a
+new push, and a review of one target does not establish parity across all generated targets.
+
+## Reporting bugs
+
+Use the structured [bug report](https://github.com/tugrulguner/intpot/issues/new?template=bug.yml).
+Include a minimal source application, exact command or public API call, framework versions,
+and generated output. Remove credentials, private source, and sensitive data before posting.
 
 ## Releasing
 
-Releases are cut by maintainers — see [`docs/releasing.md`](docs/releasing.md). Nothing in
-that process is yours to run: don't bump the version in a PR, and don't tag. Land your
-change with a changelog fragment and it goes out with the next release.
-
-## Reporting Issues
-
-- Use GitHub Issues to report bugs or request features.
-- Include steps to reproduce for bug reports.
-- Check existing issues before opening a new one.
+Releases are maintainer work described in [`docs/releasing.md`](docs/releasing.md). Do not
+bump versions, edit lockfile version metadata manually, create tags, or assemble
+`CHANGELOG.md` in a feature PR. Land a fragment and it will be included in release
+preparation.

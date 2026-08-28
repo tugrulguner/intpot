@@ -68,8 +68,9 @@ transformations that need real understanding of what a function body does.
   beyond the `typer.echo`/`typer.Exit` pairs already handled: request/response pattern
   adaptation, framework-specific context objects, streaming and background-task idioms
 - **Dependency injection mapping** ([#20](https://github.com/tugrulguner/intpot/issues/20)) —
-  FastAPI `Depends()` is currently recorded as a comment in the generated file; v2 should
-  convert it into the target's equivalent, such as a context manager or setup/teardown
+  FastAPI dependencies are currently represented during inspection but refused for
+  CLI/MCP conversion; v2 should convert them into the target's equivalent, such as a
+  context manager or setup/teardown
 - **Pydantic model parameters** ([#17](https://github.com/tugrulguner/intpot/issues/17)) —
   expand a model argument into individual CLI/MCP parameters instead of treating it as one
   opaque value

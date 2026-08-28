@@ -3,13 +3,13 @@ name: Changelog
 on:
   pull_request:
     branches: [main]
-    # `labeled`/`unlabeled` matter: applying `skip-changelog` has to re-run this
-    # check. Living in ci.yml with the default types, it did not, so a labelled
-    # PR stayed red until someone happened to push again.
+    # Labels must trigger a new run so the maintainer-controlled exemption takes effect
+    # without requiring an unrelated contributor push.
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
+  issues: read # Required to verify numeric fragments reference an issue.
   pull-requests: read # Required to inspect the pull request's changed files.
 
 concurrency:
@@ -29,18 +29,36 @@ jobs:
       - name: Skip non-user-facing changes
         if: contains(github.event.pull_request.labels.*.name, 'skip-changelog')
         run: echo "skip-changelog label present"
-      - name: Require this PR's changelog fragment
+      - name: Require a changelog fragment from this pull request
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
         shell: bash
         run: |
           set -euo pipefail
-          # Anchored to this PR's own number: a fragment belonging to some other
-          # PR used to satisfy the check.
-          pattern="^changelog\.d/${PR_NUMBER}\.(added|changed|deprecated|removed|fixed)\.md$"
-          if gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-            --paginate --jq '.[].filename' | grep -Eq "$pattern"; then
-            echo "changelog fragment found for PR #${PR_NUMBER}"
-            exit 0
+          pattern='^changelog\.d/([0-9]+|\+[A-Za-z0-9][A-Za-z0-9._-]*)\.(added|changed|deprecated|removed|fixed)\.md$'
+          mapfile -t fragments < <(
+            gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
+              --paginate --jq '.[] | select(.status != "removed") | .filename' \
+              | grep -E "$pattern" || true
+          )
+
+          if (( ${#fragments[@]} == 0 )); then
+            echo "::error::no changelog fragment found — add an issue-numbered or unique orphan fragment, or apply the skip-changelog label"
+            exit 1
           fi
-          echo "::error::no changelog fragment for PR #${PR_NUMBER} — add changelog.d/${PR_NUMBER}.<type>.md (see changelog.d/README.md), or apply the 'skip-changelog' label if this change is not user-facing"
-          exit 1
+
+          for fragment in "${fragments[@]}"; do
+            if [[ "$fragment" =~ ^changelog\.d/([0-9]+)\. ]]; then
+              issue_number="${BASH_REMATCH[1]}"
+              if ! kind="$(gh api "repos/${REPOSITORY}/issues/${issue_number}" \
+                --jq 'if has("pull_request") then "pull-request" else "issue" end')"; then
+                echo "::error::${fragment} does not reference an existing issue"
+                exit 1
+              fi
+              if [[ "$kind" != "issue" ]]; then
+                echo "::error::${fragment} must use an issue number, not a pull request number"
+                exit 1
+              fi
+            fi
+          done
+
+          echo "${#fragments[@]} changelog fragment(s) validated in PR #${PR_NUMBER}"

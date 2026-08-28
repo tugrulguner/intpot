@@ -1,30 +1,36 @@
 # Changelog fragments
 
-Every user-facing change gets a fragment file here instead of an edit to
-`CHANGELOG.md`. At release time `towncrier` assembles them into a dated section and
-deletes them, so nobody hand-edits the changelog and nobody resolves a merge conflict
-in it.
+Every unreleased user-facing change is represented by one file in this directory rather
+than a direct edit to `CHANGELOG.md`.
 
-## Adding one
+## Tracked work
 
-Name the file `<pr-number>.<type>.md`, where type is one of `added`, `changed`,
-`deprecated`, `removed`, or `fixed`:
+When the change has a tracking issue, use its issue number:
 
-```
-changelog.d/45.fixed.md
+```text
+changelog.d/<issue-number>.<type>.md
 ```
 
-Write one sentence describing what changed **for someone using intpot** — not what you
-did to the code. Say what the behavior was before if that makes it clearer. Markdown
-works, and the PR link is appended automatically, so don't add one:
+Numeric fragments must name an issue, not a pull request. Towncrier links the release note
+to the underlying user problem.
 
-```markdown
-Async tools now run correctly under `intpot serve --cli` — the coroutine was
-previously returned unawaited instead of executed.
+## Small direct changes
+
+For a focused direct change without an issue, let Towncrier generate a unique orphan ID:
+
+```bash
+uv run towncrier create +.changed.md
 ```
 
-If a change genuinely isn't user-facing (refactors, CI, formatting, test-only work),
-skip the fragment and add the `skip-changelog` label to the PR.
+Replace `changed` with `added`, `deprecated`, `removed`, or `fixed` when appropriate. Keep
+the generated identifier; do not replace it with the pull-request number.
+
+Write one sentence describing what changed **for someone using Intpot**, not what changed in
+the implementation. Markdown is allowed. Do not add a manual issue or PR link.
+
+For a genuinely internal-only change, a maintainer may apply `skip-changelog`. Deleting a
+fragment does not satisfy CI, and `CHANGELOG.md` is assembled only during release
+preparation.
 
 ## Previewing
 
@@ -32,4 +38,4 @@ skip the fragment and add the `skip-changelog` label to the PR.
 make changelog-draft
 ```
 
-This renders what the next release section will look like without touching anything.
+This renders the next release section without modifying the working tree.

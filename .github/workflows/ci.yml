@@ -76,11 +76,11 @@ jobs:
       matrix:
         include:
           - name: Typer 0.9.0
-            editable: "."
+            editable: ".[mcp]"
             framework: "typer==0.9.0"
             package: typer
             version: "0.9.0"
-            tests: tests/test_inspectors/test_cli_inspector.py
+            tests: tests/test_inspectors/test_cli_inspector.py tests/test_commands/test_cli_compatibility.py
           - name: FastAPI 0.100.0
             editable: ".[api]"
             framework: "fastapi==0.100.0"
@@ -110,7 +110,8 @@ jobs:
         run: |
           run=(uv run --no-project --python 3.11 --with-editable "$EDITABLE" --with "$FRAMEWORK" --with pytest)
           "${run[@]}" python -c 'from importlib.metadata import version; import os; actual = version(os.environ["PACKAGE"]); expected = os.environ["VERSION"]; assert actual == expected, (actual, expected)'
-          "${run[@]}" pytest "$TESTS" -q
+          read -r -a tests <<< "$TESTS"
+          "${run[@]}" pytest "${tests[@]}" -q
 
   compatibility-fastmcp-2-latest:
     name: latest FastMCP 2.x

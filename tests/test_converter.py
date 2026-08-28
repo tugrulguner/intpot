@@ -6,9 +6,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 import intpot
-from intpot.converter import IntpotApp
+from intpot.converter import IntpotApp, UnsupportedFastAPIDependencyError
 from intpot.core.detector import DetectionError
 from intpot.core.models import SourceType
+
+
+def test_unsupported_fastapi_dependency_error_is_public():
+    assert intpot.UnsupportedFastAPIDependencyError is UnsupportedFastAPIDependencyError
 
 
 def test_load_from_file(tmp_source):
@@ -135,6 +139,54 @@ def test_to_api_accepts_a_source_returning_only_on_one_branch(tmp_source):
     assert returned.json() == {"result": 1}
     assert fell_through.status_code == 200
     assert fell_through.json() is None
+
+
+def test_api_dependency_refuses_python_api_conversion_but_remains_inspectable():
+    from fastapi import Depends, FastAPI
+
+    api = FastAPI()
+
+    def current_user() -> str:
+        return "Ada"
+
+    @api.get("/greet")
+    def greet(user: str = Depends(current_user)) -> dict:
+        return {"message": f"Hello, {user}!"}
+
+    loaded = intpot.load(api)
+
+    assert loaded.tools[0].name == "greet"
+    assert loaded.tools[0].dependencies == ["current_user"]
+    with pytest.raises(
+        UnsupportedFastAPIDependencyError,
+        match=r"/greet.*greet.*current_user.*Depends/Security.*issue #20",
+    ):
+        loaded.to_cli()
+
+
+def test_conversion_uses_the_cached_inspection_snapshot():
+    from fastapi import Depends, FastAPI
+
+    api = FastAPI()
+
+    @api.get("/first")
+    def first() -> dict:
+        return {"first": True}
+
+    loaded = intpot.load(api)
+    assert [tool.name for tool in loaded.tools] == ["first"]
+
+    def later_dependency() -> str:
+        return "later"
+
+    @api.get("/second")
+    def second(value: str = Depends(later_dependency)) -> dict:
+        return {"value": value}
+
+    code = loaded.to_cli()
+
+    assert "def first(" in code
+    assert "def second(" not in code
 
 
 def test_same_type_raises():

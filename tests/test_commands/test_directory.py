@@ -79,6 +79,36 @@ def test_directory_to_api(tmp_path: Path):
     assert "FastAPI" in result.output
 
 
+def test_dependency_failure_writes_nothing_from_a_directory(tmp_path: Path):
+    project = tmp_path / "project"
+    output = tmp_path / "output"
+    _write(project, "good_cli.py", CLI_SOURCE)
+    _write(
+        project,
+        "bad_api.py",
+        """
+        from fastapi import Depends, FastAPI
+
+        app = FastAPI()
+
+        def current_user() -> str:
+            return "Ada"
+
+        @app.get("/greet")
+        def greet(user: str = Depends(current_user)) -> dict:
+            return {"message": f"Hello, {user}!"}
+        """,
+    )
+
+    result = runner.invoke(app, ["to", "mcp", str(project), "--output", str(output)])
+
+    assert result.exit_code == 1
+    assert "/greet" in result.stderr
+    assert "current_user" in result.stderr
+    assert "Traceback" not in result.output
+    assert not output.exists()
+
+
 def test_directory_no_convertible_sources(tmp_path: Path):
     _write(tmp_path, "cli.py", CLI_SOURCE)
     result = runner.invoke(app, ["to", "cli", str(tmp_path)])
