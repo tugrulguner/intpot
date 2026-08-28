@@ -5,17 +5,18 @@
 </p>
 
 <p align="center">
-  <strong>One Python tool definition. A Typer CLI, FastAPI app, or FastMCP server.</strong>
+  <strong>Define once. Serve as CLI, API, or MCP. Convert in every direction.</strong>
 </p>
 
 <p align="center">
-  Use it live, eject standalone framework code, or convert an existing app in any of six directions.
+  A Python framework for building and translating typed tools across Typer, FastAPI, and FastMCP.
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/intpot/"><img src="https://img.shields.io/pypi/v/intpot" alt="PyPI version"></a>
   <a href="https://pypi.org/project/intpot/"><img src="https://img.shields.io/pypi/pyversions/intpot" alt="Python versions"></a>
   <a href="https://github.com/tugrulguner/intpot/actions/workflows/ci.yml"><img src="https://github.com/tugrulguner/intpot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://discord.gg/u3AANZr6RG"><img src="https://img.shields.io/badge/Discord-Join%20ModePot-5865F2?logo=discord&amp;logoColor=white" alt="Join the ModePot Discord"></a>
   <a href="https://github.com/tugrulguner/intpot/stargazers"><img src="https://img.shields.io/github/stars/tugrulguner/intpot?style=flat" alt="GitHub stars"></a>
   <a href="https://github.com/tugrulguner/intpot/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
@@ -24,11 +25,16 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#convert-an-existing-app">Convert an app</a> ·
   <a href="#what-conversion-preserves">Conversion scope</a> ·
-  <a href="#cli-reference">CLI reference</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#community">Community</a> ·
   <a href="#contributing">Contributing</a>
 </p>
 
-## Why intpot
+<p align="center">
+  <img src="docs/assets/intpot-flow.png" alt="Intpot uses the same normalized ToolInfo schema in two workflows: registered Python tools can be served or ejected as CLI, API, or MCP interfaces, while existing Typer, FastAPI, or FastMCP apps can be inspected and converted into standalone code" width="960">
+</p>
+
+## Why intpot?
 
 A useful Python function often needs three interfaces: a command for people, an HTTP
 endpoint for applications, and an MCP tool for AI agents. Maintaining three copies means
@@ -497,6 +503,16 @@ Copilot and Codex installations use bounded intpot-managed blocks, so rerunning 
 command updates or repairs intpot guidance while preserving surrounding project content.
 For Codex, intpot warns when the resulting `AGENTS.md` exceeds Codex's default 32 KiB
 instruction limit.
+
+## Community
+
+The [ModePot Discord](https://discord.gg/u3AANZr6RG) is the shared community for intpot,
+summonpot, dexpot, and the rest of the project family. Join to discuss use cases, ask
+implementation questions, and help shape declaration-first Python frameworks.
+
+Use GitHub issues for reproducible bugs and scoped feature proposals. Use Discord for
+open-ended design discussion, early ideas, and help applying the frameworks to real
+projects.
 
 ## Contributing
 
