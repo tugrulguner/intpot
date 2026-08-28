@@ -20,7 +20,7 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 - Checked-in generated examples are now executed through real CLI, MCP, and FastAPI behavior during verification.
 - FastAPI conversions now reject unsupported dependency injection instead of generating code that can fail at runtime.
-  Typer 0.9 remains usable with current Click releases across intpot's public CLI and Typer app conversion.
+- Typer 0.9 remains usable with current Click releases across intpot's public CLI and Typer app conversion.
 - FastMCP 2.x applications are inspected correctly, and MCP parameter descriptions are preserved across conversions.
 
 
