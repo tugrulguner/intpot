@@ -82,7 +82,7 @@ intpot to mcp app.py --verbose     # detection details on stderr
 
 ```bash
 intpot inspect server.py           # table of extracted tools
-intpot inspect server.py --json    # normalized ToolInfo as JSON
+intpot inspect server.py --json    # canonical tool schema as JSON
 ```
 
 Prefer `--json` when you need to reason about the result programmatically.

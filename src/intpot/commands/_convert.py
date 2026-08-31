@@ -9,15 +9,23 @@ import typer
 
 from intpot.converter import (
     UnsupportedFastAPIDependencyError,
-    tools_for_target,
+    compile_app,
+    project_schema,
 )
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
 
 
-def _tools_or_exit(source_type: SourceType, app_instance: object, target: SourceType):
+def _schema_or_exit(
+    source_type: SourceType,
+    app_instance: object,
+    target: SourceType,
+    *,
+    source_path: Path,
+):
     try:
-        return tools_for_target(source_type, app_instance, target)
+        schema = compile_app(source_type, app_instance, source_path=source_path)
+        return project_schema(schema, target)
     except (InspectionError, UnsupportedFastAPIDependencyError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
@@ -128,8 +136,13 @@ def convert(
         for (file_path, source_type, app_instance), destination in zip(
             sources, destinations, strict=True
         ):
-            tools = _tools_or_exit(source_type, app_instance, target)
-            planned.append((file_path, destination, generator.generate(tools)))
+            schema = _schema_or_exit(
+                source_type,
+                app_instance,
+                target,
+                source_path=file_path,
+            )
+            planned.append((file_path, destination, generator.generate(schema)))
 
         for file_path, destination, code in planned:
             if dry_run:
@@ -165,8 +178,13 @@ def convert(
         typer.echo(f"Source is already a {label}.", err=True)
         raise typer.Exit(1)
 
-    tools = _tools_or_exit(source_type, app_instance, target)
-    code = generator.generate(tools)
+    schema = _schema_or_exit(
+        source_type,
+        app_instance,
+        target,
+        source_path=source,
+    )
+    code = generator.generate(schema)
 
     if dry_run:
         out_path = output or Path(f"{source.stem}{suffix}.py")

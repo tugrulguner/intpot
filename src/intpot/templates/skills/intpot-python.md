@@ -8,7 +8,7 @@ programmatically.
 
 - Define tools once and serve or export them in any framework — `App`
 - Convert apps inside scripts, build tools, or CI — `load()`
-- Read an app's functions as normalized data — `.tools`
+- Inspect an app as stable framework-neutral data — `.schema`
 - Generate from a live app instance rather than a file — `load(instance)`
 
 ## `intpot.App` — write once, serve everywhere
@@ -89,6 +89,8 @@ api_code = app.to_api()
 app.write("output/cli_app.py", "cli")     # generate and write, returns the Path
 
 print(app.source_type)                    # SourceType.MCP / CLI / API
+print(app.schema.to_dict())               # inspect canonical source semantics
+api_schema = app.project("api")           # inspect target semantics before generation
 ```
 
 Calling `to_cli()` on a source that is already a CLI raises `ValueError`; same for the
@@ -114,9 +116,27 @@ add the source directory to `sys.path`, so sibling imports may require installin
 package or setting `PYTHONPATH`. intpot does not reproduce configuration or provision
 external services.
 
-## Normalized tool data
+## Canonical application schema
 
-`.tools` returns `ToolInfo` objects — the schema both halves of intpot meet at.
+Both `intpot.App` and `IntpotApp` expose `.schema`, an immutable
+`ApplicationSchema`. It contains immutable `ToolSchema` and `ParameterSchema` records;
+`.project("cli" | "mcp" | "api")` returns the exact target semantics used for
+generation without mutating the source snapshot. `.to_dict()` provides a transparent
+sentinel-free representation for inspection.
+
+```python
+schema = app.schema
+print(schema.name, schema.source_type, schema.target_type)
+print(schema.to_dict())
+
+for tool in schema.tools:
+    print(tool.name, tool.description, tool.return_type, tool.is_async)
+    for param in tool.parameters:
+        print(param.name, param.type_annotation, param.required)
+```
+
+`.tools` remains available for compatibility and returns detached mutable `ToolInfo`
+objects. Mutating those objects does not change `.schema` or later generated code.
 
 ```python
 for tool in app.tools:
@@ -142,8 +162,7 @@ that declared one, otherwise `None`.
 Low-level: extract `ToolInfo` from a live instance without wrapping it.
 
 ```python
-from intpot import inspect_app
-from intpot.core.models import SourceType
+from intpot import SourceType, inspect_app
 
 tools = inspect_app(SourceType.MCP, mcp_instance)
 ```

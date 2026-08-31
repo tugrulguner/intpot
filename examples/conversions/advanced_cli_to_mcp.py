@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 
 import json
 
-mcp = FastMCP("generated-server")
+mcp = FastMCP('advanced_cli')
 
 
 @mcp.tool()
@@ -45,4 +45,3 @@ def stats(
 
 if __name__ == "__main__":
     mcp.run()
-

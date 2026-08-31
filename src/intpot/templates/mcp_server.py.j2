@@ -9,7 +9,7 @@ from fastmcp import FastMCP
 {%- endfor %}
 {%- endif %}
 
-mcp = FastMCP("generated-server")
+mcp = FastMCP({{ app_name | repr }})
 {% for tool in tools %}
 
 

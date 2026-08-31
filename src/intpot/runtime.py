@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -14,7 +15,13 @@ from intpot.core.inspectors._utils import (
     python_return_type_name,
     python_type_name,
 )
-from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.models import (
+    _SENTINEL,
+    ApplicationSchema,
+    ParameterInfo,
+    SourceType,
+    ToolInfo,
+)
 
 
 @dataclass
@@ -69,14 +76,24 @@ class App:
                 func, name_override=name, description_override=description
             )
             self._tools.append(RegisteredTool(func=func, info=info))
+            self.__dict__.pop("schema", None)
             return func
 
         return decorator
 
+    @functools.cached_property
+    def schema(self) -> ApplicationSchema:
+        """Return the same canonical snapshot used by source conversion."""
+        return ApplicationSchema.from_tools(
+            name=self.name,
+            source_type=SourceType.PYTHON,
+            tools=(tool.info for tool in self._tools),
+        )
+
     @property
     def tools(self) -> list[ToolInfo]:
-        """Return ToolInfo list for all registered tools."""
-        return [t.info for t in self._tools]
+        """Return detached compatibility models from the compiled schema."""
+        return self.schema.to_tools()
 
     def eject(self, target: str) -> str:
         """Generate standalone code for the given target framework.
@@ -101,7 +118,7 @@ class App:
 
         mod = importlib.import_module(module_path)
         generator_cls = getattr(mod, class_name)
-        return generator_cls().generate(self.tools)
+        return generator_cls().generate(self.schema)
 
     def serve(self, mode: str, *, host: str = "127.0.0.1", port: int = 8000) -> None:
         """Serve the registered tools in the specified mode.

@@ -2,13 +2,13 @@
 
 from fastapi import FastAPI, Body
 
-app = FastAPI()
+app = FastAPI(title='cli_app')
 
 
 @app.post("/add")
 def add(
-    a: int = Body(..., description="First number"),
-    b: int = Body(..., description="Second number"),
+    a: int = Body(..., description='First number'),
+    b: int = Body(..., description='Second number'),
 ) -> dict:
     """Add two numbers together."""
 
@@ -17,8 +17,8 @@ def add(
 
 @app.post("/greet")
 def greet(
-    name: str = Body(..., description="Name to greet"),
-    greeting: str = Body(default='Hello', description="Greeting to use"),
+    name: str = Body(..., description='Name to greet'),
+    greeting: str = Body(default='Hello', description='Greeting to use'),
 ) -> dict:
     """Greet someone by name."""
 
@@ -27,5 +27,6 @@ def greet(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
+    # Loopback only. Change to "0.0.0.0" to expose this on the network.
+    uvicorn.run(app, host="127.0.0.1", port=8000)

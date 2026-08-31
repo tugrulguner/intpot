@@ -4,7 +4,7 @@ import typer
 
 import json
 
-app = typer.Typer()
+app = typer.Typer(name='advanced_api')
 
 
 def _create_user_impl(
@@ -127,4 +127,3 @@ def bulk_create(
 
 if __name__ == "__main__":
     app()
-

@@ -13,7 +13,7 @@ import typer
 {%- endfor %}
 {%- endif %}
 
-app = typer.Typer()
+app = typer.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
 {% for tool in tools %}
 {%- if tool.function_body %}
 

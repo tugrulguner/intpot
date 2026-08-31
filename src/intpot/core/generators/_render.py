@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from intpot.core.models import ToolInfo
+from intpot.core.generators.base import RenderableTool
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 
@@ -32,7 +33,7 @@ _TYPING_NAMES = {
 }
 
 
-def _extract_typing_imports(tools: list[ToolInfo]) -> list[str]:
+def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
     """Scan all type annotations across tools and return required typing imports."""
     found: set[str] = set()
     for tool in tools:
@@ -90,7 +91,7 @@ _FRAMEWORK_IMPORT_MARKERS = {
 }
 
 
-def _collect_extra_imports(tools: list[ToolInfo]) -> list[str]:
+def _collect_extra_imports(tools: Sequence[RenderableTool]) -> list[str]:
     """Gather source_imports from all tools, dedupe, and filter framework imports."""
     seen: set[str] = set()
     result: list[str] = []
@@ -134,7 +135,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
     # Auto-extract typing imports and extra imports if tools are provided
     if "tools" in kwargs:
         tools = kwargs["tools"]
-        if isinstance(tools, list):
+        if isinstance(tools, Sequence) and not isinstance(tools, (str, bytes)):
             if "typing_imports" not in kwargs:
                 kwargs = dict(kwargs, typing_imports=_extract_typing_imports(tools))
             if "extra_imports" not in kwargs:

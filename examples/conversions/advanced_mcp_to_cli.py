@@ -8,7 +8,7 @@ from datetime import datetime
 import hashlib
 import json
 
-app = typer.Typer()
+app = typer.Typer(name='notes-server')
 
 
 def _create_note_impl(
@@ -25,9 +25,9 @@ def _create_note_impl(
 
 @app.command()
 def create_note(
-    title: str = typer.Argument(..., help=""),
-    body: str = typer.Argument(..., help=""),
-    tags: str = typer.Option('', help=""),
+    title: str = typer.Argument(..., help=''),
+    body: str = typer.Argument(..., help=''),
+    tags: str = typer.Option('', help=''),
 ) -> None:
     """Create a new note with a generated ID."""
     result = _create_note_impl(title, body, tags)
@@ -46,8 +46,8 @@ def _search_notes_impl(
 
 @app.command()
 def search_notes(
-    query: str = typer.Argument(..., help=""),
-    max_results: int = typer.Option(5, help=""),
+    query: str = typer.Argument(..., help=''),
+    max_results: int = typer.Option(5, help=''),
 ) -> None:
     """Search notes by keyword in title or body."""
     result = _search_notes_impl(query, max_results)
@@ -65,7 +65,7 @@ async def _summarize_impl(
 
 @app.command()
 def summarize(
-    note_ids: str = typer.Argument(..., help=""),
+    note_ids: str = typer.Argument(..., help=''),
 ) -> None:
     """Summarize multiple notes by their IDs (comma-separated)."""
     result = asyncio.run(_summarize_impl(note_ids))
@@ -84,7 +84,7 @@ def _export_all_impl(
 
 @app.command()
 def export_all(
-    format: str = typer.Option('json', help=""),
+    format: str = typer.Option('json', help=''),
 ) -> None:
     """Export all notes in the specified format."""
     result = _export_all_impl(format)
@@ -94,4 +94,3 @@ def export_all(
 
 if __name__ == "__main__":
     app()
-

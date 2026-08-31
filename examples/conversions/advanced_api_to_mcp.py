@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 
 import json
 
-mcp = FastMCP("generated-server")
+mcp = FastMCP('advanced_api')
 
 
 @mcp.tool()
@@ -74,4 +74,3 @@ def bulk_create(
 
 if __name__ == "__main__":
     mcp.run()
-

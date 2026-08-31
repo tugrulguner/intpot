@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
-from intpot.core.models import SourceType, ToolInfo
+from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
 
 
 class UnsupportedFastAPIDependencyError(Exception):
@@ -31,8 +31,8 @@ def _guard_fastapi_dependencies(tools: list[ToolInfo]) -> None:
     )
 
 
-def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
-    """Inspect an app instance and return normalized tool definitions."""
+def _inspect_tools(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
+    """Inspect an app instance into the compatibility tool models."""
     if source_type == SourceType.MCP:
         from intpot.core.inspectors.mcp import MCPInspector
 
@@ -47,6 +47,50 @@ def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
     return APIInspector().inspect(app_instance)
 
 
+def _application_name(
+    source_type: SourceType,
+    app_instance: Any,
+    source_path: Path | None = None,
+) -> str:
+    """Read a stable human-facing name using each framework's own semantics."""
+    candidate: Any = None
+    if source_type == SourceType.MCP:
+        candidate = getattr(app_instance, "name", None)
+    elif source_type == SourceType.API:
+        title = getattr(app_instance, "title", None)
+        candidate = title if title != "FastAPI" else None
+    elif source_type == SourceType.CLI:
+        candidate = getattr(getattr(app_instance, "info", None), "name", None)
+        if not isinstance(candidate, str) or not candidate:
+            candidate = getattr(app_instance, "name", None)
+
+    if isinstance(candidate, str) and candidate:
+        return candidate
+    if source_path is not None:
+        return source_path.stem
+    return source_type.value
+
+
+def compile_app(
+    source_type: SourceType,
+    app_instance: Any,
+    *,
+    source_path: Path | None = None,
+) -> ApplicationSchema:
+    """Compile a framework application into Intpot's canonical schema."""
+    return ApplicationSchema.from_tools(
+        name=_application_name(source_type, app_instance, source_path),
+        source_type=source_type,
+        tools=_inspect_tools(source_type, app_instance),
+        source_path=source_path,
+    )
+
+
+def inspect_app(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
+    """Inspect an app and return detached compatibility tool definitions."""
+    return compile_app(source_type, app_instance).to_tools()
+
+
 def _prepare_tools_for_target(
     source_type: SourceType, tools: list[ToolInfo], target: SourceType
 ) -> list[ToolInfo]:
@@ -58,12 +102,31 @@ def _prepare_tools_for_target(
     return transform_tools(tools, source_type, target)
 
 
+def project_schema(
+    schema: ApplicationSchema,
+    target: SourceType,
+) -> ApplicationSchema:
+    """Project a canonical schema into target-specific immutable semantics."""
+    tools = _prepare_tools_for_target(
+        schema.source_type,
+        schema.to_tools(),
+        target,
+    )
+    return ApplicationSchema.from_tools(
+        name=schema.name,
+        source_type=schema.source_type,
+        tools=tools,
+        source_path=schema.source_path,
+        target_type=target,
+    )
+
+
 def tools_for_target(
     source_type: SourceType, app_instance: Any, target: SourceType
 ) -> list[ToolInfo]:
     """Inspect an app and prepare tools for a target framework."""
-    tools = inspect_app(source_type, app_instance)
-    return _prepare_tools_for_target(source_type, tools, target)
+    schema = compile_app(source_type, app_instance)
+    return project_schema(schema, target).to_tools()
 
 
 class IntpotApp:
@@ -84,13 +147,41 @@ class IntpotApp:
         return f"IntpotApp(source_type={self.source_type.value!r}{src})"
 
     @functools.cached_property
+    def schema(self) -> ApplicationSchema:
+        """Compile the app into a stable immutable semantic snapshot."""
+        return compile_app(
+            self.source_type,
+            self.app,
+            source_path=self.source_path,
+        )
+
+    @property
     def tools(self) -> list[ToolInfo]:
-        """Inspect the app and return normalized tool definitions."""
-        return inspect_app(self.source_type, self.app)
+        """Return detached compatibility models from the compiled schema."""
+        return self.schema.to_tools()
 
     def _tools_for(self, target: SourceType) -> list[ToolInfo]:
         """Return tools transformed for the target framework."""
-        return _prepare_tools_for_target(self.source_type, self.tools, target)
+        return self.project(target).to_tools()
+
+    def project(self, target: str | SourceType) -> ApplicationSchema:
+        """Return an immutable target projection of the compiled application."""
+        if isinstance(target, str):
+            try:
+                target = SourceType(target)
+            except ValueError:
+                raise ValueError(
+                    f"Unknown target '{target}', expected: cli, mcp, api"
+                ) from None
+        if target not in (SourceType.CLI, SourceType.MCP, SourceType.API):
+            raise ValueError(
+                f"Unknown target '{target.value}', expected: cli, mcp, api"
+            )
+        if target == self.source_type:
+            raise ValueError(
+                f"Source is already a {self.source_type.value.upper()} app"
+            )
+        return project_schema(self.schema, target)
 
     def to_cli(self) -> str:
         """Generate Typer CLI code."""
@@ -98,7 +189,7 @@ class IntpotApp:
             raise ValueError("Source is already a CLI app")
         from intpot.core.generators.cli import CLIGenerator
 
-        return CLIGenerator().generate(self._tools_for(SourceType.CLI))
+        return CLIGenerator().generate(self.project(SourceType.CLI))
 
     def to_mcp(self) -> str:
         """Generate FastMCP server code."""
@@ -106,7 +197,7 @@ class IntpotApp:
             raise ValueError("Source is already an MCP server")
         from intpot.core.generators.mcp import MCPGenerator
 
-        return MCPGenerator().generate(self._tools_for(SourceType.MCP))
+        return MCPGenerator().generate(self.project(SourceType.MCP))
 
     def to_api(self) -> str:
         """Generate FastAPI app code."""
@@ -114,7 +205,7 @@ class IntpotApp:
             raise ValueError("Source is already an API app")
         from intpot.core.generators.api import APIGenerator
 
-        return APIGenerator().generate(self._tools_for(SourceType.API))
+        return APIGenerator().generate(self.project(SourceType.API))
 
     def write(self, path: str | Path, target: str | SourceType) -> Path:
         """Generate code and write it to a file.

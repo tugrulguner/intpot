@@ -4,14 +4,14 @@ from fastapi import FastAPI, Body
 
 import json
 
-app = FastAPI()
+app = FastAPI(title='advanced_cli')
 
 
 @app.post("/create")
 def create(
-    title: str = Body(..., description="Task title"),
-    priority: int = Body(default=3, description="Priority level 1-5"),
-    tags: str = Body(default='', description="Comma-separated tags"),
+    title: str = Body(..., description='Task title'),
+    priority: int = Body(default=3, description='Priority level 1-5'),
+    tags: str = Body(default='', description='Comma-separated tags'),
 ) -> dict:
     """Create a new task with optional priority and tags."""
 
@@ -22,9 +22,9 @@ def create(
 
 @app.post("/search")
 def search(
-    query: str = Body(..., description="Search query"),
-    limit: int = Body(default=10, description="Max results to return"),
-    include_done: bool = Body(default=False, description="Include completed tasks"),
+    query: str = Body(..., description='Search query'),
+    limit: int = Body(default=10, description='Max results to return'),
+    include_done: bool = Body(default=False, description='Include completed tasks'),
 ) -> dict:
     """Search tasks by title or tag."""
 
@@ -44,5 +44,6 @@ def stats() -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
+    # Loopback only. Change to "0.0.0.0" to expose this on the network.
+    uvicorn.run(app, host="127.0.0.1", port=8000)

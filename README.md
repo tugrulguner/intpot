@@ -194,8 +194,9 @@ intpot add skills --path ./myproject/
   return values.
 - **Interface fidelity:** carry types, defaults, and async functions through supported
   conversions, and apply FastAPI parameter sources when generating an API.
-- **Programmatic access:** use `intpot.load()` and normalized `ToolInfo` objects from
-  Python.
+- **Inspectable semantic core:** use `intpot.load().schema` for an immutable
+  `ApplicationSchema`, inspect target projections before generation, or use detached
+  `ToolInfo` compatibility objects through `.tools`.
 - **Project tooling:** scan directories, scaffold projects, and install agent guidance
   for six coding agents.
 
@@ -222,8 +223,9 @@ app.serve(mode="mcp")                         # Run as MCP server
 cli_code = app.eject("cli")                   # Returns Typer code string
 api_code = app.eject("api")                   # Returns FastAPI code string
 
-# Access normalized tool definitions
-for tool in app.tools:
+# Inspect the canonical application schema
+print(app.schema.to_dict())
+for tool in app.schema.tools:
     print(tool.name, tool.parameters)
 ```
 
@@ -234,6 +236,7 @@ import intpot
 
 # From a file
 app = intpot.load("mcp_server.py")
+api_schema = app.project("api")               # Immutable target semantics
 cli_code = app.to_cli()
 api_code = app.to_api()
 
@@ -258,18 +261,22 @@ app.write("output/api_app.py", "api")
 - `.tool(name=None, description=None)` — decorator to register functions as tools; both arguments override the defaults taken from the function name and docstring. Functions with `*args` or `**kwargs` are rejected because those parameters have no consistent CLI, HTTP API, and MCP representation.
 - `.serve(mode, host, port)` — serve as CLI, API, or MCP
 - `.eject(target)` — generate standalone framework code
-- `.tools` — list of normalized `ToolInfo` objects
+- `.schema` — immutable `ApplicationSchema` snapshot shared with conversion
+- `.tools` — detached `ToolInfo` compatibility objects
 
 **`IntpotApp`** (conversion wrapper, returned by `intpot.load()`):
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
+- `.schema` — immutable source `ApplicationSchema`, compiled once
+- `.project(target)` — immutable target projection used by generation
 - `.write(path, target)` — generate and write to a file in one step
-- `.tools` — list of normalized `ToolInfo` objects
+- `.tools` — detached `ToolInfo` compatibility objects; mutating them does not alter the schema
 - `.source_type` — detected framework type
 
 ## What conversion preserves
 
 intpot is designed to produce code you can own, rather than hide conversion behind a
-runtime adapter. Its normalized `ToolInfo` schema carries the parts that the three
+runtime adapter. `ApplicationSchema` is the application-level semantic boundary;
+immutable `ToolSchema` and `ParameterSchema` records carry the parts that the three
 frameworks share:
 
 - tool names, descriptions, types, defaults, and async behavior;
@@ -306,8 +313,9 @@ cannot recover a body, it emits a `# TODO: implement` stub instead of inventing 
 
 ## Architecture
 
-Both halves of intpot meet at one normalized schema, `ToolInfo`. Everything upstream
-produces it; everything downstream consumes it.
+Both halves of intpot meet at one canonical `ApplicationSchema`. It owns immutable
+`ToolSchema` and `ParameterSchema` records. Existing `ToolInfo` and `ParameterInfo`
+objects remain detached compatibility views at the edges.
 
 ```
    @app.tool()                        source .py file
@@ -316,7 +324,8 @@ produces it; everything downstream consumes it.
         |                              1. DETECT
         |                              2. INSPECT
         |                                    |
-        +--------------> ToolInfo[] <--------+
+        +-----------> ApplicationSchema <----+
+                           ToolSchema[]
                               |
               +---------------+---------------+
               |                               |
@@ -327,10 +336,12 @@ produces it; everything downstream consumes it.
                                     (to cli/mcp/api, eject)
 ```
 
-Conversion follows three stages: detect the framework, inspect its tools into
-`ToolInfo[]`, then render the target framework. The runtime side starts at the same schema:
-`@app.tool()` creates `ToolInfo` directly, then `serve` builds a live framework instance
-or `eject` sends it through the generators.
+Conversion follows four stages: detect the framework, inspect its tools, compile one
+immutable `ApplicationSchema`, then project target-specific semantics before rendering.
+The runtime side compiles `@app.tool()` registrations into the same schema. `serve` keeps
+the registered callables for live execution; `eject` renders detached views of the stable
+schema. Access `.schema.to_dict()` when a human, build tool, or agent needs to inspect
+exactly what Intpot compiled.
 
 ## Conversion examples
 
@@ -389,7 +400,7 @@ intpot inspect <source> [--json] [--verbose]
 | Argument/Option | Description |
 |----------------|-------------|
 | `source` | Path to a source Python file or directory |
-| `--json` | Emit the normalized `ToolInfo` list as JSON instead of a table |
+| `--json` | Emit the canonical tool schema as JSON instead of a table |
 | `--verbose`, `-v` | Print detection details to stderr |
 
 ```

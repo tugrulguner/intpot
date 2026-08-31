@@ -22,7 +22,7 @@ from fastapi import FastAPI{% if ns.imports %}, {{ ns.imports | sort | join(", "
 {%- endfor %}
 {%- endif %}
 
-app = FastAPI()
+app = FastAPI(title={{ app_name | repr }})
 {% for tool in tools %}
 
 
