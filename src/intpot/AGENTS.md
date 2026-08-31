@@ -70,14 +70,19 @@ the contracts a change has to keep.
 - Commands take `typer.Argument` / `typer.Option` parameters and return `None`.
 - Shared models belong in `core/models.py`, not beside their first consumer.
 
-**ToolInfo / ParameterInfo**
+**Canonical schema and compatibility models**
 
 - A required parameter is one whose `default is _SENTINEL`. Outside `core/`, use the
   `.required` property rather than comparing against the sentinel.
 - `name` on both dataclasses has already been through `sanitize_identifier()` — don't
   sanitize it again.
-- These two dataclasses are the seam between both halves of intpot. A field added here
-  ripples through every inspector, generator, and transform.
+- `ApplicationSchema` is the seam between both halves of intpot. Its nested `ToolSchema`
+  and `ParameterSchema` records and collections are immutable; projections must build a
+  new schema rather than mutate the source snapshot.
+- `ToolInfo` and `ParameterInfo` remain mutable inspector/generator compatibility models.
+  `.tools` returns detached copies, so mutating one must not change `.schema` or output.
+- A semantic field added to either representation must be mapped in both conversion
+  directions and reviewed across every inspector, generator, transform, and serializer.
 
 **Templates**
 

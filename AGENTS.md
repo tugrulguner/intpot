@@ -12,14 +12,17 @@ Two halves that meet at one schema:
 - **Converter** — `intpot to cli|mcp|api` reads an existing Typer / FastMCP / FastAPI app
   and generates the equivalent in another framework.
 
-Both produce `ToolInfo` (`src/intpot/core/models.py`). Everything upstream builds it;
-everything downstream consumes it. When you add a capability, ask which side of that
-boundary it belongs on.
+Both compile an immutable `ApplicationSchema` (`src/intpot/core/models.py`) containing
+`ToolSchema` and `ParameterSchema` records. Inspectors and registrations still create
+mutable `ToolInfo` compatibility models at the edges; projection and generation consume
+the canonical schema directly. When you add a capability, ask which side of that boundary
+it belongs on.
 
 ```
    @app.tool()                    source .py file
         |                    DETECT -> INSPECT
-        +--------> ToolInfo[] <--------+
+        +-----> ApplicationSchema <----+
+                     ToolSchema[]
               |                  |
      live framework          GENERATE
        instance            (Jinja template)
@@ -29,10 +32,10 @@ boundary it belongs on.
 
 | Path | What's there |
 |------|--------------|
-| `core/models.py` | `ToolInfo`, `ParameterInfo`, `ParamSource`, `sanitize_identifier` |
+| `core/models.py` | Canonical `ApplicationSchema`/`ToolSchema`/`ParameterSchema` plus compatibility models |
 | `core/detector.py` | Identifies the framework; **imports the source file to do it** |
 | `core/inspectors/` | Framework → `ToolInfo` |
-| `core/generators/` + `templates/*.j2` | `ToolInfo` → source code |
+| `core/generators/` + `templates/*.j2` | `ApplicationSchema` (or legacy `ToolInfo`) → source code |
 | `core/transforms.py` | Rewrites bodies and return types between frameworks |
 | `runtime.py`, `runtime_builders.py` | The `App` class and live instance builders |
 | `commands/` | One module per CLI command; `cli.py` wires them together |
