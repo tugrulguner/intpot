@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from collections import deque
 from dataclasses import FrozenInstanceError
+from enum import Enum
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -221,6 +225,114 @@ def test_public_schema_constructors_freeze_nested_collections() -> None:
     assert [dict(item) for item in frozen_default] == [{"region": "us"}]
     with pytest.raises(TypeError):
         frozen_default[0]["region"] = "apac"
+
+
+def test_parameter_schema_freezes_mutable_defaults_and_rejects_opaque() -> None:
+    from intpot import ParameterSchema
+
+    binary = ParameterSchema(name="binary", default=bytearray(b"a"))
+    queue = ParameterSchema(name="queue", default=deque(["a"], maxlen=2))
+
+    with pytest.raises(TypeError):
+        binary.default[0] = ord("z")
+    with pytest.raises(AttributeError):
+        queue.default.append("b")
+
+    assert binary.to_info().default == bytearray(b"a")
+    assert queue.to_info().default == deque(["a"], maxlen=2)
+
+    class MutableHashable:
+        __hash__ = object.__hash__
+
+        def __init__(self) -> None:
+            self.value = "a"
+
+    with pytest.raises(TypeError, match="Unsupported parameter default"):
+        ParameterSchema(name="opaque", default=MutableHashable())
+
+
+def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
+    from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
+
+    class Color(Enum):
+        red = "red"
+
+    schema = ApplicationSchema(
+        name="json-values",
+        source_type=SourceType.PYTHON,
+        tools=(
+            ToolSchema(
+                name="show",
+                parameters=(
+                    ParameterSchema(name="tags", default={"b", "a"}),
+                    ParameterSchema(name="path", default=Path("/tmp/value")),
+                    ParameterSchema(name="color", default=Color.red),
+                    ParameterSchema(name="blob", default=b"abc"),
+                    ParameterSchema(name="queue", default=deque([1, 2], maxlen=3)),
+                ),
+            ),
+        ),
+    )
+
+    data = schema.to_dict()
+    defaults = {
+        parameter["name"]: parameter["default"]
+        for parameter in data["tools"][0]["parameters"]
+    }
+
+    json.dumps(data)
+    assert defaults["tags"] == {"type": "set", "items": ["a", "b"]}
+    assert defaults["path"] == {"type": "path", "value": "/tmp/value"}
+    assert defaults["color"] == {
+        "type": "enum",
+        "class": f"{Color.__module__}.{Color.__qualname__}",
+        "name": "red",
+        "value": "red",
+    }
+    assert defaults["blob"] == {"type": "bytes", "base64": "YWJj"}
+    assert defaults["queue"] == {
+        "type": "deque",
+        "items": [1, 2],
+        "maxlen": 3,
+    }
+
+
+def test_runtime_schema_and_ejection_follow_public_app_renames() -> None:
+    from intpot.runtime_builders import build_fastapi_app
+
+    app = intpot.App("first")
+
+    @app.tool()
+    def status() -> str:
+        return "ok"
+
+    _ = app.schema
+    app.name = "second"
+
+    live = build_fastapi_app(app.name, app._tools)
+    generated = ModuleType("generated_after_rename")
+    exec(compile(app.eject("api"), "generated.py", "exec"), generated.__dict__)
+
+    assert app.schema.name == "second"
+    assert live.title == "second"
+    assert generated.app.title == "second"
+
+
+def test_compile_app_supports_the_public_python_source_type() -> None:
+    app = intpot.App("python-source")
+
+    @app.tool()
+    def echo(value: str) -> str:
+        return value
+
+    schema = intpot.compile_app(intpot.SourceType.PYTHON, app)
+
+    assert schema == app.schema
+    assert schema.name == "python-source"
+    assert [tool.name for tool in schema.tools] == ["echo"]
+
+    with pytest.raises(ValueError, match=r"requires an intpot\.App"):
+        intpot.compile_app(intpot.SourceType.PYTHON, object())
 
 
 def test_application_names_follow_framework_semantics_and_path_fallback(

@@ -343,6 +343,10 @@ the registered callables for live execution; `eject` renders detached views of t
 schema. Access `.schema.to_dict()` when a human, build tool, or agent needs to inspect
 exactly what Intpot compiled.
 
+`to_dict()` is directly JSON-serializable. Supported non-JSON defaults such as sets,
+bytes, paths, and enums use tagged dictionaries with a `type` field. Opaque mutable
+defaults are rejected with `TypeError` instead of being retained inside the frozen schema.
+
 ## Conversion examples
 
 The repository includes checked-in source and generated output for every direction:

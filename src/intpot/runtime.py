@@ -57,6 +57,15 @@ class App:
         count = len(self._tools)
         return f"App({self.name!r}, tools={count})"
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+        self.__dict__.pop("schema", None)
+
     def tool(
         self, *, name: str | None = None, description: str | None = None
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -83,7 +92,7 @@ class App:
 
     @functools.cached_property
     def schema(self) -> ApplicationSchema:
-        """Return the same canonical snapshot used by source conversion."""
+        """Return a stable snapshot, invalidated by registrations or renaming."""
         return ApplicationSchema.from_tools(
             name=self.name,
             source_type=SourceType.PYTHON,

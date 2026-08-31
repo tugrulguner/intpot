@@ -121,8 +121,10 @@ external services.
 Both `intpot.App` and `IntpotApp` expose `.schema`, an immutable
 `ApplicationSchema`. It contains immutable `ToolSchema` and `ParameterSchema` records;
 `.project("cli" | "mcp" | "api")` returns the exact target semantics used for
-generation without mutating the source snapshot. `.to_dict()` provides a transparent
-sentinel-free representation for inspection.
+generation without mutating the source snapshot. `.to_dict()` provides a sentinel-free,
+JSON-compatible representation for inspection. Supported non-JSON defaults use tagged
+dictionaries; opaque mutable defaults are rejected rather than exposed through the frozen
+schema.
 
 ```python
 schema = app.schema

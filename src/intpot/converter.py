@@ -33,6 +33,12 @@ def _guard_fastapi_dependencies(tools: list[ToolInfo]) -> None:
 
 def _inspect_tools(source_type: SourceType, app_instance: Any) -> list[ToolInfo]:
     """Inspect an app instance into the compatibility tool models."""
+    if source_type == SourceType.PYTHON:
+        from intpot.runtime import App
+
+        if not isinstance(app_instance, App):
+            raise ValueError("SourceType.PYTHON requires an intpot.App instance")
+        return app_instance.tools
     if source_type == SourceType.MCP:
         from intpot.core.inspectors.mcp import MCPInspector
 
@@ -54,7 +60,7 @@ def _application_name(
 ) -> str:
     """Read a stable human-facing name using each framework's own semantics."""
     candidate: Any = None
-    if source_type == SourceType.MCP:
+    if source_type in (SourceType.MCP, SourceType.PYTHON):
         candidate = getattr(app_instance, "name", None)
     elif source_type == SourceType.API:
         title = getattr(app_instance, "title", None)

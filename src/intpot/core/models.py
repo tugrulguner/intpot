@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import base64
 import copy
+import json
 import keyword
 import re
+from collections import deque
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from enum import Enum
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 
 class SourceType(Enum):
@@ -74,6 +81,29 @@ class _FrozenSet(frozenset[Any]):
         return repr({_thaw_default(value) for value in self})
 
 
+class _FrozenBytearray(bytes):
+    """Immutable bytes that preserve a bytearray default's source representation."""
+
+    def __repr__(self) -> str:
+        return f"bytearray({bytes(self)!r})"
+
+
+@dataclass(frozen=True, slots=True)
+class _FrozenDeque:
+    """Immutable snapshot of a deque and its maximum length."""
+
+    items: tuple[Any, ...]
+    maxlen: int | None
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self.items)
+
+    def __repr__(self) -> str:
+        values = [_thaw_default(value) for value in self.items]
+        suffix = f", maxlen={self.maxlen}" if self.maxlen is not None else ""
+        return f"deque({values!r}{suffix})"
+
+
 @dataclass(frozen=True)
 class _FrozenDict(Mapping[Any, Any]):
     """Read-only mapping that preserves insertion order and nested values."""
@@ -94,20 +124,37 @@ class _FrozenDict(Mapping[Any, Any]):
 
     def __repr__(self) -> str:
         return repr(
-            {copy.deepcopy(key): _thaw_default(value) for key, value in self.entries}
+            {_thaw_default(key): _thaw_default(value) for key, value in self.entries}
         )
 
 
 def _freeze_default(value: Any) -> Any:
-    """Detach and recursively freeze common mutable Python defaults."""
+    """Detach and recursively freeze supported Python parameter defaults."""
     if value is _SENTINEL:
         return value
-    if isinstance(value, (_FrozenDict, _FrozenList, _FrozenTuple, _FrozenSet)):
+    if isinstance(
+        value,
+        (
+            _FrozenBytearray,
+            _FrozenDeque,
+            _FrozenDict,
+            _FrozenList,
+            _FrozenTuple,
+            _FrozenSet,
+        ),
+    ):
         return value
+    if isinstance(value, bytearray):
+        return _FrozenBytearray(value)
+    if isinstance(value, deque):
+        return _FrozenDeque(
+            tuple(_freeze_default(item) for item in value),
+            value.maxlen,
+        )
     if isinstance(value, dict):
         return _FrozenDict(
             tuple(
-                (copy.deepcopy(key), _freeze_default(item))
+                (_freeze_default(key), _freeze_default(item))
                 for key, item in value.items()
             )
         )
@@ -117,22 +164,153 @@ def _freeze_default(value: Any) -> Any:
         return _FrozenTuple(_freeze_default(item) for item in value)
     if isinstance(value, set):
         return _FrozenSet(_freeze_default(item) for item in value)
-    return copy.deepcopy(value)
+    if isinstance(value, frozenset):
+        return frozenset(_freeze_default(item) for item in value)
+    if value is None or value is Ellipsis or value is NotImplemented:
+        return value
+    if isinstance(
+        value,
+        (
+            bool,
+            int,
+            float,
+            complex,
+            str,
+            bytes,
+            date,
+            datetime,
+            time,
+            timedelta,
+            Decimal,
+            Enum,
+            Fraction,
+            Path,
+            range,
+            slice,
+            UUID,
+        ),
+    ):
+        return copy.deepcopy(value)
+    raise TypeError(
+        "Unsupported parameter default "
+        f"{type(value).__module__}.{type(value).__qualname__}; "
+        "use an immutable scalar or a supported container"
+    )
 
 
 def _thaw_default(value: Any) -> Any:
     """Return a detached value with the source container types restored."""
     if value is _SENTINEL:
         return value
+    if isinstance(value, _FrozenBytearray):
+        return bytearray(value)
+    if isinstance(value, _FrozenDeque):
+        return deque(
+            (_thaw_default(item) for item in value.items),
+            maxlen=value.maxlen,
+        )
     if isinstance(value, _FrozenDict):
-        return {copy.deepcopy(key): _thaw_default(item) for key, item in value.entries}
+        return {_thaw_default(key): _thaw_default(item) for key, item in value.entries}
     if isinstance(value, _FrozenList):
         return [_thaw_default(item) for item in value]
     if isinstance(value, _FrozenTuple):
         return tuple(_thaw_default(item) for item in value)
     if isinstance(value, _FrozenSet):
         return {_thaw_default(item) for item in value}
+    if isinstance(value, frozenset):
+        return frozenset(_thaw_default(item) for item in value)
     return copy.deepcopy(value)
+
+
+def _json_key(value: Any) -> str | int | float | bool | None:
+    """Normalize a mapping key into a value accepted by the JSON encoder."""
+    normalized = _json_default(value)
+    if normalized is None or isinstance(normalized, (str, int, float, bool)):
+        return normalized
+    return json.dumps(normalized, sort_keys=True, separators=(",", ":"))
+
+
+def _json_default(value: Any) -> Any:
+    """Normalize a frozen default into a deterministic JSON-compatible value."""
+    if isinstance(value, _FrozenBytearray):
+        return {
+            "type": "bytearray",
+            "base64": base64.b64encode(bytes(value)).decode("ascii"),
+        }
+    if isinstance(value, _FrozenDeque):
+        return {
+            "type": "deque",
+            "items": [_json_default(item) for item in value.items],
+            "maxlen": value.maxlen,
+        }
+    if isinstance(value, _FrozenDict):
+        return {_json_key(key): _json_default(item) for key, item in value.entries}
+    if isinstance(value, (_FrozenList, _FrozenTuple, list, tuple)):
+        return [_json_default(item) for item in value]
+    if isinstance(value, (_FrozenSet, set, frozenset)):
+        items = [_json_default(item) for item in value]
+        items.sort(
+            key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":"))
+        )
+        return {
+            "type": "frozenset" if type(value) is frozenset else "set",
+            "items": items,
+        }
+    if isinstance(value, Enum):
+        return {
+            "type": "enum",
+            "class": f"{type(value).__module__}.{type(value).__qualname__}",
+            "name": value.name,
+            "value": _json_default(value.value),
+        }
+    if isinstance(value, Path):
+        return {"type": "path", "value": str(value)}
+    if isinstance(value, bytes):
+        return {
+            "type": "bytes",
+            "base64": base64.b64encode(value).decode("ascii"),
+        }
+    if isinstance(value, datetime):
+        return {"type": "datetime", "value": value.isoformat()}
+    if isinstance(value, date):
+        return {"type": "date", "value": value.isoformat()}
+    if isinstance(value, time):
+        return {"type": "time", "value": value.isoformat()}
+    if isinstance(value, timedelta):
+        return {"type": "timedelta", "seconds": value.total_seconds()}
+    if isinstance(value, Decimal):
+        return {"type": "decimal", "value": str(value)}
+    if isinstance(value, Fraction):
+        return {
+            "type": "fraction",
+            "numerator": value.numerator,
+            "denominator": value.denominator,
+        }
+    if isinstance(value, UUID):
+        return {"type": "uuid", "value": str(value)}
+    if isinstance(value, complex):
+        return {"type": "complex", "real": value.real, "imag": value.imag}
+    if isinstance(value, range):
+        return {
+            "type": "range",
+            "start": value.start,
+            "stop": value.stop,
+            "step": value.step,
+        }
+    if isinstance(value, slice):
+        return {
+            "type": "slice",
+            "start": _json_default(value.start),
+            "stop": _json_default(value.stop),
+            "step": _json_default(value.step),
+        }
+    if value is Ellipsis:
+        return {"type": "ellipsis"}
+    if value is NotImplemented:
+        return {"type": "not-implemented"}
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    raise TypeError(f"Unsupported JSON parameter default: {type(value).__qualname__}")
 
 
 def sanitize_identifier(name: str) -> str:
@@ -294,7 +472,7 @@ class ParameterSchema:
             "required": self.required,
         }
         if not self.required:
-            result["default"] = _thaw_default(self.default)
+            result["default"] = _json_default(self.default)
         return result
 
 
