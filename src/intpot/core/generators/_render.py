@@ -109,6 +109,7 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     aliases = {
         module: unique(f"_intpot_defaults_{module}")
         for module in (
+            "builtins",
             "collections",
             "datetime",
             "decimal",
@@ -136,7 +137,8 @@ def _collect_extra_imports(
 ) -> list[str]:
     """Gather source_imports from all tools, dedupe, and filter framework imports."""
     seen: set[str] = set()
-    result: list[str] = []
+    source_imports: list[str] = []
+    default_imports: set[str] = set()
     for tool in tools:
         for imp in tool.source_imports:
             if imp in seen:
@@ -144,15 +146,13 @@ def _collect_extra_imports(
             seen.add(imp)
             if any(marker in imp for marker in _FRAMEWORK_IMPORT_MARKERS):
                 continue
-            result.append(imp)
+            source_imports.append(imp)
         for parameter in tool.parameters:
             if parameter.required:
                 continue
             for imp in sorted(_default_imports(parameter.default, aliases)):
-                if imp not in seen:
-                    seen.add(imp)
-                    result.append(imp)
-    return sorted(result)
+                default_imports.add(imp)
+    return sorted(source_imports) + sorted(default_imports)
 
 
 # Only runs that precede a top-level line: those are the template seams. A run

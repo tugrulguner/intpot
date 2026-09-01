@@ -417,6 +417,7 @@ def _json_default(value: Any) -> Any:
 def _source_default(value: Any, aliases: Mapping[str, str] | None = None) -> str:
     """Render a frozen default as deterministic, executable Python source."""
     aliases = aliases or {
+        "builtins": "_intpot_defaults_builtins",
         "collections": "_intpot_defaults_collections",
         "datetime": "_intpot_defaults_datetime",
         "decimal": "_intpot_defaults_decimal",
@@ -441,7 +442,7 @@ def _source_default(value: Any, aliases: Mapping[str, str] | None = None) -> str
     if value is _SENTINEL:
         raise TypeError("Required parameters do not have a source default")
     if isinstance(value, _FrozenBytearray):
-        return f"bytearray({bytes(value)!r})"
+        return f"{aliases['builtins']}.bytearray({bytes(value)!r})"
     if isinstance(value, _FrozenDeque):
         items = ", ".join(_source_default(item, aliases) for item in value.items)
         maxlen = f", maxlen={value.maxlen}" if value.maxlen is not None else ""
@@ -459,22 +460,22 @@ def _source_default(value: Any, aliases: Mapping[str, str] | None = None) -> str
         return f"({items[0]},)" if len(items) == 1 else f"({', '.join(items)})"
     if isinstance(value, _FrozenSet):
         items = sorted(_source_default(item, aliases) for item in value)
-        return f"{{{', '.join(items)}}}" if items else "set()"
+        return f"{{{', '.join(items)}}}" if items else f"{aliases['builtins']}.set()"
     if isinstance(value, _FrozenFrozenset):
         items = sorted(_source_default(item, aliases) for item in value)
-        inner = f"{{{', '.join(items)}}}" if items else "set()"
-        return f"frozenset({inner})"
+        inner = f"{{{', '.join(items)}}}" if items else f"{aliases['builtins']}.set()"
+        return f"{aliases['builtins']}.frozenset({inner})"
     if isinstance(value, _FrozenSlice):
         return (
-            f"slice({_source_default(value.start, aliases)}, "
+            f"{aliases['builtins']}.slice({_source_default(value.start, aliases)}, "
             f"{_source_default(value.stop, aliases)}, "
             f"{_source_default(value.step, aliases)})"
         )
     if isinstance(value, float) and not math.isfinite(value):
-        return f"float({str(value)!r})"
+        return f"{aliases['builtins']}.float({str(value)!r})"
     if isinstance(value, complex):
         return (
-            f"complex({_source_default(value.real, aliases)}, "
+            f"{aliases['builtins']}.complex({_source_default(value.real, aliases)}, "
             f"{_source_default(value.imag, aliases)})"
         )
     if isinstance(value, datetime):
@@ -499,13 +500,18 @@ def _source_default(value: Any, aliases: Mapping[str, str] | None = None) -> str
     if isinstance(value, UUID):
         return f"{aliases['uuid']}.UUID({str(value)!r})"
     if isinstance(value, range):
-        return f"range({value.start}, {value.stop}, {value.step})"
+        return f"{aliases['builtins']}.range({value.start}, {value.stop}, {value.step})"
+    if value is Ellipsis:
+        return f"{aliases['builtins']}.Ellipsis"
+    if value is NotImplemented:
+        return f"{aliases['builtins']}.NotImplemented"
     return repr(value)
 
 
 def _default_imports(value: Any, aliases: Mapping[str, str] | None = None) -> set[str]:
     """Return imports required by an executable source-default expression."""
     aliases = aliases or {
+        "builtins": "_intpot_defaults_builtins",
         "collections": "_intpot_defaults_collections",
         "datetime": "_intpot_defaults_datetime",
         "decimal": "_intpot_defaults_decimal",
@@ -528,7 +534,10 @@ def _default_imports(value: Any, aliases: Mapping[str, str] | None = None) -> se
     ):
         value = _freeze_default(value)
     imports: set[str] = set()
-    if isinstance(value, _FrozenDeque):
+    if isinstance(value, _FrozenBytearray):
+        imports.add(f"import builtins as {aliases['builtins']}")
+        children = ()
+    elif isinstance(value, _FrozenDeque):
         imports.add(f"import collections as {aliases['collections']}")
         children: Iterable[Any] = value.items
     elif isinstance(value, _FrozenDict):
@@ -542,6 +551,15 @@ def _default_imports(value: Any, aliases: Mapping[str, str] | None = None) -> se
 
     for child in children:
         imports.update(_default_imports(child, aliases))
+
+    if (
+        isinstance(value, (_FrozenFrozenset, _FrozenSlice, complex, range))
+        or (isinstance(value, _FrozenSet) and not value)
+        or (isinstance(value, float) and not math.isfinite(value))
+        or value is Ellipsis
+        or value is NotImplemented
+    ):
+        imports.add(f"import builtins as {aliases['builtins']}")
 
     if isinstance(value, (date, time, timedelta)):
         imports.add(f"import datetime as {aliases['datetime']}")
@@ -600,14 +618,16 @@ def _default_identity(value: Any) -> Any:
             _default_identity(value.stop),
             _default_identity(value.step),
         )
-    if isinstance(value, float) and math.isnan(value):
-        return ("float", "nan")
+    if isinstance(value, float):
+        return ("float", value.hex())
     if isinstance(value, complex):
         return (
             "complex",
             _default_identity(value.real),
             _default_identity(value.imag),
         )
+    if isinstance(value, Decimal):
+        return ("decimal", value.as_tuple())
     return (type(value), value)
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 import threading
 from collections import deque
 from dataclasses import FrozenInstanceError
@@ -500,6 +501,27 @@ def test_schema_equality_distinguishes_cross_type_equal_scalars() -> None:
     assert hash(boolean) != hash(integer)
 
 
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (Decimal("1.0"), Decimal("1.00")),
+        (Decimal("-0"), Decimal("0")),
+        (-0.0, 0.0),
+        (complex(-0.0, 0.0), complex(0.0, 0.0)),
+    ],
+)
+def test_schema_equality_distinguishes_preserved_value_representations(
+    left, right
+) -> None:
+    from intpot import ParameterSchema
+
+    left_schema = ParameterSchema("value", default=left)
+    right_schema = ParameterSchema("value", default=right)
+
+    assert repr(left_schema.to_info().default) != repr(right_schema.to_info().default)
+    assert left_schema != right_schema
+
+
 def test_api_generation_avoids_path_default_import_collisions() -> None:
     from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
 
@@ -640,6 +662,61 @@ def test_default_helpers_cannot_be_shadowed_by_generated_tool_names(generator) -
     code = generator.generate(schema)
     module = ModuleType("generated_helper_collisions")
     exec(compile(code, "generated_helper_collisions.py", "exec"), module.__dict__)
+
+
+@pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
+def test_wildcard_source_imports_cannot_shadow_generated_helpers(
+    generator, monkeypatch
+) -> None:
+    from intpot import ApplicationSchema, ParameterSchema, ToolSchema
+
+    collision = ModuleType("intpot_collision_source")
+    exported = (
+        "typer",
+        "FastMCP",
+        "bytearray",
+        "complex",
+        "float",
+        "frozenset",
+        "range",
+        "set",
+        "slice",
+        "Ellipsis",
+        "NotImplemented",
+        "_intpot_fastapi_FastAPI",
+        "_intpot_fastapi_Body",
+        "_intpot_defaults_builtins",
+        "_intpot_defaults_datetime",
+    )
+    collision.__all__ = exported
+    for name in exported:
+        setattr(collision, name, object())
+    monkeypatch.setitem(sys.modules, collision.__name__, collision)
+
+    schema = ApplicationSchema(
+        name="wildcard-safe",
+        source_type=SourceType.PYTHON,
+        tools=(
+            ToolSchema(
+                name="show",
+                parameters=(
+                    ParameterSchema("when", default=datetime(2026, 1, 1)),
+                    ParameterSchema("blob", default=bytearray(b"x")),
+                    ParameterSchema("number", default=complex(1, 2)),
+                    ParameterSchema("infinite", default=float("inf")),
+                    ParameterSchema("frozen", default=frozenset()),
+                    ParameterSchema("span", default=range(1, 2)),
+                    ParameterSchema("items", default=set()),
+                    ParameterSchema("window", default=slice(1, 2)),
+                ),
+                source_imports=(f"from {collision.__name__} import *",),
+            ),
+        ),
+    )
+
+    code = generator.generate(schema)
+    module = ModuleType("generated_wildcard_safe")
+    exec(compile(code, "generated_wildcard_safe.py", "exec"), module.__dict__)
 
 
 @pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
