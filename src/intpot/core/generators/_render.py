@@ -9,6 +9,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from intpot.core.generators.base import RenderableTool
+from intpot.core.models import _default_imports, _source_default
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 
@@ -103,6 +104,13 @@ def _collect_extra_imports(tools: Sequence[RenderableTool]) -> list[str]:
             if any(marker in imp for marker in _FRAMEWORK_IMPORT_MARKERS):
                 continue
             result.append(imp)
+        for parameter in tool.parameters:
+            if parameter.required:
+                continue
+            for imp in sorted(_default_imports(parameter.default)):
+                if imp not in seen:
+                    seen.add(imp)
+                    result.append(imp)
     return sorted(result)
 
 
@@ -128,6 +136,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
         keep_trailing_newline=True,
     )
     env.filters["repr"] = repr
+    env.filters["source_default"] = _source_default
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
     template = env.get_template(template_name)

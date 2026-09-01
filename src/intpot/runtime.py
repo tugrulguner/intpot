@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import functools
 import inspect
 from collections.abc import Callable
@@ -101,8 +102,8 @@ class App:
 
     @property
     def tools(self) -> list[ToolInfo]:
-        """Return detached compatibility models from the compiled schema."""
-        return self.schema.to_tools()
+        """Return detached compatibility models without requiring schema support."""
+        return [copy.deepcopy(tool.info) for tool in self._tools]
 
     def eject(self, target: str) -> str:
         """Generate standalone code for the given target framework.

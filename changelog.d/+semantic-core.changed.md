@@ -1,0 +1,1 @@
+Canonical schemas now reject enum and opaque defaults that cannot be preserved in standalone generated code, render every supported structured default as executable source without import collisions, preserve stable detached ``App.tools`` compatibility access, and encode non-string mapping keys and non-finite numbers as strict JSON without collisions.

@@ -21,7 +21,7 @@ def _schema_or_exit(
 ):
     try:
         return compile_app(source_type, app_instance, source_path=source_path)
-    except InspectionError as exc:
+    except (InspectionError, TypeError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
 

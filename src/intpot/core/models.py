@@ -6,6 +6,7 @@ import base64
 import copy
 import json
 import keyword
+import math
 import re
 from collections import deque
 from collections.abc import Iterable, Iterator, Mapping
@@ -66,12 +67,28 @@ class _FrozenList(tuple[Any, ...]):
     def __repr__(self) -> str:
         return repr([_thaw_default(value) for value in self])
 
+    def __eq__(self, other: object) -> bool:
+        return type(other) is _FrozenList and tuple.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    __hash__ = tuple.__hash__
+
 
 class _FrozenTuple(tuple[Any, ...]):
     """Immutable tuple value with recursively thawed source representation."""
 
     def __repr__(self) -> str:
         return repr(tuple(_thaw_default(value) for value in self))
+
+    def __eq__(self, other: object) -> bool:
+        return type(other) is _FrozenTuple and tuple.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    __hash__ = tuple.__hash__
 
 
 class _FrozenSet(frozenset[Any]):
@@ -80,12 +97,40 @@ class _FrozenSet(frozenset[Any]):
     def __repr__(self) -> str:
         return repr({_thaw_default(value) for value in self})
 
+    def __eq__(self, other: object) -> bool:
+        return type(other) is _FrozenSet and frozenset.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    __hash__ = frozenset.__hash__
+
+
+class _FrozenFrozenset(frozenset[Any]):
+    """Immutable frozenset whose schema identity preserves its source type."""
+
+    def __eq__(self, other: object) -> bool:
+        return type(other) is _FrozenFrozenset and frozenset.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    __hash__ = frozenset.__hash__
+
 
 class _FrozenBytearray(bytes):
     """Immutable bytes that preserve a bytearray default's source representation."""
 
     def __repr__(self) -> str:
         return f"bytearray({bytes(self)!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return type(other) is _FrozenBytearray and bytes.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    __hash__ = bytes.__hash__
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +147,15 @@ class _FrozenDeque:
         values = [_thaw_default(value) for value in self.items]
         suffix = f", maxlen={self.maxlen}" if self.maxlen is not None else ""
         return f"deque({values!r}{suffix})"
+
+
+@dataclass(frozen=True, slots=True)
+class _FrozenSlice:
+    """Immutable recursive snapshot of a slice's three arbitrary bounds."""
+
+    start: Any
+    stop: Any
+    step: Any
 
 
 @dataclass(frozen=True)
@@ -138,7 +192,9 @@ def _freeze_default(value: Any) -> Any:
             _FrozenBytearray,
             _FrozenDeque,
             _FrozenDict,
+            _FrozenFrozenset,
             _FrozenList,
+            _FrozenSlice,
             _FrozenTuple,
             _FrozenSet,
         ),
@@ -165,32 +221,54 @@ def _freeze_default(value: Any) -> Any:
     if isinstance(value, set):
         return _FrozenSet(_freeze_default(item) for item in value)
     if isinstance(value, frozenset):
-        return frozenset(_freeze_default(item) for item in value)
+        return _FrozenFrozenset(_freeze_default(item) for item in value)
+    if isinstance(value, slice):
+        return _FrozenSlice(
+            _freeze_default(value.start),
+            _freeze_default(value.stop),
+            _freeze_default(value.step),
+        )
     if value is None or value is Ellipsis or value is NotImplemented:
         return value
-    if isinstance(
-        value,
-        (
-            bool,
-            int,
-            float,
-            complex,
-            str,
-            bytes,
-            date,
-            datetime,
-            time,
-            timedelta,
-            Decimal,
-            Enum,
-            Fraction,
-            Path,
-            range,
-            slice,
-            UUID,
-        ),
-    ):
-        return copy.deepcopy(value)
+    if isinstance(value, Enum):
+        raise TypeError(
+            "Enum defaults are not supported because standalone generated code "
+            "cannot preserve a locally defined enum class"
+        )
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float):
+        return float(value)
+    if isinstance(value, complex):
+        return complex(value)
+    if isinstance(value, str):
+        return str(value)
+    if isinstance(value, bytes):
+        return bytes(value)
+    if isinstance(value, datetime):
+        return datetime.fromisoformat(value.isoformat())
+    if isinstance(value, date):
+        return date.fromisoformat(value.isoformat())
+    if isinstance(value, time):
+        return time.fromisoformat(value.isoformat())
+    if isinstance(value, timedelta):
+        return timedelta(
+            days=value.days,
+            seconds=value.seconds,
+            microseconds=value.microseconds,
+        )
+    if isinstance(value, Decimal):
+        return Decimal(value)
+    if isinstance(value, Fraction):
+        return Fraction(value.numerator, value.denominator)
+    if isinstance(value, Path):
+        return Path(str(value))
+    if isinstance(value, range):
+        return range(value.start, value.stop, value.step)
+    if isinstance(value, UUID):
+        return UUID(str(value))
     raise TypeError(
         "Unsupported parameter default "
         f"{type(value).__module__}.{type(value).__qualname__}; "
@@ -217,8 +295,14 @@ def _thaw_default(value: Any) -> Any:
         return tuple(_thaw_default(item) for item in value)
     if isinstance(value, _FrozenSet):
         return {_thaw_default(item) for item in value}
-    if isinstance(value, frozenset):
+    if isinstance(value, _FrozenFrozenset):
         return frozenset(_thaw_default(item) for item in value)
+    if isinstance(value, _FrozenSlice):
+        return slice(
+            _thaw_default(value.start),
+            _thaw_default(value.stop),
+            _thaw_default(value.step),
+        )
     return copy.deepcopy(value)
 
 
@@ -244,25 +328,29 @@ def _json_default(value: Any) -> Any:
             "maxlen": value.maxlen,
         }
     if isinstance(value, _FrozenDict):
-        return {_json_key(key): _json_default(item) for key, item in value.entries}
+        if all(type(key) is str for key, _ in value.entries):
+            return {key: _json_default(item) for key, item in value.entries}
+        return {
+            "type": "mapping",
+            "items": [
+                {"key": _json_default(key), "value": _json_default(item)}
+                for key, item in value.entries
+            ],
+        }
     if isinstance(value, (_FrozenList, _FrozenTuple, list, tuple)):
         return [_json_default(item) for item in value]
-    if isinstance(value, (_FrozenSet, set, frozenset)):
+    if isinstance(value, (_FrozenSet, _FrozenFrozenset, set, frozenset)):
         items = [_json_default(item) for item in value]
         items.sort(
             key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":"))
         )
         return {
-            "type": "frozenset" if type(value) is frozenset else "set",
+            "type": "frozenset"
+            if isinstance(value, _FrozenFrozenset) or type(value) is frozenset
+            else "set",
             "items": items,
         }
-    if isinstance(value, Enum):
-        return {
-            "type": "enum",
-            "class": f"{type(value).__module__}.{type(value).__qualname__}",
-            "name": value.name,
-            "value": _json_default(value.value),
-        }
+
     if isinstance(value, Path):
         return {"type": "path", "value": str(value)}
     if isinstance(value, bytes):
@@ -288,8 +376,18 @@ def _json_default(value: Any) -> Any:
         }
     if isinstance(value, UUID):
         return {"type": "uuid", "value": str(value)}
+    if isinstance(value, float) and not math.isfinite(value):
+        if math.isnan(value):
+            normalized = "nan"
+        else:
+            normalized = "infinity" if value > 0 else "-infinity"
+        return {"type": "float", "value": normalized}
     if isinstance(value, complex):
-        return {"type": "complex", "real": value.real, "imag": value.imag}
+        return {
+            "type": "complex",
+            "real": _json_default(value.real),
+            "imag": _json_default(value.imag),
+        }
     if isinstance(value, range):
         return {
             "type": "range",
@@ -297,7 +395,7 @@ def _json_default(value: Any) -> Any:
             "stop": value.stop,
             "step": value.step,
         }
-    if isinstance(value, slice):
+    if isinstance(value, _FrozenSlice):
         return {
             "type": "slice",
             "start": _json_default(value.start),
@@ -311,6 +409,104 @@ def _json_default(value: Any) -> Any:
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     raise TypeError(f"Unsupported JSON parameter default: {type(value).__qualname__}")
+
+
+def _source_default(value: Any) -> str:
+    """Render a frozen default as deterministic, executable Python source."""
+    if value is _SENTINEL:
+        raise TypeError("Required parameters do not have a source default")
+    if isinstance(value, _FrozenBytearray):
+        return f"bytearray({bytes(value)!r})"
+    if isinstance(value, _FrozenDeque):
+        items = ", ".join(_source_default(item) for item in value.items)
+        maxlen = f", maxlen={value.maxlen}" if value.maxlen is not None else ""
+        return f"deque([{items}]{maxlen})"
+    if isinstance(value, _FrozenDict):
+        entries = ", ".join(
+            f"{_source_default(key)}: {_source_default(item)}"
+            for key, item in value.entries
+        )
+        return f"{{{entries}}}"
+    if isinstance(value, _FrozenList):
+        return f"[{', '.join(_source_default(item) for item in value)}]"
+    if isinstance(value, _FrozenTuple):
+        items = [_source_default(item) for item in value]
+        return f"({items[0]},)" if len(items) == 1 else f"({', '.join(items)})"
+    if isinstance(value, _FrozenSet):
+        items = sorted(_source_default(item) for item in value)
+        return f"{{{', '.join(items)}}}" if items else "set()"
+    if isinstance(value, _FrozenFrozenset):
+        items = sorted(_source_default(item) for item in value)
+        inner = f"{{{', '.join(items)}}}" if items else "set()"
+        return f"frozenset({inner})"
+    if isinstance(value, _FrozenSlice):
+        return (
+            f"slice({_source_default(value.start)}, {_source_default(value.stop)}, "
+            f"{_source_default(value.step)})"
+        )
+    if isinstance(value, float) and not math.isfinite(value):
+        return f"float({str(value)!r})"
+    if isinstance(value, complex):
+        return f"complex({_source_default(value.real)}, {_source_default(value.imag)})"
+    if isinstance(value, datetime):
+        return f"datetime.fromisoformat({value.isoformat()!r})"
+    if isinstance(value, date):
+        return f"date.fromisoformat({value.isoformat()!r})"
+    if isinstance(value, time):
+        return f"time.fromisoformat({value.isoformat()!r})"
+    if isinstance(value, timedelta):
+        return (
+            f"timedelta(days={value.days}, seconds={value.seconds}, "
+            f"microseconds={value.microseconds})"
+        )
+    if isinstance(value, Decimal):
+        return f"Decimal({str(value)!r})"
+    if isinstance(value, Fraction):
+        return f"Fraction({value.numerator}, {value.denominator})"
+    if isinstance(value, Path):
+        return f"pathlib.Path({str(value)!r})"
+    if isinstance(value, UUID):
+        return f"UUID({str(value)!r})"
+    if isinstance(value, range):
+        return f"range({value.start}, {value.stop}, {value.step})"
+    return repr(value)
+
+
+def _default_imports(value: Any) -> set[str]:
+    """Return imports required by an executable source-default expression."""
+    imports: set[str] = set()
+    if isinstance(value, _FrozenDeque):
+        imports.add("from collections import deque")
+        children: Iterable[Any] = value.items
+    elif isinstance(value, _FrozenDict):
+        children = (child for entry in value.entries for child in entry)
+    elif isinstance(value, (_FrozenList, _FrozenTuple, _FrozenSet, _FrozenFrozenset)):
+        children = value
+    elif isinstance(value, _FrozenSlice):
+        children = (value.start, value.stop, value.step)
+    else:
+        children = ()
+
+    for child in children:
+        imports.update(_default_imports(child))
+
+    if isinstance(value, datetime):
+        imports.add("from datetime import datetime")
+    elif isinstance(value, date):
+        imports.add("from datetime import date")
+    elif isinstance(value, time):
+        imports.add("from datetime import time")
+    elif isinstance(value, timedelta):
+        imports.add("from datetime import timedelta")
+    elif isinstance(value, Decimal):
+        imports.add("from decimal import Decimal")
+    elif isinstance(value, Fraction):
+        imports.add("from fractions import Fraction")
+    elif isinstance(value, Path):
+        imports.add("import pathlib")
+    elif isinstance(value, UUID):
+        imports.add("from uuid import UUID")
+    return imports
 
 
 def sanitize_identifier(name: str) -> str:

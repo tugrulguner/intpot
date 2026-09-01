@@ -34,7 +34,7 @@ app = typer.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if not param.required %} = typer.Option({{ param.default | repr }}, help={{ param.description | repr }})
+{%- if not param.required %} = typer.Option({{ param.default | source_default }}, help={{ param.description | repr }})
 {%- else %} = typer.Argument(..., help={{ param.description | repr }})
 {%- endif %},
 {%- endfor %}

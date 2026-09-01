@@ -103,3 +103,22 @@ def test_eject_file_not_found():
     result = runner.invoke(app, ["eject", "/nonexistent.py", "--to", "cli"])
     assert result.exit_code == 1
     assert "not found" in result.output
+
+
+def test_eject_reports_unsupported_defaults_without_a_traceback(tmp_source):
+    source = tmp_source("""
+        from intpot import App
+        app = App("test")
+
+        marker = object()
+
+        @app.tool()
+        def use_marker(value=marker):
+            return value
+    """)
+
+    result = runner.invoke(app, ["eject", str(source), "--to", "cli"])
+
+    assert result.exit_code == 1
+    assert "Unsupported parameter default" in result.stderr
+    assert "Traceback" not in result.output

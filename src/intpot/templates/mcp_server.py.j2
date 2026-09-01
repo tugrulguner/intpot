@@ -20,7 +20,7 @@ mcp = FastMCP({{ app_name | repr }})
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if not param.required %} = {{ param.default | repr }}
+{%- if not param.required %} = {{ param.default | source_default }}
 {%- endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:

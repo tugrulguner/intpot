@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import math
 from collections import deque
 from dataclasses import FrozenInstanceError
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from enum import Enum
+from fractions import Fraction
 from pathlib import Path
 from types import ModuleType
+from uuid import UUID
 
 import pytest
 
@@ -15,7 +20,7 @@ import intpot
 from intpot.core.generators.api import APIGenerator
 from intpot.core.generators.cli import CLIGenerator
 from intpot.core.generators.mcp import MCPGenerator
-from intpot.core.models import ApplicationSchema, SourceType
+from intpot.core.models import ApplicationSchema, ParamSource, SourceType
 
 
 def test_load_compiles_an_immutable_application_schema(tmp_source) -> None:
@@ -188,7 +193,7 @@ def test_schema_detaches_and_freezes_mutable_parameter_defaults() -> None:
     first_compatibility_default[0]["region"] = "apac"
     second_compatibility_default = app.tools[0].parameters[0].default
 
-    assert second_compatibility_default == [{"region": "us"}]
+    assert second_compatibility_default == [{"region": "eu"}]
     assert app.schema.to_dict()["tools"][0]["parameters"][0]["default"] == [
         {"region": "us"}
     ]
@@ -251,11 +256,224 @@ def test_parameter_schema_freezes_mutable_defaults_and_rejects_opaque() -> None:
         ParameterSchema(name="opaque", default=MutableHashable())
 
 
-def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
+def test_parameter_schema_normalizes_scalar_subclasses_and_rejects_enums() -> None:
+    from intpot import ParameterSchema
+
+    class MutableText(str):
+        pass
+
+    text = MutableText("stable")
+    text.state = []
+    parameter = ParameterSchema(name="text", default=text)
+    before = hash(parameter)
+    text.state.append("changed")
+
+    assert type(parameter.default) is str
+    assert parameter.default == "stable"
+    assert hash(parameter) == before
+
+    class MutableValue(Enum):
+        item = []  # noqa: RUF012 - adversarial mutable enum payload
+
+    with pytest.raises(TypeError, match="Enum defaults are not supported"):
+        ParameterSchema(name="enum", default=MutableValue.item)
+
+
+def test_parameter_schema_freezes_slice_bounds_and_remains_hashable() -> None:
+    from intpot import ParameterSchema
+
+    start: list[str] = []
+    parameter = ParameterSchema(name="window", default=slice(start, 2, 1))
+    before = hash(parameter)
+    start.append("changed")
+
+    assert parameter.to_info().default == slice([], 2, 1)
+    assert hash(parameter) == before
+
+
+def test_schema_equality_distinguishes_source_container_types() -> None:
+    from intpot import ParameterSchema
+
+    unequal_pairs = [
+        ([], ()),
+        (set(), frozenset()),
+        (bytearray(b"a"), b"a"),
+    ]
+
+    for left, right in unequal_pairs:
+        assert ParameterSchema("value", default=left) != ParameterSchema(
+            "value", default=right
+        )
+
+
+def test_schema_json_preserves_mixed_mapping_keys() -> None:
+    from intpot import ParameterSchema
+
+    data = ParameterSchema("mapping", default={1: "integer", "1": "string"}).to_dict()[
+        "default"
+    ]
+    encoded = json.loads(json.dumps(data))
+
+    assert encoded == {
+        "type": "mapping",
+        "items": [
+            {"key": 1, "value": "integer"},
+            {"key": "1", "value": "string"},
+        ],
+    }
+
+
+def test_runtime_tools_preserve_detached_opaque_compatibility_defaults() -> None:
+    class Marker:
+        def __init__(self) -> None:
+            self.value = "original"
+
+    marker = Marker()
+    app = intpot.App("compatibility")
+
+    @app.tool()
+    def use_marker(value=marker):
+        return value.value
+
+    first = app.tools
+    first[0].parameters[0].default.value = "changed"
+
+    assert app.tools[0].parameters[0].default.value == "original"
+    with pytest.raises(TypeError, match="Unsupported parameter default"):
+        _ = app.schema
+
+
+def test_runtime_tools_are_stable_before_and_after_schema_access() -> None:
+    class MutableText(str):
+        pass
+
+    default = MutableText("stable")
+    default.state = ["compatibility"]
+    app = intpot.App("compatibility")
+
+    @app.tool()
+    def show(value=default):
+        return value
+
+    before = app.tools[0].parameters[0].default
+    _ = app.schema
+    after = app.tools[0].parameters[0].default
+
+    assert type(before) is MutableText
+    assert type(after) is MutableText
+    assert before.state == after.state == ["compatibility"]
+
+
+def test_schema_json_strictly_normalizes_non_finite_numbers() -> None:
+    from intpot import ParameterSchema
+
+    defaults = {
+        "positive": float("inf"),
+        "negative": float("-inf"),
+        "nan": float("nan"),
+        "complex": complex(float("inf"), float("nan")),
+    }
+    normalized = {
+        name: ParameterSchema(name, default=value).to_dict()["default"]
+        for name, value in defaults.items()
+    }
+
+    json.dumps(normalized, allow_nan=False)
+    assert normalized["positive"] == {"type": "float", "value": "infinity"}
+    assert normalized["negative"] == {"type": "float", "value": "-infinity"}
+    assert normalized["nan"] == {"type": "float", "value": "nan"}
+    assert normalized["complex"] == {
+        "type": "complex",
+        "real": {"type": "float", "value": "infinity"},
+        "imag": {"type": "float", "value": "nan"},
+    }
+
+
+def test_api_generation_avoids_path_default_import_collisions() -> None:
     from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
 
-    class Color(Enum):
-        red = "red"
+    schema = ApplicationSchema(
+        name="paths",
+        source_type=SourceType.PYTHON,
+        tools=(
+            ToolSchema(
+                name="read",
+                parameters=(
+                    ParameterSchema(
+                        "item_id", type_annotation="str", param_source=ParamSource.path
+                    ),
+                    ParameterSchema(
+                        "output", type_annotation="object", default=Path("result.txt")
+                    ),
+                ),
+                route_path="/items/{item_id}",
+            ),
+        ),
+    )
+
+    code = APIGenerator().generate(schema)
+    module = ModuleType("generated_path_defaults")
+    exec(compile(code, "generated_path_defaults.py", "exec"), module.__dict__)
+
+    assert "from fastapi import FastAPI, Body, Path" in code
+    assert "import pathlib" in code
+    assert "pathlib.Path('result.txt')" in code
+
+
+@pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
+def test_generators_render_every_supported_structured_default(generator) -> None:
+    from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
+
+    defaults = (
+        [1, "two"],
+        (1, "two"),
+        {1, 2},
+        frozenset({1, 2}),
+        {1: "one", "two": 2},
+        bytearray(b"abc"),
+        deque([1, 2], maxlen=3),
+        Path("value.txt"),
+        date(2026, 8, 31),
+        datetime(2026, 8, 31, 3, 4, 5),
+        time(3, 4, 5),
+        timedelta(days=2, seconds=3, microseconds=4),
+        Decimal("1.25"),
+        Fraction(2, 3),
+        UUID("12345678-1234-5678-1234-567812345678"),
+        range(1, 5, 2),
+        slice(1, 5, 2),
+        complex(1, 2),
+        float("inf"),
+    )
+    parameters = tuple(
+        ParameterSchema(f"value_{index}", type_annotation="object", default=value)
+        for index, value in enumerate(defaults)
+    )
+    schema = ApplicationSchema(
+        name="defaults",
+        source_type=SourceType.PYTHON,
+        tools=(ToolSchema(name="show", parameters=parameters),),
+    )
+
+    code = generator.generate(schema)
+    module = ModuleType("generated_defaults")
+    exec(compile(code, "generated_defaults.py", "exec"), module.__dict__)
+
+    generated = module.show
+    actual = tuple(
+        parameter.default
+        for parameter in __import__("inspect").signature(generated).parameters.values()
+    )
+    if isinstance(generator, CLIGenerator):
+        actual = tuple(value.default for value in actual)
+    if isinstance(generator, APIGenerator):
+        actual = tuple(value.default for value in actual)
+    assert actual[:-1] == defaults[:-1]
+    assert math.isinf(actual[-1]) and actual[-1] > 0
+
+
+def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
+    from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
 
     schema = ApplicationSchema(
         name="json-values",
@@ -266,7 +484,6 @@ def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
                 parameters=(
                     ParameterSchema(name="tags", default={"b", "a"}),
                     ParameterSchema(name="path", default=Path("/tmp/value")),
-                    ParameterSchema(name="color", default=Color.red),
                     ParameterSchema(name="blob", default=b"abc"),
                     ParameterSchema(name="queue", default=deque([1, 2], maxlen=3)),
                 ),
@@ -283,12 +500,7 @@ def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
     json.dumps(data)
     assert defaults["tags"] == {"type": "set", "items": ["a", "b"]}
     assert defaults["path"] == {"type": "path", "value": "/tmp/value"}
-    assert defaults["color"] == {
-        "type": "enum",
-        "class": f"{Color.__module__}.{Color.__qualname__}",
-        "name": "red",
-        "value": "red",
-    }
+
     assert defaults["blob"] == {"type": "bytes", "base64": "YWJj"}
     assert defaults["queue"] == {
         "type": "deque",
