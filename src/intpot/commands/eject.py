@@ -31,7 +31,7 @@ def eject_command(
 
     try:
         code = app_instance.eject(target=to)
-    except ValueError as e:
+    except (TypeError, ValueError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from None
 

@@ -4,31 +4,26 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 import typer
 
-from intpot.converter import inspect_app
+from intpot.converter import compile_app
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
 
 
-def _inspect_or_exit(source_type: SourceType, app_instance: object):
+def _schema_or_exit(
+    source_type: SourceType,
+    app_instance: object,
+    *,
+    source_path: Path,
+):
     try:
-        return inspect_app(source_type, app_instance)
-    except InspectionError as exc:
+        return compile_app(source_type, app_instance, source_path=source_path)
+    except (InspectionError, TypeError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
-
-
-def _serialize_tool(tool):
-    d = asdict(tool)
-    for p_info, p_dict in zip(tool.parameters, d["parameters"], strict=True):
-        p_dict["required"] = p_info.required
-        if p_info.required:
-            del p_dict["default"]
-    return d
 
 
 def _params_summary(params):
@@ -64,24 +59,28 @@ def inspect_command(
 
         all_results = []
         for file_path, source_type, app_instance in sources:
-            tools = _inspect_or_exit(source_type, app_instance)
-            all_results.append((file_path, source_type, tools))
+            schema = _schema_or_exit(
+                source_type,
+                app_instance,
+                source_path=file_path,
+            )
+            all_results.append((file_path, schema))
 
         if as_json:
             out = []
-            for file_path, source_type, tools in all_results:
+            for file_path, schema in all_results:
                 out.append(
                     {
                         "source": str(file_path),
-                        "type": source_type.value,
-                        "tools": [_serialize_tool(t) for t in tools],
+                        "type": schema.source_type.value,
+                        "tools": [tool.to_dict() for tool in schema.tools],
                     }
                 )
             typer.echo(json.dumps(out, indent=2, default=str))
             return
 
-        for file_path, source_type, tools in all_results:
-            _print_table(file_path, source_type, tools)
+        for file_path, schema in all_results:
+            _print_table(file_path, schema.source_type, schema.tools)
         return
 
     from intpot.core.detector import DetectionError, detect_source
@@ -98,20 +97,20 @@ def inspect_command(
     if verbose:
         print(f"FOUND: {source} ({source_type.value})", file=sys.stderr)
 
-    tools = _inspect_or_exit(source_type, app_instance)
+    schema = _schema_or_exit(source_type, app_instance, source_path=source)
 
     if as_json:
         out = [
             {
                 "source": str(source),
-                "type": source_type.value,
-                "tools": [_serialize_tool(t) for t in tools],
+                "type": schema.source_type.value,
+                "tools": [tool.to_dict() for tool in schema.tools],
             }
         ]
         typer.echo(json.dumps(out, indent=2, default=str))
         return
 
-    _print_table(source, source_type, tools)
+    _print_table(source, schema.source_type, schema.tools)
 
 
 def _print_table(source: Path, source_type: SourceType, tools):

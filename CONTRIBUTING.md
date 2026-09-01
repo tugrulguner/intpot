@@ -75,8 +75,8 @@ src/intpot/
 The core flow is:
 
 ```text
-source app → detect → inspect → ToolInfo[] → transform/generate → target app
-                              ↘ runtime builders → live target
+source app → detect → inspect → ApplicationSchema → project/generate → target app
+                                      ↘ runtime builders → live target
 ```
 
 Read [`src/intpot/AGENTS.md`](src/intpot/AGENTS.md) before changing source. Its rules come
@@ -87,8 +87,8 @@ checks that silently stopped discovering tools.
 
 - Preserve Intpot as a full framework, not a thin wrapper around one target.
 - Keep runtime and conversion behavior aligned where they advertise the same contract.
-- Treat `ToolInfo` and `ParameterInfo` as the seam between inspectors, generators,
-  transforms, and runtime builders.
+- Treat immutable `ApplicationSchema`, `ToolSchema`, and `ParameterSchema` as the seam.
+  `ToolInfo` and `ParameterInfo` are detached compatibility models at framework edges.
 - Check all source and target frameworks affected by a normalized-schema or template change.
 - Keep the minimum supported versions in `pyproject.toml` honest and exercise structural
   compatibility generations, not only the lockfile.

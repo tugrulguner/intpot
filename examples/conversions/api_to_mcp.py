@@ -2,7 +2,7 @@
 
 from fastmcp import FastMCP
 
-mcp = FastMCP("generated-server")
+mcp = FastMCP('api_app')
 
 
 @mcp.tool()
@@ -27,4 +27,3 @@ def greet(
 
 if __name__ == "__main__":
     mcp.run()
-

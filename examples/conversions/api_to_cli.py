@@ -2,7 +2,7 @@
 
 import typer
 
-app = typer.Typer()
+app = typer.Typer(name='api_app')
 
 
 def _add_impl(
@@ -15,8 +15,8 @@ def _add_impl(
 
 @app.command()
 def add(
-    a: int = typer.Argument(..., help=""),
-    b: int = typer.Argument(..., help=""),
+    a: int = typer.Argument(..., help=''),
+    b: int = typer.Argument(..., help=''),
 ) -> None:
     """Add two numbers together."""
     result = _add_impl(a, b)
@@ -34,8 +34,8 @@ def _greet_impl(
 
 @app.command()
 def greet(
-    name: str = typer.Argument(..., help=""),
-    greeting: str = typer.Option('Hello', help=""),
+    name: str = typer.Argument(..., help=''),
+    greeting: str = typer.Option('Hello', help=''),
 ) -> None:
     """Greet someone by name."""
     result = _greet_impl(name, greeting)
@@ -45,4 +45,3 @@ def greet(
 
 if __name__ == "__main__":
     app()
-
