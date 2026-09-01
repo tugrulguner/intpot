@@ -93,7 +93,12 @@ testpaths = ["tests"]
 [tool.pyright]
 pythonVersion = "3.11"
 typeCheckingMode = "standard"
-include = ["src", "tests"]
+include = [
+    "src",
+    "tests",
+    "examples/semantic_schema.py",
+    "scripts/verify_generated_examples.py",
+]
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
