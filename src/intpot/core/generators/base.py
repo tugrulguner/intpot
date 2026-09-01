@@ -19,7 +19,7 @@ def generation_context(
     """Normalize canonical and compatibility inputs for a generator."""
     if isinstance(source, ApplicationSchema):
         return source.tools, source.name
-    return source, default_name
+    return tuple(ToolSchema.from_info(tool) for tool in source), default_name
 
 
 class BaseGenerator(ABC):

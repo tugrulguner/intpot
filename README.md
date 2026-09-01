@@ -343,9 +343,11 @@ the registered callables for live execution; `eject` renders detached views of t
 schema. Access `.schema.to_dict()` when a human, build tool, or agent needs to inspect
 exactly what Intpot compiled.
 
-`to_dict()` is directly JSON-serializable. Supported non-JSON defaults such as sets,
-bytes, paths, and enums use tagged dictionaries with a `type` field. Opaque mutable
-defaults are rejected with `TypeError` instead of being retained inside the frozen schema.
+`to_dict()` is directly JSON-serializable. Every non-JSON-native default uses an
+unambiguous `{"$intpot": {"type": ...}}` envelope, preserving distinctions such as
+list versus tuple and bytes versus an ordinary dictionary. Enum and opaque defaults, as
+well as timezone-aware/folded temporal values, are rejected with `TypeError` because
+standalone generated code cannot preserve their semantics reliably.
 
 ## Conversion examples
 

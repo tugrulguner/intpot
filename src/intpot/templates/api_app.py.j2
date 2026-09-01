@@ -15,14 +15,14 @@ from typing import {{ typing_imports | join(", ") }}
     {%- endif %}
   {%- endfor %}
 {%- endfor %}
-from fastapi import FastAPI{% if ns.imports %}, {{ ns.imports | sort | join(", ") }}{% endif %}
+from fastapi import FastAPI as {{ "FastAPI" | fastapi_alias }}{% for imp in ns.imports | sort %}, {{ imp }} as {{ imp | fastapi_alias }}{% endfor %}
 {%- if extra_imports %}
 {% for imp in extra_imports %}
 {{ imp }}
 {%- endfor %}
 {%- endif %}
 
-app = FastAPI(title={{ app_name | repr }})
+app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {% for tool in tools %}
 
 
@@ -34,7 +34,7 @@ app = FastAPI(title={{ app_name | repr }})
 {%- if tool.parameters %}
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- set fa_type = param.param_source.fastapi_class if param.param_source else "Body" %}
+{%- set fa_type = (param.param_source.fastapi_class | fastapi_alias) if param.param_source else ("Body" | fastapi_alias) %}
 {%- if not param.required %} = {{ fa_type }}(default={{ param.default | source_default }}{% if param.description %}, description={{ param.description | repr }}{% endif %})
 {%- else %} = {{ fa_type }}(...{% if param.description %}, description={{ param.description | repr }}{% endif %})
 {%- endif %},

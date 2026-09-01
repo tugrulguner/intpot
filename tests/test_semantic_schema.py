@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 from collections import deque
 from dataclasses import FrozenInstanceError
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from enum import Enum
 from fractions import Fraction
@@ -194,9 +195,19 @@ def test_schema_detaches_and_freezes_mutable_parameter_defaults() -> None:
     second_compatibility_default = app.tools[0].parameters[0].default
 
     assert second_compatibility_default == [{"region": "eu"}]
-    assert app.schema.to_dict()["tools"][0]["parameters"][0]["default"] == [
-        {"region": "us"}
-    ]
+    assert app.schema.to_dict()["tools"][0]["parameters"][0]["default"] == {
+        "$intpot": {
+            "type": "list",
+            "items": [
+                {
+                    "$intpot": {
+                        "type": "dict",
+                        "items": [{"key": "region", "value": "us"}],
+                    }
+                }
+            ],
+        }
+    }
 
 
 def test_public_schema_constructors_freeze_nested_collections() -> None:
@@ -315,11 +326,13 @@ def test_schema_json_preserves_mixed_mapping_keys() -> None:
     encoded = json.loads(json.dumps(data))
 
     assert encoded == {
-        "type": "mapping",
-        "items": [
-            {"key": 1, "value": "integer"},
-            {"key": "1", "value": "string"},
-        ],
+        "$intpot": {
+            "type": "dict",
+            "items": [
+                {"key": 1, "value": "integer"},
+                {"key": "1", "value": "string"},
+            ],
+        }
     }
 
 
@@ -364,6 +377,26 @@ def test_runtime_tools_are_stable_before_and_after_schema_access() -> None:
     assert before.state == after.state == ["compatibility"]
 
 
+def test_runtime_tools_keep_uncloneable_opaque_defaults_available() -> None:
+    class SelfCopying:
+        def __deepcopy__(self, memo):
+            return self
+
+    lock = threading.Lock()
+    self_copying = SelfCopying()
+    app = intpot.App("opaque-compatibility")
+
+    @app.tool()
+    def use(lock_value=lock, self_copying_value=self_copying):
+        return lock_value, self_copying_value
+
+    defaults = [parameter.default for parameter in app.tools[0].parameters]
+
+    assert defaults == [lock, self_copying]
+    assert defaults[0] is lock
+    assert defaults[1] is self_copying
+
+
 def test_schema_json_strictly_normalizes_non_finite_numbers() -> None:
     from intpot import ParameterSchema
 
@@ -379,14 +412,92 @@ def test_schema_json_strictly_normalizes_non_finite_numbers() -> None:
     }
 
     json.dumps(normalized, allow_nan=False)
-    assert normalized["positive"] == {"type": "float", "value": "infinity"}
-    assert normalized["negative"] == {"type": "float", "value": "-infinity"}
-    assert normalized["nan"] == {"type": "float", "value": "nan"}
-    assert normalized["complex"] == {
-        "type": "complex",
-        "real": {"type": "float", "value": "infinity"},
-        "imag": {"type": "float", "value": "nan"},
+    assert normalized["positive"] == {"$intpot": {"type": "float", "value": "infinity"}}
+    assert normalized["negative"] == {
+        "$intpot": {"type": "float", "value": "-infinity"}
     }
+    assert normalized["nan"] == {"$intpot": {"type": "float", "value": "nan"}}
+    assert normalized["complex"] == {
+        "$intpot": {
+            "type": "complex",
+            "real": {"$intpot": {"type": "float", "value": "infinity"}},
+            "imag": {"$intpot": {"type": "float", "value": "nan"}},
+        }
+    }
+
+
+def test_schema_json_envelopes_preserve_source_types_without_tag_collisions() -> None:
+    from intpot import ParameterSchema
+
+    values = {
+        "list": [],
+        "tuple": (),
+        "bytes": b"abc",
+        "lookalike": {"type": "bytes", "base64": "YWJj"},
+    }
+    normalized = {
+        name: ParameterSchema(name, default=value).to_dict()["default"]
+        for name, value in values.items()
+    }
+
+    assert (
+        len({json.dumps(value, sort_keys=True) for value in normalized.values()}) == 4
+    )
+    assert normalized["list"]["$intpot"]["type"] == "list"
+    assert normalized["tuple"]["$intpot"]["type"] == "tuple"
+    assert normalized["bytes"]["$intpot"]["type"] == "bytes"
+    assert normalized["lookalike"]["$intpot"]["type"] == "dict"
+
+
+def test_frozen_mapping_retrieves_the_identical_nan_key() -> None:
+    from intpot import ParameterSchema
+
+    mapping = ParameterSchema("mapping", default={float("nan"): "value"}).default
+    key = next(iter(mapping))
+
+    assert mapping[key] == "value"
+    assert dict(mapping)[key] == "value"
+
+
+def test_schema_equality_preserves_multiple_distinct_nan_set_members() -> None:
+    from intpot import ParameterSchema
+
+    first_nan = float("nan")
+    second_nan = float("nan")
+    single = ParameterSchema("values", default={first_nan})
+    multiple = ParameterSchema("values", default={first_nan, second_nan})
+
+    assert len(single.default) == 1
+    assert len(multiple.default) == 2
+    assert single.to_dict() != multiple.to_dict()
+    assert single != multiple
+
+
+def test_schema_rejects_defaults_that_cannot_preserve_value_semantics() -> None:
+    from intpot import ParameterSchema
+
+    unsupported = (
+        datetime(2026, 11, 1, 1, 30, fold=1),
+        time(1, 30, fold=1),
+        datetime(2026, 1, 1, tzinfo=UTC),
+        time(1, 30, tzinfo=UTC),
+        Decimal("sNaN"),
+    )
+
+    for value in unsupported:
+        with pytest.raises(TypeError, match="cannot be preserved"):
+            ParameterSchema("value", default=value)
+
+
+def test_schema_equality_distinguishes_cross_type_equal_scalars() -> None:
+    from intpot import ParameterSchema
+
+    boolean = ParameterSchema("value", default=True)
+    integer = ParameterSchema("value", default=1)
+
+    assert boolean != integer
+    assert integer != boolean
+    assert hash(boolean) != hash(integer)
 
 
 def test_api_generation_avoids_path_default_import_collisions() -> None:
@@ -415,9 +526,120 @@ def test_api_generation_avoids_path_default_import_collisions() -> None:
     module = ModuleType("generated_path_defaults")
     exec(compile(code, "generated_path_defaults.py", "exec"), module.__dict__)
 
-    assert "from fastapi import FastAPI, Body, Path" in code
-    assert "import pathlib" in code
-    assert "pathlib.Path('result.txt')" in code
+    assert (
+        "from fastapi import FastAPI as _intpot_fastapi_FastAPI, "
+        "Body as _intpot_fastapi_Body, Path as _intpot_fastapi_Path"
+    ) in code
+    assert "import pathlib as _intpot_defaults_pathlib" in code
+    assert "_intpot_defaults_pathlib.Path('result.txt')" in code
+
+
+def test_api_generation_isolated_fastapi_path_from_preserved_source_imports() -> None:
+    from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
+
+    schema = ApplicationSchema(
+        name="paths",
+        source_type=SourceType.PYTHON,
+        tools=(
+            ToolSchema(
+                name="read",
+                parameters=(
+                    ParameterSchema(
+                        "item_id", type_annotation="str", param_source=ParamSource.path
+                    ),
+                    ParameterSchema(
+                        "output", type_annotation="Path", default=Path("result.txt")
+                    ),
+                ),
+                route_path="/items/{item_id}",
+                source_imports=("from pathlib import Path",),
+            ),
+        ),
+    )
+
+    code = APIGenerator().generate(schema)
+    module = ModuleType("generated_preserved_path")
+    exec(compile(code, "generated_preserved_path.py", "exec"), module.__dict__)
+
+    assert "Path as _intpot_fastapi_Path" in code
+
+
+@pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
+def test_compatibility_tool_inputs_render_structured_defaults(generator) -> None:
+    from intpot.core.models import ParameterInfo, ToolInfo
+
+    tool = ToolInfo(
+        name="show",
+        parameters=[
+            ParameterInfo(
+                "values", type_annotation="object", default=deque([Path("value.txt")])
+            )
+        ],
+    )
+
+    code = generator.generate([tool])
+    module = ModuleType("generated_compatibility_defaults")
+    exec(compile(code, "generated_compatibility_defaults.py", "exec"), module.__dict__)
+
+
+@pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
+def test_default_helpers_cannot_be_shadowed_by_generated_tool_names(generator) -> None:
+    from intpot import ApplicationSchema, ParameterSchema, SourceType, ToolSchema
+
+    helper_names = (
+        "datetime",
+        "date",
+        "time",
+        "timedelta",
+        "Decimal",
+        "Fraction",
+        "UUID",
+        "deque",
+        "pathlib",
+        "_intpot_defaults_collections",
+        "_intpot_defaults_datetime",
+        "_intpot_defaults_decimal",
+        "_intpot_defaults_fractions",
+        "_intpot_defaults_pathlib",
+        "_intpot_defaults_uuid",
+        "_intpot_fastapi_Body",
+        "_intpot_fastapi_Path",
+    )
+    defaults = (
+        datetime(2026, 1, 1),
+        date(2026, 1, 1),
+        time(1, 2),
+        timedelta(seconds=1),
+        Decimal("1.5"),
+        Fraction(1, 2),
+        UUID("12345678-1234-5678-1234-567812345678"),
+        deque([1]),
+        Path("value.txt"),
+    )
+    schema = ApplicationSchema(
+        name="helper-collisions",
+        source_type=SourceType.PYTHON,
+        tools=(
+            *(ToolSchema(name=name) for name in helper_names),
+            ToolSchema(
+                name="preserved_alias",
+                source_imports=("import math as _intpot_defaults_datetime",),
+            ),
+            ToolSchema(
+                name="show",
+                parameters=tuple(
+                    ParameterSchema(
+                        f"value_{index}", type_annotation="object", default=value
+                    )
+                    for index, value in enumerate(defaults)
+                ),
+            ),
+        ),
+    )
+
+    code = generator.generate(schema)
+    module = ModuleType("generated_helper_collisions")
+    exec(compile(code, "generated_helper_collisions.py", "exec"), module.__dict__)
 
 
 @pytest.mark.parametrize("generator", [CLIGenerator(), APIGenerator(), MCPGenerator()])
@@ -498,14 +720,15 @@ def test_schema_to_dict_normalizes_supported_non_json_defaults() -> None:
     }
 
     json.dumps(data)
-    assert defaults["tags"] == {"type": "set", "items": ["a", "b"]}
-    assert defaults["path"] == {"type": "path", "value": "/tmp/value"}
-
-    assert defaults["blob"] == {"type": "bytes", "base64": "YWJj"}
+    assert defaults["tags"] == {"$intpot": {"type": "set", "items": ["a", "b"]}}
+    assert defaults["path"] == {"$intpot": {"type": "path", "value": "/tmp/value"}}
+    assert defaults["blob"] == {"$intpot": {"type": "bytes", "base64": "YWJj"}}
     assert defaults["queue"] == {
-        "type": "deque",
-        "items": [1, 2],
-        "maxlen": 3,
+        "$intpot": {
+            "type": "deque",
+            "items": [1, 2],
+            "maxlen": 3,
+        }
     }
 
 

@@ -92,7 +92,48 @@ _FRAMEWORK_IMPORT_MARKERS = {
 }
 
 
-def _collect_extra_imports(tools: Sequence[RenderableTool]) -> list[str]:
+def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
+    """Choose deterministic helper aliases that cannot collide with source globals."""
+    occupied = {tool.name for tool in tools}
+    for tool in tools:
+        for source_import in tool.source_imports:
+            occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
+
+    def unique(base: str) -> str:
+        candidate = base
+        while candidate in occupied:
+            candidate += "_"
+        occupied.add(candidate)
+        return candidate
+
+    aliases = {
+        module: unique(f"_intpot_defaults_{module}")
+        for module in (
+            "collections",
+            "datetime",
+            "decimal",
+            "fractions",
+            "pathlib",
+            "uuid",
+        )
+    }
+    for name in (
+        "Body",
+        "Cookie",
+        "FastAPI",
+        "File",
+        "Form",
+        "Header",
+        "Path",
+        "Query",
+    ):
+        aliases[f"fastapi:{name}"] = unique(f"_intpot_fastapi_{name}")
+    return aliases
+
+
+def _collect_extra_imports(
+    tools: Sequence[RenderableTool], aliases: dict[str, str]
+) -> list[str]:
     """Gather source_imports from all tools, dedupe, and filter framework imports."""
     seen: set[str] = set()
     result: list[str] = []
@@ -107,7 +148,7 @@ def _collect_extra_imports(tools: Sequence[RenderableTool]) -> list[str]:
         for parameter in tool.parameters:
             if parameter.required:
                 continue
-            for imp in sorted(_default_imports(parameter.default)):
+            for imp in sorted(_default_imports(parameter.default, aliases)):
                 if imp not in seen:
                     seen.add(imp)
                     result.append(imp)
@@ -131,23 +172,31 @@ def _normalize_blank_lines(code: str) -> str:
 
 
 def render_template(template_name: str, **kwargs: object) -> str:
+    tools: Sequence[RenderableTool] | None = None
+    aliases: dict[str, str] = {}
+    candidate_tools = kwargs.get("tools")
+    if isinstance(candidate_tools, Sequence) and not isinstance(
+        candidate_tools, (str, bytes)
+    ):
+        tools = candidate_tools
+        aliases = _private_aliases(tools)
+
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
         keep_trailing_newline=True,
     )
     env.filters["repr"] = repr
-    env.filters["source_default"] = _source_default
+    env.filters["source_default"] = lambda value: _source_default(value, aliases)
+    env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
     template = env.get_template(template_name)
 
     # Auto-extract typing imports and extra imports if tools are provided
-    if "tools" in kwargs:
-        tools = kwargs["tools"]
-        if isinstance(tools, Sequence) and not isinstance(tools, (str, bytes)):
-            if "typing_imports" not in kwargs:
-                kwargs = dict(kwargs, typing_imports=_extract_typing_imports(tools))
-            if "extra_imports" not in kwargs:
-                kwargs = dict(kwargs, extra_imports=_collect_extra_imports(tools))
+    if tools is not None:
+        if "typing_imports" not in kwargs:
+            kwargs = dict(kwargs, typing_imports=_extract_typing_imports(tools))
+        if "extra_imports" not in kwargs:
+            kwargs = dict(kwargs, extra_imports=_collect_extra_imports(tools, aliases))
 
     return _normalize_blank_lines(template.render(**kwargs))

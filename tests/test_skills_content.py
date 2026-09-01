@@ -59,6 +59,14 @@ def test_python_skill_covers_the_canonical_application_schema():
     assert "immutable" in text.lower()
 
 
+def test_python_skill_documents_default_value_limits_honestly():
+    text = python_skill_body().lower()
+
+    assert "enum" in text and "rejected" in text
+    assert "timezone" in text and "fold" in text
+    assert "opaque defaults" in text and "by identity" in text
+
+
 def test_skills_cover_every_cli_command():
     text = _all_skill_text()
 

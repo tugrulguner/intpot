@@ -33,6 +33,39 @@ class RegisteredTool:
     info: ToolInfo
 
 
+def _copy_compatibility_default(value: Any) -> Any:
+    """Copy a default when possible, retaining opaque identity when it is not."""
+    try:
+        return copy.deepcopy(value)
+    except Exception:
+        return value
+
+
+def _copy_tool_info(info: ToolInfo) -> ToolInfo:
+    """Detach compatibility metadata without rejecting opaque parameter defaults."""
+    return ToolInfo(
+        name=info.name,
+        description=info.description,
+        parameters=[
+            ParameterInfo(
+                name=parameter.name,
+                type_annotation=parameter.type_annotation,
+                default=_copy_compatibility_default(parameter.default),
+                description=parameter.description,
+                param_source=parameter.param_source,
+            )
+            for parameter in info.parameters
+        ],
+        return_type=info.return_type,
+        http_method=info.http_method,
+        function_body=info.function_body,
+        is_async=info.is_async,
+        route_path=info.route_path,
+        dependencies=list(info.dependencies),
+        source_imports=list(info.source_imports),
+    )
+
+
 class App:
     """Universal app: register tools once, serve as CLI, API, or MCP.
 
@@ -102,8 +135,11 @@ class App:
 
     @property
     def tools(self) -> list[ToolInfo]:
-        """Return detached compatibility models without requiring schema support."""
-        return [copy.deepcopy(tool.info) for tool in self._tools]
+        """Return copied compatibility metadata without requiring schema support.
+
+        Opaque defaults that cannot be copied remain available by identity.
+        """
+        return [_copy_tool_info(tool.info) for tool in self._tools]
 
     def eject(self, target: str) -> str:
         """Generate standalone code for the given target framework.

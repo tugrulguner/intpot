@@ -122,8 +122,9 @@ Both `intpot.App` and `IntpotApp` expose `.schema`, an immutable
 `ApplicationSchema`. It contains immutable `ToolSchema` and `ParameterSchema` records;
 `.project("cli" | "mcp" | "api")` returns the exact target semantics used for
 generation without mutating the source snapshot. `.to_dict()` provides a sentinel-free,
-JSON-compatible representation for inspection. Supported non-JSON defaults use tagged
-dictionaries; opaque mutable defaults are rejected rather than exposed through the frozen
+JSON-compatible representation for inspection. Non-JSON-native defaults use unambiguous
+`{"$intpot": {"type": ...}}` envelopes. Enum and opaque defaults, plus temporal defaults
+with timezone or `fold` semantics, are rejected rather than exposed through the frozen
 schema.
 
 ```python
@@ -137,8 +138,10 @@ for tool in schema.tools:
         print(param.name, param.type_annotation, param.required)
 ```
 
-`.tools` remains available for compatibility and returns detached mutable `ToolInfo`
-objects. Mutating those objects does not change `.schema` or later generated code.
+`.tools` remains available for compatibility and returns copied mutable `ToolInfo`
+metadata. Copyable defaults are detached; opaque defaults that Python cannot copy remain
+available by identity, so mutating such a default can mutate runtime state. Canonical
+generation still rejects those opaque values through `.schema`.
 
 ```python
 for tool in app.tools:
