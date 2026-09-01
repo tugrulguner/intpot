@@ -10,6 +10,18 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.8.0] - 2026-09-01
+
+### Added
+
+- Intpot now compiles runtime and converted applications into an immutable, inspectable `ApplicationSchema` with target projections shared by generation, with a runnable canonical-schema example.
+
+### Changed
+
+- Canonical schemas now reject enum, opaque, timezone-aware/folded temporal, and Decimal NaN defaults that standalone code or stable hashing cannot preserve; render supported structured defaults through private collision-resistant imports; distinguish source types in equality and strict JSON using an unambiguous ``$intpot`` envelope; and keep copied ``App.tools`` compatibility metadata available while retaining identity for opaque defaults Python cannot copy.
+- The README now visualizes how Intpot connects one normalized schema to live and generated interfaces and links the shared ModePot Discord community.
+
+
 ## [0.7.2] - 2026-08-28
 
 ### Changed

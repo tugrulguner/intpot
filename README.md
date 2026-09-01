@@ -362,7 +362,9 @@ The repository includes checked-in source and generated output for every directi
 [`examples/`](examples/) also contains advanced inputs with direct imports, async tools,
 request bodies, `Depends()`, and path parameters. The FastAPI dependency example remains
 inspectable, but API-to-CLI/MCP conversion intentionally refuses it until issue #20 is
-implemented. The FastAPI input also includes routes with multiple HTTP methods.
+implemented. The FastAPI input also includes routes with multiple HTTP methods. See
+[`semantic_schema.py`](examples/semantic_schema.py) for a runnable canonical-schema
+inspection example.
 
 ## CLI Reference
 
