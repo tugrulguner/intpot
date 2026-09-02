@@ -3,6 +3,7 @@
 
 import json
 
+from typing import Optional
 from fastmcp import FastMCP
 
 mcp = FastMCP('advanced_api')
@@ -31,8 +32,8 @@ def get_user(
 @mcp.tool()
 def update_user(
     user_id: str,
-    email: str | None = None,
-    role: str | None = None,
+    email: Optional[str] = None,
+    role: Optional[str] = None,
 ) -> dict:
     """Update user fields."""
 

@@ -3,6 +3,7 @@
 
 import json
 
+from typing import Optional
 import typer
 
 app = typer.Typer(name='advanced_api')
@@ -48,8 +49,8 @@ def get_user(
 
 def _update_user_impl(
     user_id: str,
-    email: str | None,
-    role: str | None,
+    email: Optional[str],
+    role: Optional[str],
 ) -> None:
     """Update user fields."""
     changes = {}
@@ -63,8 +64,8 @@ def _update_user_impl(
 @app.command()
 def update_user(
     user_id: str = typer.Argument(..., help='Path parameter from /users/{user_id}'),
-    email: str | None = typer.Option(None, help='New email address'),
-    role: str | None = typer.Option(None, help='New role'),
+    email: Optional[str] = typer.Option(None, help='New email address'),
+    role: Optional[str] = typer.Option(None, help='New role'),
 ) -> None:
     """Update user fields."""
     result = _update_user_impl(user_id, email, role)
