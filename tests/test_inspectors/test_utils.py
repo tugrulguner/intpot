@@ -8,7 +8,7 @@ delete the thing being tested.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from typer.testing import CliRunner
 
@@ -16,6 +16,7 @@ from intpot.core.generators.cli import CLIGenerator
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
+    python_type_name,
 )
 from intpot.core.models import SourceType
 from intpot.core.transforms import transform_tools
@@ -29,6 +30,29 @@ def _load(path: Path, name: str) -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return getattr(module, name)
+
+
+def test_equivalent_optional_annotations_have_one_canonical_name() -> None:
+    assert python_type_name(Optional[str]) == "Optional[str]"  # noqa: UP045
+    assert python_type_name(str | None) == "Optional[str]"
+
+
+def test_nullable_multi_member_union_uses_executable_none_annotation() -> None:
+    annotation = python_type_name(int | str | None)
+    namespace: dict[str, Any] = {}
+
+    exec(
+        f"from typing import Union\n\ndef probe(value: {annotation}):\n    return value",
+        namespace,
+    )
+
+    assert annotation == "Union[int, str, None]"
+    assert namespace["probe"](None) is None
+
+
+def test_nested_optional_annotations_have_one_canonical_name() -> None:
+    assert python_type_name(list[Optional[str]]) == "list[Optional[str]]"  # noqa: UP045
+    assert python_type_name(list[str | None]) == "list[Optional[str]]"
 
 
 def test_body_on_the_signature_line_excludes_the_signature(tmp_source):

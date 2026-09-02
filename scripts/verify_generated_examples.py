@@ -61,10 +61,28 @@ def verify_dependency_api() -> None:
     print("verified dependency FastAPI route")
 
 
+def verify_semantic_schema() -> None:
+    module = _load_module(
+        "intpot_semantic_schema",
+        ROOT / "examples" / "semantic_schema.py",
+    )
+    schema = module.app.schema
+    payload = schema.to_dict()
+    assert payload["name"] == "schema-example"
+    assert payload["source_type"] == "python"
+    assert [tool["name"] for tool in payload["tools"]] == ["greet"]
+    assert [parameter["name"] for parameter in payload["tools"][0]["parameters"]] == [
+        "name",
+        "excited",
+    ]
+    print("verified semantic schema example")
+
+
 def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
     verify_dependency_api()
+    verify_semantic_schema()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "intpot"
-version = "0.7.2"
+version = "0.8.0"
 description = "Define Python tools once and serve them as a Typer CLI, FastAPI app, or FastMCP server — or convert existing apps between all three"
 readme = "README.md"
 license = "MIT"
@@ -93,7 +93,12 @@ testpaths = ["tests"]
 [tool.pyright]
 pythonVersion = "3.11"
 typeCheckingMode = "standard"
-include = ["src", "tests"]
+include = [
+    "src",
+    "tests",
+    "examples/semantic_schema.py",
+    "scripts/verify_generated_examples.py",
+]
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
