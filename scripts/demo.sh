@@ -37,6 +37,9 @@ run() {
 
     if $SAVE && [[ -n "$outfile" ]]; then
         eval "$cmd" 2>/dev/null | tee "$outfile"
+        uv run --no-sync python -c \
+            'import sys; from pathlib import Path; path = Path(sys.argv[1]); path.write_text(path.read_text().rstrip("\n") + "\n")' \
+            "$outfile"
         echo -e "${CYAN}  → saved to $outfile${RESET}"
     else
         eval "$cmd" 2>/dev/null
