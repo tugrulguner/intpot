@@ -213,15 +213,27 @@ class IntpotApp:
 
         return APIGenerator().generate(self.project(SourceType.API))
 
-    def write(self, path: str | Path, target: str | SourceType) -> Path:
+    def write(
+        self,
+        path: str | Path,
+        target: str | SourceType,
+        *,
+        encoding: str = "utf-8",
+        overwrite: bool = True,
+    ) -> Path:
         """Generate code and write it to a file.
 
         Args:
             path: Output file path.
             target: Target framework — "cli", "mcp", "api" or a SourceType enum.
+            encoding: Text encoding used for the generated source file.
+            overwrite: Whether an existing output file may be replaced.
 
         Returns:
             The resolved Path that was written.
+
+        Raises:
+            FileExistsError: If ``overwrite`` is false and the output exists.
         """
         # Accept both strings and SourceType enum
         if isinstance(target, SourceType):
@@ -230,10 +242,12 @@ class IntpotApp:
         generators = {"cli": self.to_cli, "mcp": self.to_mcp, "api": self.to_api}
         if target not in generators:
             raise ValueError(f"Unknown target '{target}', expected: cli, mcp, api")
-        code = generators[target]()
         out = Path(path)
+        if out.exists() and not overwrite:
+            raise FileExistsError(f"Output file already exists: {out}")
+        code = generators[target]()
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(code)
+        out.write_text(code, encoding=encoding)
         return out.resolve()
 
 
