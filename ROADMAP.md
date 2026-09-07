@@ -1,12 +1,39 @@
 # Roadmap
 
-## Direction
+## Ambition — The leading framework for tool and application conversion
+
+Our ambition is to make intpot the world's leading Python framework for defining tools
+and converting applications across CLI, HTTP API, and MCP interfaces. Start with typed
+functions, grow to realistic multi-module applications, and give people and coding agents
+one predictable way to build, inspect, adapt, and own those interfaces.
+
+Robustness is how we earn that position, not a ceiling on what we build. We aim to expand
+conversion coverage substantially while preserving behavior where possible and explaining
+adaptations or required intervention where frameworks differ. A successful conversion
+should mean more than syntactically valid output.
 
 Define typed Python tools once, serve them as CLI, API, or MCP interfaces, and generate
 ordinary framework code that users can inspect and own. Keep the public entry points
 small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_api()/to_mcp()`.
 
-The next milestone is confidence in the supported subset, not broader conversion claims:
+### What leadership should mean
+
+- **Broad practical coverage:** real applications with rich types, validation, command
+  hierarchies, multi-module dependencies, and lifecycle-sensitive behavior—not just demos.
+- **Predictable conversion:** inspectable plans and diagnostics distinguish preserved
+  behavior, explicit adaptations, and work requiring user intervention.
+- **Verified fidelity:** runnable real-world examples and behavioral compatibility tests
+  demonstrate what survives conversion across supported frameworks and versions.
+- **Simple adoption:** small public APIs, useful agent skills, actionable errors, and
+  readable generated code without an intpot runtime dependency.
+- **An extensible ecosystem:** once the contracts are stable, documented backend extension
+  points let contributors broaden framework and protocol coverage without duplicating the core.
+- **Performance at application scale:** measure and improve loading, inspection, projection,
+  and generation on representative projects without sacrificing correctness.
+
+### The next milestone
+
+Build confidence in the current supported subset as the foundation for wider coverage:
 
 - supported conversions preserve behavior;
 - unsupported or lossy cases explain what cannot be preserved;
@@ -125,10 +152,12 @@ There are no speedup commitments yet. Avoid persistent caches, parallel conversi
 extensions, or new performance dependencies until representative measurements justify them.
 Low-risk removal of redundant work can accompany earlier correctness changes when tested.
 
-## Later — Bounded deeper transformations
+## Future goals — Rich applications and deeper transformations
 
-These are research directions, not a promise of universal equivalence between frameworks.
-Each requires an explicit semantic contract and independent acceptance criteria.
+These remain strategic goals, not discarded features. Their scope and implementation need
+research; delivery should proceed in independently useful increments with explicit semantic
+contracts and acceptance criteria. We aim for broad real-world coverage, not an impossible
+promise of universal equivalence between frameworks.
 
 - **Dependency injection mapping** ([#20](https://github.com/tugrulguner/intpot/issues/20)):
   preserve applicable dependency ordering, caching, security, exception propagation, and
@@ -146,9 +175,20 @@ Each requires an explicit semantic contract and independent acceptance criteria.
   defer until interface parity is established; specify transports, startup, shutdown,
   cancellation, and CLI interaction before adding `serve --all`.
 
-## Boundaries
+- **Backend ecosystem:** stabilize inspector, projection, and generator contracts, then
+  document extension points and a backend conformance suite. Add frameworks and protocols
+  where concrete use cases justify them; new backends must explain their fidelity limits.
+- **Specification-driven workflows** ([#22](https://github.com/tugrulguner/intpot/issues/22),
+  [#43](https://github.com/tugrulguner/intpot/issues/43)): support useful OpenAPI import/export
+  paths while distinguishing interface descriptions from recoverable implementation behavior.
 
-- Keep Typer, FastAPI, and FastMCP as the supported framework focus.
+## Current focus and enduring guarantees
+
+Typer, FastAPI, and FastMCP are the current delivery focus, not a permanent ceiling.
+Backend extensibility follows stable contracts and demonstrated demand; do not build a
+plugin platform merely to organize the current three implementations.
+
+The guarantees below remain important as coverage grows:
 - Keep generated output ordinary Python with no intpot runtime dependency; other application
   dependencies may still be required.
 - Do not add a runtime bridge for adapting arbitrary existing framework applications.
@@ -159,8 +199,8 @@ Each requires an explicit semantic contract and independent acceptance criteria.
   consistent CLI/API/MCP representation. Prefer explicit named parameters.
 - Preserve the trusted-source boundary: detection imports code; inspection and dry-run
   conversion are not sandboxes.
-- Do not introduce a plugin system or another generalized intermediate representation just
-  to support the current three backends.
+- Keep the core small as backends expand: share stable semantics rather than adding a
+  second generalized intermediate representation or duplicating conversion policy.
 
 Linked items have existing issue discussions; unlinked items are directional work, not
 implementation commitments. Check current issues and open work before starting a scoped
