@@ -1,105 +1,167 @@
 # Roadmap
 
-## v0.8 (current) — One Semantic Contract, Every Interface
+## Direction
 
-Define tools once with `@app.tool()` and serve them as a CLI, API, or MCP server, or
-eject them to standalone framework code. The converter handles all six directions between
-existing Typer, FastMCP, and FastAPI apps. Every live and generated interface now derives
-from the same immutable application schema, so callers can inspect target semantics before
-generation instead of treating conversion as a black box.
+Define typed Python tools once, serve them as CLI, API, or MCP interfaces, and generate
+ordinary framework code that users can inspect and own. Keep the public entry points
+small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_api()/to_mcp()`.
 
-### Conversion correctness
+The next milestone is confidence in the supported subset, not broader conversion claims:
 
-- [ ] Carry the complete dependency closure within one source module: referenced helper
-      functions, constants, classes, models, defaults, decorators, annotations, and base
-      classes. This stops generated tools raising `NameError` without following imports
-      into other modules.
-- [ ] Preserve repeatable Typer/Click options and collection cardinality when converting
-      to API or MCP schemas.
-- [ ] Support package and sibling imports when detecting a source file directly. Detection
-      currently imports by file path without adding the source directory to `sys.path`.
-- [ ] Detect apps created by factories such as `app = create_app()` without broadening
-      directory discovery into importing every Python file.
-- [ ] Define and preserve multi-method FastAPI route semantics. `ToolInfo` currently stores
-      one HTTP method, so a route registered for several methods is lossy.
+- supported conversions preserve behavior;
+- unsupported or lossy cases explain what cannot be preserved;
+- live and generated interfaces agree on their shared interface semantics;
+- documentation and shipped agent skills describe executable behavior.
 
-### Framework polish
+The phases below express priority, not promised release dates. Correctness and contract
+consolidation come before deeper transformations or performance infrastructure.
 
-- [ ] Handle `Annotated[str, Body(...)]` style FastAPI parameters ([#1](https://github.com/tugrulguner/intpot/issues/1))
-- [ ] Emit nested command hierarchies. Reading them works; see "Already shipped". What's
-      missing is the other direction — generating a Typer sub-app rather than a flat
-      command ([#2](https://github.com/tugrulguner/intpot/issues/2))
-- [ ] Preserve parameter descriptions through all conversion directions ([#3](https://github.com/tugrulguner/intpot/issues/3), [#9](https://github.com/tugrulguner/intpot/issues/9))
-- [ ] `--all` mode for `intpot serve` — serve CLI, API, and MCP simultaneously ([#32](https://github.com/tugrulguner/intpot/issues/32))
+## v0.8 — Current foundation
 
-## Already shipped
+- **One definition, three live interfaces:** registered Python functions can run through
+  Typer, FastAPI, or FastMCP, or be ejected as framework source.
+- **Six conversion directions:** existing Typer, FastAPI, and FastMCP applications can be
+  inspected and converted within the documented supported subset.
+- **Immutable conversion schema:** `ApplicationSchema`, `ToolSchema`, and `ParameterSchema`
+  support inspection and generation; `ToolInfo` compatibility views remain available.
+- **Target projections:** conversion exposes intermediate target projections before
+  rendering. Some effective parameter defaults are still decided by templates.
+- **Strict schema serialization:** supported non-JSON defaults use tagged `$intpot`
+  envelopes; executable default rendering preserves supported value semantics.
+- **Basic body transforms:** supported CLI output and return conventions are translated;
+  FastAPI response annotations account for value, `None`, and fallthrough outcomes.
+- **Explicit dependency refusal:** inspection records FastAPI dependencies, but conversion
+  to CLI/MCP rejects unsupported dependency semantics rather than silently dropping them.
+- **Practical tooling:** recursive Typer command inspection, direct import extraction,
+  collision-safe directory output, actionable source failures, scaffolding, and agent skills.
+- **Verification:** generated-artifact execution tests, conversion snapshot drift tests,
+  and a Python 3.11–3.14 compatibility matrix.
 
-These were listed as v2 goals when this roadmap was first written, and landed earlier
-than planned:
+Live serving currently uses registered callables and compatibility metadata; it does not
+consume the immutable schema in the same way as generation. Completing shared interface
+semantics is planned below. Live execution and standalone export also have deliberately
+different capabilities: a callable may depend on runtime values that cannot be exported.
 
-- **Canonical semantic schema** — immutable application, tool, and parameter records are
-  shared by live apps and every generator, with detached compatibility views for existing
-  callers.
-- **Target projections** — CLI, FastAPI, and FastMCP parameter semantics can be inspected
-  before code generation.
-- **Strict schema serialization** — supported non-JSON defaults use unambiguous `$intpot`
-  envelopes and generated source preserves their executable value semantics.
-- **Basic body transforms** — `typer.echo(x)` becomes `return x` on the way to MCP/API
-  and back again, and `raise typer.Exit(code)` becomes `raise RuntimeError(...)`. See
-  `core/transforms.py`.
-- **Return-type coercion for FastAPI** — a scalar return is wrapped as
-  `{"result": ...}` so the generated handler matches the response model FastAPI validates
-  against. The annotation is derived from every reachable outcome of the body, not from
-  whether a `return` appears somewhere: a function that returns on one branch and falls
-  through on another is annotated `dict | None`, because FastAPI rejects the response
-  otherwise.
-- **Reading nested command hierarchies** — `app.add_typer(db, name="db")` is walked to any
-  depth and each command extracted, named by its path: `db migrate` becomes `db_migrate`.
-  Generating a nested hierarchy back out is still open (#2).
-- **Round-trip fidelity tests** — `tests/test_roundtrip.py` covers all three pairings.
-- **Direct import resolution** — imports referenced by a function body are carried into
-  the generated file, including dotted and mixed import statements. Same-module
-  declarations and dependencies across imported modules are not yet followed.
-- **Collision-safe directory output** — directory conversion mirrors the source tree, so
-  files with the same basename in separate packages cannot overwrite each other.
-- **Actionable source failures** — import errors, syntax errors, and import-time
-  `sys.exit()` calls are reported without a traceback. Directory scans report a bad file,
-  continue, and convert the remaining apps.
+## Phase 1 — Correctness and honest documentation
 
-## v2 — Full AST Transform Pipeline
+- [ ] Preserve control flow in API/MCP-to-CLI conversion, including early returns, loop
+      returns, and unreachable side effects. Prefer retaining implementation returns and
+      letting the existing outer CLI wrapper print results over rewriting returns to echo.
+- [ ] Replace substring-based import filtering with structural binding analysis. Remove
+      imports only when their uses have actually been removed or translated.
+- [ ] Add behavioral live-versus-ejected tests for parameter placement, defaults, response
+      shapes, async behavior, errors, and naming—not only route/schema presence.
+- [ ] Align the README, architecture illustrations, cookbook, and shipped skills with the
+      implementation. Distinguish `App` from `IntpotApp`, including `.project()` and `.tools`
+      behavior; keep public-command guidance in parity ([#121](https://github.com/tugrulguner/intpot/issues/121)).
+- [ ] Execute cookbook and shipped-skill examples, including single-tool CLI applications,
+      so prose and expected output cannot drift independently of tests.
+- [ ] Keep contributor guidance accurate and agent installation predictable
+      ([#123](https://github.com/tugrulguner/intpot/issues/123),
+      [#122](https://github.com/tugrulguner/intpot/issues/122)).
 
-v2 goes past the signature-level and single-call rewrites that exist today, into
-transformations that need real understanding of what a function body does.
+Acceptance: the original failure cases have generated-consumer regressions, documented
+examples execute, and the supported Python/framework matrix remains green. Source-level
+audit findings must be reproduced before treating their fixes as verified.
 
-### Planned
+## Phase 2 — Complete the shared interface contract
 
-- **Deep body transforms** ([#19](https://github.com/tugrulguner/intpot/issues/19)) —
-  beyond the `typer.echo`/`typer.Exit` pairs already handled: request/response pattern
-  adaptation, framework-specific context objects, streaming and background-task idioms
-- **Dependency injection mapping** ([#20](https://github.com/tugrulguner/intpot/issues/20)) —
-  FastAPI dependencies are currently represented during inspection but refused for
-  CLI/MCP conversion; v2 should convert them into the target's equivalent, such as a
-  context manager or setup/teardown
-- **Pydantic model parameters** ([#17](https://github.com/tugrulguner/intpot/issues/17)) —
-  expand a model argument into individual CLI/MCP parameters instead of treating it as one
-  opaque value
-- **Cross-module dependency resolution** — after same-module dependency closure is
-  reliable, follow dependencies through imported project modules and packages
-- **Full error-handling conversion** — Typer exits are mapped today; HTTP exceptions and
-  MCP error patterns are not
+- [ ] Centralize target decisions for names, parameter placement, required/default rules,
+      descriptions, and response policy. Projections should expose those decisions rather
+      than leave hidden defaults to templates.
+- [ ] Reuse shared interface decisions in live builders and source renderers while keeping
+      callable bindings separate from recovered source. Do not make live serving depend
+      on every value being serializable or exportable.
+- [ ] Transform immutable schema records directly and share unchanged parameters. Keep
+      mutable `ToolInfo` adaptation at compatibility boundaries rather than repeatedly
+      thawing, deep-copying, and refreezing records during projection.
+- [ ] Isolate existing default-value freezing, serialization, identity, and source-rendering
+      behavior behind a small private module. Preserve supported values and regression
+      coverage; do not replace these contracts with generic `repr()` or JSON conversion.
+- [ ] Expose structured conversion diagnostics: preserved, adapted, unsupported, and
+      requiring manual implementation. Diagnose unresolved symbols and missing bodies
+      instead of letting generated source appear complete without qualification.
 
-### Non-goals for v2
+Acceptance: shared behavior is defined once, projections explain the emitted interface,
+and compatibility APIs retain their documented behavior. No generated-code execution is
+introduced as a prerequisite for live serving.
 
-- Runtime interop / adapter layer (intpot is a code generator, not a runtime bridge)
-- Supporting frameworks beyond Typer, FastMCP, and FastAPI
-- **Variadic tool signatures.** `*args` and `**kwargs` have no representation that means
-  the same thing as a CLI argument, an HTTP request body, and an MCP tool schema, so
-  `@app.tool()` rejects them outright rather than guessing. Use explicit named parameters.
+## Phase 3 — Practical conversion coverage
 
----
+- [ ] Carry a bounded dependency closure within one source module: referenced helper
+      functions, constants, classes, models, defaults, annotations, decorators, and base
+      classes. Start with explicitly supported cases; diagnose dynamic or ambiguous cases
+      rather than promise arbitrary Python recovery.
+- [ ] Preserve parameter descriptions and supported `Annotated` metadata across targets
+      ([#1](https://github.com/tugrulguner/intpot/issues/1),
+      [#3](https://github.com/tugrulguner/intpot/issues/3),
+      [#9](https://github.com/tugrulguner/intpot/issues/9),
+      [#38](https://github.com/tugrulguner/intpot/issues/38)).
+- [ ] Preserve repeatable Typer/Click options and collection cardinality in target schemas.
+- [ ] Support package and sibling imports with explicit loading semantics. Direct file
+      loading currently does not add the source directory to `sys.path`.
+- [ ] Support explicit app selection and bounded factory loading without making directory
+      discovery import every Python file.
+- [ ] Define multi-method FastAPI route semantics instead of reducing them to one method.
+- [ ] Generate nested command hierarchies ([#2](https://github.com/tugrulguner/intpot/issues/2)).
+      Recursive inspection already works; hierarchy generation remains separate work.
+- [ ] Add realistic runnable examples demonstrating these capabilities and their refusal
+      paths ([#5](https://github.com/tugrulguner/intpot/issues/5)).
 
-Linked items above are tracked as issues; unlinked items are directional roadmap work and
-should get a focused issue before implementation. If something here interests you,
-[CONTRIBUTING.md](CONTRIBUTING.md) has the setup and
-[good first issues](https://github.com/tugrulguner/intpot/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-are a gentler place to start.
+Acceptance: each new capability includes a supported-case example, an unsupported-case
+policy, and execution through the generated target—not merely a matching source string.
+
+## Phase 4 — Profile, then optimize
+
+- [ ] Establish reproducible benchmarks separating cold startup, inspection, projection,
+      and rendering for small and larger applications. Record Python and dependency versions.
+- [ ] Measure the benefit of immutable structural sharing during projection.
+- [ ] Reuse function analysis and a module/import index within one inspection operation
+      instead of reparsing the same module for each tool.
+- [ ] Evaluate compiled-template reuse while preserving per-render alias isolation and
+      concurrency safety.
+
+There are no speedup commitments yet. Avoid persistent caches, parallel conversion, native
+extensions, or new performance dependencies until representative measurements justify them.
+Low-risk removal of redundant work can accompany earlier correctness changes when tested.
+
+## Later — Bounded deeper transformations
+
+These are research directions, not a promise of universal equivalence between frameworks.
+Each requires an explicit semantic contract and independent acceptance criteria.
+
+- **Dependency injection mapping** ([#20](https://github.com/tugrulguner/intpot/issues/20)):
+  preserve applicable dependency ordering, caching, security, exception propagation, and
+  cleanup lifetime. Replacing `Depends()` with a context manager alone is not equivalence.
+  Keep unsupported conversions rejected until a particular subset is proven.
+- **Pydantic model parameters** ([#17](https://github.com/tugrulguner/intpot/issues/17)):
+  define target-specific representation and validation before choosing flattening. MCP and
+  HTTP can represent structured inputs differently from CLI arguments.
+- **Cross-module dependency resolution:** only after same-module closure is reliable;
+  distinguish project code from external packages and avoid implicit environment provisioning.
+- **Deeper body/error transforms** ([#19](https://github.com/tugrulguner/intpot/issues/19)):
+  add individual supported patterns for HTTP/MCP errors, context objects, streaming, and
+  background work. Reject cases without a meaningful target equivalent.
+- **Simultaneous serving** ([#32](https://github.com/tugrulguner/intpot/issues/32)):
+  defer until interface parity is established; specify transports, startup, shutdown,
+  cancellation, and CLI interaction before adding `serve --all`.
+
+## Boundaries
+
+- Keep Typer, FastAPI, and FastMCP as the supported framework focus.
+- Keep generated output ordinary Python with no intpot runtime dependency; other application
+  dependencies may still be required.
+- Do not add a runtime bridge for adapting arbitrary existing framework applications.
+  Building live interfaces from `intpot.App` remains a core capability.
+- Do not attempt unrestricted Python transpilation or claim that every framework behavior
+  has a lossless equivalent.
+- Keep variadic tool signatures unsupported: `*args` and `**kwargs` do not have one
+  consistent CLI/API/MCP representation. Prefer explicit named parameters.
+- Preserve the trusted-source boundary: detection imports code; inspection and dry-run
+  conversion are not sandboxes.
+- Do not introduce a plugin system or another generalized intermediate representation just
+  to support the current three backends.
+
+Linked items have existing issue discussions; unlinked items are directional work, not
+implementation commitments. Check current issues and open work before starting a scoped
+change. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and contribution guidance.
