@@ -1,10 +1,12 @@
 # Roadmap
 
-## v0.7 (current) — Write Once, Serve Everywhere
+## v0.8 (current) — One Semantic Contract, Every Interface
 
 Define tools once with `@app.tool()` and serve them as a CLI, API, or MCP server, or
 eject them to standalone framework code. The converter handles all six directions between
-existing Typer, FastMCP, and FastAPI apps.
+existing Typer, FastMCP, and FastAPI apps. Every live and generated interface now derives
+from the same immutable application schema, so callers can inspect target semantics before
+generation instead of treating conversion as a black box.
 
 ### Conversion correctness
 
@@ -35,6 +37,13 @@ existing Typer, FastMCP, and FastAPI apps.
 These were listed as v2 goals when this roadmap was first written, and landed earlier
 than planned:
 
+- **Canonical semantic schema** — immutable application, tool, and parameter records are
+  shared by live apps and every generator, with detached compatibility views for existing
+  callers.
+- **Target projections** — CLI, FastAPI, and FastMCP parameter semantics can be inspected
+  before code generation.
+- **Strict schema serialization** — supported non-JSON defaults use unambiguous `$intpot`
+  envelopes and generated source preserves their executable value semantics.
 - **Basic body transforms** — `typer.echo(x)` becomes `return x` on the way to MCP/API
   and back again, and `raise typer.Exit(code)` becomes `raise RuntimeError(...)`. See
   `core/transforms.py`.

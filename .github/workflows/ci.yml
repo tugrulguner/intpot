@@ -30,8 +30,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       - run: uv sync --all-extras --locked
-      - run: uv run ruff check src/ tests/
-      - run: uv run ruff format --check src/ tests/
+      - run: uv run ruff check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+      - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
 
   typecheck:
     name: typecheck
@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       - run: uv sync --all-extras --locked
-      - run: uv run pyright src/ tests/
+      - run: uv run pyright src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
 
   test:
     name: test (${{ matrix.python-version }})

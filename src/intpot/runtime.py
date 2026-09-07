@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import functools
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -14,7 +16,13 @@ from intpot.core.inspectors._utils import (
     python_return_type_name,
     python_type_name,
 )
-from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.models import (
+    _SENTINEL,
+    ApplicationSchema,
+    ParameterInfo,
+    SourceType,
+    ToolInfo,
+)
 
 
 @dataclass
@@ -23,6 +31,39 @@ class RegisteredTool:
 
     func: Callable[..., Any]
     info: ToolInfo
+
+
+def _copy_compatibility_default(value: Any) -> Any:
+    """Copy a default when possible, retaining opaque identity when it is not."""
+    try:
+        return copy.deepcopy(value)
+    except Exception:
+        return value
+
+
+def _copy_tool_info(info: ToolInfo) -> ToolInfo:
+    """Detach compatibility metadata without rejecting opaque parameter defaults."""
+    return ToolInfo(
+        name=info.name,
+        description=info.description,
+        parameters=[
+            ParameterInfo(
+                name=parameter.name,
+                type_annotation=parameter.type_annotation,
+                default=_copy_compatibility_default(parameter.default),
+                description=parameter.description,
+                param_source=parameter.param_source,
+            )
+            for parameter in info.parameters
+        ],
+        return_type=info.return_type,
+        http_method=info.http_method,
+        function_body=info.function_body,
+        is_async=info.is_async,
+        route_path=info.route_path,
+        dependencies=list(info.dependencies),
+        source_imports=list(info.source_imports),
+    )
 
 
 class App:
@@ -50,6 +91,15 @@ class App:
         count = len(self._tools)
         return f"App({self.name!r}, tools={count})"
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+        self.__dict__.pop("schema", None)
+
     def tool(
         self, *, name: str | None = None, description: str | None = None
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -69,14 +119,27 @@ class App:
                 func, name_override=name, description_override=description
             )
             self._tools.append(RegisteredTool(func=func, info=info))
+            self.__dict__.pop("schema", None)
             return func
 
         return decorator
 
+    @functools.cached_property
+    def schema(self) -> ApplicationSchema:
+        """Return a stable snapshot, invalidated by registrations or renaming."""
+        return ApplicationSchema.from_tools(
+            name=self.name,
+            source_type=SourceType.PYTHON,
+            tools=(tool.info for tool in self._tools),
+        )
+
     @property
     def tools(self) -> list[ToolInfo]:
-        """Return ToolInfo list for all registered tools."""
-        return [t.info for t in self._tools]
+        """Return copied compatibility metadata without requiring schema support.
+
+        Opaque defaults that cannot be copied remain available by identity.
+        """
+        return [_copy_tool_info(tool.info) for tool in self._tools]
 
     def eject(self, target: str) -> str:
         """Generate standalone code for the given target framework.
@@ -101,7 +164,7 @@ class App:
 
         mod = importlib.import_module(module_path)
         generator_cls = getattr(mod, class_name)
-        return generator_cls().generate(self.tools)
+        return generator_cls().generate(self.schema)
 
     def serve(self, mode: str, *, host: str = "127.0.0.1", port: int = 8000) -> None:
         """Serve the registered tools in the specified mode.

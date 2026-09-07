@@ -5,20 +5,52 @@ from __future__ import annotations
 import ast
 import inspect
 import textwrap
-from typing import Any
+import types
+from typing import Any, Union, get_args, get_origin
+
+
+def _contains_union(annotation: Any) -> bool:
+    origin = get_origin(annotation)
+    if origin in (Union, types.UnionType):
+        return True
+    return any(_contains_union(arg) for arg in get_args(annotation))
+
+
+def _annotation_argument_name(argument: Any) -> str:
+    if argument is Ellipsis:
+        return "..."
+    if isinstance(argument, list):
+        return f"[{', '.join(python_type_name(item) for item in argument)}]"
+    if argument is type(None):
+        return "None"
+    if isinstance(argument, type) or get_origin(argument) is not None:
+        return python_type_name(argument)
+    return repr(argument)
 
 
 def python_type_name(annotation: Any) -> str:
-    """Convert a type annotation to a string representation."""
+    """Convert a type annotation to a deterministic string representation."""
     if annotation is inspect.Parameter.empty or annotation is None:
         return "str"
+    if annotation is type(None):
+        return "None"
     if isinstance(annotation, type):
         return annotation.__name__
-    # For typing generics (e.g. list[str], Optional[int]), use str()
-    # but clean up the 'typing.' prefix for readability
-    text = str(annotation)
-    text = text.replace("typing.", "")
-    return text
+
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    if origin in (Union, types.UnionType):
+        non_none = tuple(arg for arg in args if arg is not type(None))
+        if len(args) == 2 and len(non_none) == 1:
+            return f"Optional[{python_type_name(non_none[0])}]"
+        return f"Union[{', '.join(_annotation_argument_name(arg) for arg in args)}]"
+
+    if args and _contains_union(annotation):
+        outer = str(annotation).replace("typing.", "").split("[", 1)[0]
+        return f"{outer}[{', '.join(_annotation_argument_name(arg) for arg in args)}]"
+
+    # For other typing generics, use str() but clean up the module prefix.
+    return str(annotation).replace("typing.", "")
 
 
 def python_return_type_name(annotation: Any) -> str:

@@ -5,8 +5,15 @@ from importlib.metadata import version
 from intpot.converter import (
     IntpotApp,
     UnsupportedFastAPIDependencyError,
+    compile_app,
     inspect_app,
     load,
+)
+from intpot.core.models import (
+    ApplicationSchema,
+    ParameterSchema,
+    SourceType,
+    ToolSchema,
 )
 from intpot.runtime import App
 
@@ -21,8 +28,13 @@ except Exception:
 
 __all__ = [
     "App",
+    "ApplicationSchema",
     "IntpotApp",
+    "ParameterSchema",
+    "SourceType",
+    "ToolSchema",
     "UnsupportedFastAPIDependencyError",
+    "compile_app",
     "inspect_app",
     "load",
 ]

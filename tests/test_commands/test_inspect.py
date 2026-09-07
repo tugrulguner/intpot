@@ -141,3 +141,22 @@ def test_inspect_unknown_mcp_registry_reports_compatibility_error(tmp_source):
     assert "Unsupported FastMCP registry shape" in result.stderr
     assert "supported FastMCP 2.x or 3.x" in result.stderr
     assert "Traceback" not in result.output
+
+
+def test_inspect_reports_unsupported_defaults_without_a_traceback(tmp_source):
+    source = tmp_source("""
+        from fastapi import FastAPI
+
+        app = FastAPI()
+        marker = object()
+
+        @app.post("/use")
+        def use(value: object = marker) -> object:
+            return value
+    """)
+
+    result = runner.invoke(app, ["inspect", str(source), "--json"])
+
+    assert result.exit_code == 1
+    assert "Unsupported parameter default" in result.stderr
+    assert "Traceback" not in result.output

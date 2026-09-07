@@ -51,6 +51,22 @@ def test_skills_cover_the_conversion_api():
         assert symbol in text, f"skills never mention {symbol}"
 
 
+def test_python_skill_covers_the_canonical_application_schema():
+    text = python_skill_body()
+
+    for symbol in ("ApplicationSchema", ".schema", ".project", ".to_dict"):
+        assert symbol in text, f"Python skill never mentions {symbol}"
+    assert "immutable" in text.lower()
+
+
+def test_python_skill_documents_default_value_limits_honestly():
+    text = python_skill_body().lower()
+
+    assert "enum" in text and "rejected" in text
+    assert "timezone" in text and "fold" in text
+    assert "opaque defaults" in text and "by identity" in text
+
+
 def test_skills_cover_every_cli_command():
     text = _all_skill_text()
 

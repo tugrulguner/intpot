@@ -166,8 +166,8 @@ def test_generator_output_correct_fastapi_types():
 
     assert "Query" in output
     assert "Header" in output
-    assert "q: str = Query(" in output
-    assert "token: str = Header(" in output
+    assert "q: str = _intpot_fastapi_Query(" in output
+    assert "token: str = _intpot_fastapi_Header(" in output
 
 
 def test_an_endpoint_named_root_is_not_dropped():
