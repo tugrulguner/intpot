@@ -9,9 +9,9 @@ app = typer.Typer(name='example-server')
 def _add_impl(
     a: int,
     b: int,
-) -> None:
+) -> int:
     """Add two numbers together."""
-    typer.echo(a + b)
+    return a + b
 
 
 @app.command()
@@ -28,9 +28,9 @@ def add(
 def _greet_impl(
     name: str,
     greeting: str,
-) -> None:
+) -> str:
     """Greet someone by name."""
-    typer.echo(f'{greeting}, {name}!')
+    return f"{greeting}, {name}!"
 
 
 @app.command()

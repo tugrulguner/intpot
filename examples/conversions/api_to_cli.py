@@ -9,9 +9,9 @@ app = typer.Typer(name='api_app')
 def _add_impl(
     a: int,
     b: int,
-) -> None:
+) -> dict:
     """Add two numbers together."""
-    typer.echo({'result': a + b})
+    return {"result": a + b}
 
 
 @app.command()
@@ -28,9 +28,9 @@ def add(
 def _greet_impl(
     name: str,
     greeting: str,
-) -> None:
+) -> dict:
     """Greet someone by name."""
-    typer.echo({'message': f'{greeting}, {name}!'})
+    return {"message": f"{greeting}, {name}!"}
 
 
 @app.command()

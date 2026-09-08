@@ -16,12 +16,18 @@ def _create_note_impl(
     title: str,
     body: str,
     tags: str,
-) -> None:
+) -> str:
     """Create a new note with a generated ID."""
     note_id = hashlib.md5(title.encode()).hexdigest()[:8]
-    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-    note = {'id': note_id, 'title': title, 'body': body, 'tags': tag_list, 'created': datetime.now().isoformat()}
-    typer.echo(json.dumps(note, indent=2))
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    note = {
+        "id": note_id,
+        "title": title,
+        "body": body,
+        "tags": tag_list,
+        "created": datetime.now().isoformat(),
+    }
+    return json.dumps(note, indent=2)
 
 
 @app.command()
@@ -39,10 +45,10 @@ def create_note(
 def _search_notes_impl(
     query: str,
     max_results: int,
-) -> None:
+) -> str:
     """Search notes by keyword in title or body."""
-    results = [{'id': 'abc123', 'title': f'Match: {query}', 'snippet': '...'}]
-    typer.echo(json.dumps(results[:max_results]))
+    results = [{"id": "abc123", "title": f"Match: {query}", "snippet": "..."}]
+    return json.dumps(results[:max_results])
 
 
 @app.command()
@@ -58,10 +64,10 @@ def search_notes(
 
 async def _summarize_impl(
     note_ids: str,
-) -> None:
+) -> str:
     """Summarize multiple notes by their IDs (comma-separated)."""
-    ids = [nid.strip() for nid in note_ids.split(',')]
-    typer.echo(json.dumps({'summarized': len(ids), 'ids': ids}))
+    ids = [nid.strip() for nid in note_ids.split(",")]
+    return json.dumps({"summarized": len(ids), "ids": ids})
 
 
 @app.command()
@@ -76,11 +82,11 @@ def summarize(
 
 def _export_all_impl(
     format: str,
-) -> None:
+) -> str:
     """Export all notes in the specified format."""
-    if format == 'json':
-        typer.echo(json.dumps({'notes': [], 'count': 0}))
-    typer.echo('No notes found.')
+    if format == "json":
+        return json.dumps({"notes": [], "count": 0})
+    return "No notes found."
 
 
 @app.command()
