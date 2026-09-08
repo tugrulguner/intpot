@@ -6,8 +6,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from typer.testing import CliRunner
 
 from intpot.core.generators.api import APIGenerator
+from intpot.core.generators.cli import CLIGenerator
 from intpot.core.models import _SENTINEL, ParameterInfo, SourceType, ToolInfo
 from intpot.core.transforms import transform_tools
 
@@ -128,10 +130,71 @@ def test_api_target_does_not_change_other_targets():
         SourceType.MCP,
     )[0]
 
-    assert "result" not in (cli.function_body or "")
-    assert cli.return_type == "None"
+    assert cli.function_body == "return a + b"
+    assert cli.return_type == "str"
     assert mcp.function_body == "return a + b"
     assert mcp.return_type == "int"
+
+
+def _run_as_cli(tool: ToolInfo, source: SourceType, *args: str):
+    """Convert, execute the generated module, and invoke its real Typer command."""
+    transformed = transform_tools([tool], source, SourceType.CLI)
+    namespace: dict[str, Any] = {}
+    code = CLIGenerator().generate(transformed)
+    exec(compile(code, "<generated>", "exec"), namespace)
+    return CliRunner().invoke(namespace["app"], list(args))
+
+
+@pytest.mark.parametrize("source", [SourceType.MCP, SourceType.API])
+def test_to_cli_preserves_early_return_control_flow(source: SourceType) -> None:
+    tool = _add_tool(
+        "if a > 0:\n    return a + b\nraise RuntimeError('unreachable side effect')",
+        return_type="int",
+    )
+
+    result = _run_as_cli(tool, source, "2", "3")
+
+    assert result.exit_code == 0, result.exception
+    assert result.output.strip() == "5"
+
+
+def test_to_cli_preserves_return_inside_loop() -> None:
+    tool = _add_tool(
+        "for value in (a, b):\n"
+        "    return value\n"
+        "raise RuntimeError('unreachable side effect')",
+        return_type="int",
+    )
+
+    result = _run_as_cli(tool, SourceType.MCP, "2", "3")
+
+    assert result.exit_code == 0, result.exception
+    assert result.output.strip() == "2"
+
+
+def test_to_cli_preserves_bare_return() -> None:
+    tool = _add_tool(
+        "if a > 0:\n    return\nraise RuntimeError('unreachable side effect')",
+        return_type="None",
+    )
+
+    result = _run_as_cli(tool, SourceType.API, "2", "3")
+
+    assert result.exit_code == 0, result.exception
+    assert result.output == ""
+
+
+def test_to_cli_preserves_async_early_return() -> None:
+    tool = _add_tool(
+        "if a > 0:\n    return a + b\nraise RuntimeError('unreachable side effect')",
+        return_type="int",
+    )
+    tool.is_async = True
+
+    result = _run_as_cli(tool, SourceType.MCP, "2", "3")
+
+    assert result.exit_code == 0, result.exception
+    assert result.output.strip() == "5"
 
 
 # ---------------------------------------------------------------------------

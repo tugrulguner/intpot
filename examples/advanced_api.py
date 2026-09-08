@@ -21,7 +21,9 @@ def create_user(
 @app.get("/users/{user_id}")
 def get_user(user_id: str) -> dict:
     """Retrieve a user by their ID."""
-    return {"user_id": user_id, "username": "example", "role": "member"}
+    if user_id:
+        return {"user_id": user_id, "username": "example", "role": "member"}
+    raise ValueError("user_id is required")
 
 
 @app.put("/users/{user_id}")

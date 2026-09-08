@@ -7,6 +7,7 @@ from pathlib import Path
 from types import ModuleType
 
 from fastapi.testclient import TestClient
+from typer.testing import CliRunner
 
 from intpot.converter import load
 
@@ -182,6 +183,44 @@ class TestAPIRoundtrips:
         assert compile(cli_code, "<string>", "exec")
         assert "def greet" in cli_code
         assert "def add" in cli_code
+
+    def test_api_to_cli_imports_with_a_framework_return_annotation(
+        self, tmp_path: Path
+    ) -> None:
+        """The private implementation must not eagerly resolve source-only types.
+
+        ``dont_inherit`` matters here: this test module enables future annotations,
+        but a generated file executed by a user does not inherit its compiler flags.
+        """
+        source = textwrap.dedent("""\
+            from fastapi import FastAPI
+            from fastapi.responses import HTMLResponse
+
+            app = FastAPI()
+
+            @app.get("/hello", response_class=HTMLResponse)
+            def hello() -> HTMLResponse:
+                return "<h1>Hello</h1>"
+        """)
+        path = tmp_path / "html_api.py"
+        path.write_text(source)
+
+        cli_code = load(path).to_cli()
+        generated = ModuleType("generated_html_cli")
+        exec(
+            compile(
+                cli_code,
+                "generated_html_cli.py",
+                "exec",
+                dont_inherit=True,
+            ),
+            generated.__dict__,
+        )
+
+        result = CliRunner().invoke(generated.app)
+
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "<h1>Hello</h1>"
 
 
 class TestParameterPreservation:
