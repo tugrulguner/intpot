@@ -95,9 +95,12 @@ the contracts a change has to keep.
 
 **Transforms and return types** (`transforms.py`)
 
-- The AST pass maps `typer.echo` ↔ `return` and `typer.Exit` ↔ `raise`. A new transform
-  that breaks either direction breaks round-tripping.
-- `_target_return_type` decides the annotation. CLI is always `None`.
+- The AST pass maps CLI `typer.echo` calls to returned values and `typer.Exit` to
+  return/raise behavior. API/MCP returns remain returns when targeting CLI; the generated
+  command wrapper prints the implementation result so early returns still terminate it.
+- `_target_return_type` decides the implementation annotation. Generated CLI command
+  wrappers are always `None`, while their implementation functions keep the source return
+  annotation.
 - API annotations must describe every reachable path. Scalar returns are wrapped as
   `{"result": ...}`, but the presence of one `return` does not prove that a conditional
   body cannot fall through to `None`. Treating `dict` as unconditional is what made every
