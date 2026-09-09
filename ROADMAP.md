@@ -71,9 +71,9 @@ different capabilities: a callable may depend on runtime values that cannot be e
 
 ## Phase 1 — Correctness and honest documentation
 
-- [ ] Preserve control flow in API/MCP-to-CLI conversion, including early returns, loop
-      returns, and unreachable side effects. Prefer retaining implementation returns and
-      letting the existing outer CLI wrapper print results over rewriting returns to echo.
+- [x] Preserve control flow in API/MCP-to-CLI conversion, including early returns, loop
+      returns, and unreachable side effects. Implementation returns are retained and the
+      outer CLI wrapper prints their values ([#131](https://github.com/tugrulguner/intpot/pull/131)).
 - [ ] Replace substring-based import filtering with structural binding analysis. Remove
       imports only when their uses have actually been removed or translated.
 - [ ] Add behavioral live-versus-ejected tests for parameter placement, defaults, response

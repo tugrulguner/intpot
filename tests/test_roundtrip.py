@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import builtins
+import importlib.util
 import textwrap
 from pathlib import Path
 from types import ModuleType
+from typing import Any, get_type_hints
 
 from fastapi.testclient import TestClient
+from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
 from intpot.converter import load
@@ -140,6 +145,69 @@ class TestMCPRoundtrips:
         assert response.status_code == 200
         assert response.json() == {"result": "Hello, Ada!"}
 
+    def test_mcp_to_cli_keeps_a_required_import_containing_a_framework_name(
+        self, tmp_path: Path
+    ) -> None:
+        source = textwrap.dedent("""\
+            import copy as BodyBuilder
+
+            from fastmcp import FastMCP
+
+            mcp = FastMCP("copy-server")
+
+            @mcp.tool()
+            def copy_value(value: str) -> str:
+                return BodyBuilder.copy(value)
+        """)
+        path = tmp_path / "copy_mcp.py"
+        path.write_text(source)
+
+        cli_code = load(path).to_cli()
+        generated = ModuleType("generated_copy_cli")
+        exec(
+            compile(cli_code, "generated_copy_cli.py", "exec", dont_inherit=True),
+            generated.__dict__,
+        )
+
+        result = CliRunner().invoke(generated.app, ["hello"])
+
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "hello"
+
+    def test_runtime_app_to_cli_keeps_a_quoted_annotation_import(
+        self, tmp_path: Path
+    ) -> None:
+        source = textwrap.dedent("""\
+            from pathlib import Path
+
+            from intpot import App
+
+            app = App("path-app")
+
+            @app.tool()
+            def empty_paths() -> list["Path"]:
+                return []
+        """)
+        path = tmp_path / "runtime_app.py"
+        path.write_text(source)
+
+        spec = importlib.util.spec_from_file_location("path_app", path)
+        assert spec is not None and spec.loader is not None
+        source_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(source_module)
+        cli_code = source_module.app.eject("cli")
+        generated = ModuleType("generated_path_cli")
+        exec(
+            compile(cli_code, "generated_path_cli.py", "exec", dont_inherit=True),
+            generated.__dict__,
+        )
+        result = CliRunner().invoke(generated.app)
+
+        assert "from pathlib import Path" in cli_code
+        assert get_type_hints(generated._empty_paths_impl)["return"] == list[Path]
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "[]"
+
 
 class TestCLIRoundtrips:
     def test_cli_to_mcp_preserves_tools(self, tmp_path: Path) -> None:
@@ -162,6 +230,34 @@ class TestCLIRoundtrips:
         assert "def greet" in api_code
         assert "def add" in api_code
 
+    def test_cli_to_mcp_drops_typer_after_echo_is_translated(
+        self, tmp_path: Path
+    ) -> None:
+        path = tmp_path / "cli_app.py"
+        path.write_text(CLI_SOURCE)
+
+        mcp_code = load(path).to_mcp()
+        generated = ModuleType("generated_mcp_without_typer")
+        exec(
+            compile(
+                mcp_code,
+                "generated_mcp_without_typer.py",
+                "exec",
+                dont_inherit=True,
+            ),
+            generated.__dict__,
+        )
+        result = asyncio.run(
+            generated.mcp.call_tool(
+                "greet",
+                {"name": "Ada", "greeting": "Welcome"},
+            )
+        )
+
+        assert "import typer" not in mcp_code
+        assert result.is_error is False
+        assert result.structured_content == {"result": "Welcome, Ada!"}
+
 
 class TestAPIRoundtrips:
     def test_api_to_mcp_preserves_tools(self, tmp_path: Path) -> None:
@@ -183,6 +279,41 @@ class TestAPIRoundtrips:
         assert compile(cli_code, "<string>", "exec")
         assert "def greet" in cli_code
         assert "def add" in cli_code
+
+    def test_api_to_cli_drops_an_import_shadowed_by_a_parameter(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        source = textwrap.dedent("""\
+            from fastapi import FastAPI, status
+
+            app = FastAPI()
+
+            @app.get("/echo")
+            def echo(status: str) -> str:
+                return status
+        """)
+        path = tmp_path / "shadowed_api.py"
+        path.write_text(source)
+
+        cli_code = load(path).to_cli()
+        generated = ModuleType("generated_shadowed_cli")
+        real_import = builtins.__import__
+
+        def target_only_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "fastapi" or name.startswith("fastapi."):
+                raise ImportError("generated CLI must not depend on FastAPI")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", target_only_import)
+        exec(
+            compile(cli_code, "generated_shadowed_cli.py", "exec", dont_inherit=True),
+            generated.__dict__,
+        )
+        result = CliRunner().invoke(generated.app, ["ok"])
+
+        assert "from fastapi import status" not in cli_code
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "ok"
 
     def test_api_to_cli_imports_with_a_framework_return_annotation(
         self, tmp_path: Path

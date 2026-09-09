@@ -189,6 +189,15 @@ def test_from_import_binding_is_unchanged(tmp_source):
     assert imports == ["from os import path"]
 
 
+def test_an_import_used_by_a_quoted_nested_annotation_is_kept(tmp_source):
+    imports = _imports_for(
+        tmp_source,
+        'from pathlib import Path\n\n\ndef tool() -> list["Path"]:\n    return []\n',
+    )
+
+    assert imports == ["from pathlib import Path"]
+
+
 def test_an_unused_dotted_import_is_still_dropped(tmp_source):
     """The fix must not turn the filter into "keep everything"."""
     imports = _imports_for(

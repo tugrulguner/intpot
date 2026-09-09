@@ -6,11 +6,11 @@ from datetime import datetime
 import hashlib
 import json
 
-import asyncio
+import asyncio as _intpot_cli_asyncio
 
-import typer
+import typer as _intpot_cli_typer
 
-app = typer.Typer(name='notes-server')
+app = _intpot_cli_typer.Typer(name='notes-server')
 
 
 def _create_note_impl(
@@ -33,14 +33,14 @@ def _create_note_impl(
 
 @app.command()
 def create_note(
-    title: str = typer.Argument(..., help=''),
-    body: str = typer.Argument(..., help=''),
-    tags: str = typer.Option('', help=''),
+    title: str = _intpot_cli_typer.Argument(..., help=''),
+    body: str = _intpot_cli_typer.Argument(..., help=''),
+    tags: str = _intpot_cli_typer.Option('', help=''),
 ) -> None:
     """Create a new note with a generated ID."""
     result = _create_note_impl(title, body, tags)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _search_notes_impl(
@@ -54,13 +54,13 @@ def _search_notes_impl(
 
 @app.command()
 def search_notes(
-    query: str = typer.Argument(..., help=''),
-    max_results: int = typer.Option(5, help=''),
+    query: str = _intpot_cli_typer.Argument(..., help=''),
+    max_results: int = _intpot_cli_typer.Option(5, help=''),
 ) -> None:
     """Search notes by keyword in title or body."""
     result = _search_notes_impl(query, max_results)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 async def _summarize_impl(
@@ -73,12 +73,12 @@ async def _summarize_impl(
 
 @app.command()
 def summarize(
-    note_ids: str = typer.Argument(..., help=''),
+    note_ids: str = _intpot_cli_typer.Argument(..., help=''),
 ) -> None:
     """Summarize multiple notes by their IDs (comma-separated)."""
-    result = asyncio.run(_summarize_impl(note_ids))
+    result = _intpot_cli_asyncio.run(_summarize_impl(note_ids))
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _export_all_impl(
@@ -92,12 +92,12 @@ def _export_all_impl(
 
 @app.command()
 def export_all(
-    format: str = typer.Option('json', help=''),
+    format: str = _intpot_cli_typer.Option('json', help=''),
 ) -> None:
     """Export all notes in the specified format."""
     result = _export_all_impl(format)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 if __name__ == "__main__":

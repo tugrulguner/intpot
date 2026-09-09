@@ -32,6 +32,15 @@ def verify_generated_cli() -> None:
     assert result.stdout == (
         "{'user_id': '7', 'username': 'example', 'role': 'member'}\n"
     )
+    created = CliRunner().invoke(
+        module.app,
+        ["create-user", "ada", "ada@example.com"],
+    )
+    assert created.exit_code == 0, created.exception
+    assert created.stdout == (
+        "{'username': 'ada', 'email': 'ada@example.com', 'role': 'member', "
+        "'created': True, 'status': 201}\n"
+    )
     print("verified generated CLI command")
 
 
@@ -46,6 +55,20 @@ def verify_generated_mcp() -> None:
         "user_id": "7",
         "username": "example",
         "role": "member",
+    }
+    created = asyncio.run(
+        module.mcp.call_tool(
+            "create_user",
+            {"username": "ada", "email": "ada@example.com"},
+        )
+    )
+    assert created.is_error is False
+    assert created.structured_content == {
+        "username": "ada",
+        "email": "ada@example.com",
+        "role": "member",
+        "created": True,
+        "status": 201,
     }
     print("verified generated MCP tool")
 

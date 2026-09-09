@@ -3,9 +3,9 @@
 
 import json
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP as _intpot_mcp_fastmcp
 
-mcp = FastMCP('advanced_cli')
+mcp = _intpot_mcp_fastmcp('advanced_cli')
 
 
 @mcp.tool()

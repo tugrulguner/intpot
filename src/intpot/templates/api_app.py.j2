@@ -54,7 +54,7 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn as {{ generated_aliases["api:uvicorn"] }}
 
     # Loopback only. Change to "0.0.0.0" to expose this on the network.
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    {{ generated_aliases["api:uvicorn"] }}.run(app, host="127.0.0.1", port=8000)
