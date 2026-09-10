@@ -222,6 +222,39 @@ def test_write_to_file(tmp_path):
     assert result == out.resolve()
 
 
+def test_write_to_file_honors_encoding(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    intpot.load(mcp).write(out, "cli", encoding="utf-16")
+
+    assert "import typer" in out.read_text(encoding="utf-16")
+
+
+def test_write_to_file_can_refuse_overwrite(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    out = tmp_path / "cli_app.py"
+    out.write_text("keep this file", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        intpot.load(mcp).write(out, "cli", overwrite=False)
+
+    assert out.read_text(encoding="utf-8") == "keep this file"
+
+
 def test_write_invalid_target():
     from fastmcp import FastMCP
 
