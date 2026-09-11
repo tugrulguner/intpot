@@ -505,9 +505,10 @@ class _SpecialScopeReadCollector(ast.NodeVisitor):
         self._class_bound[-1].update(targets)
         for statement in body:
             self.visit(statement)
-        self._class_bound[-1] = previous
+        self._class_bound[-1] = set(previous)
         for statement in orelse:
             self.visit(statement)
+        self._class_bound[-1] = previous
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
         if self._in_class_scope() and isinstance(node.target, ast.Name):

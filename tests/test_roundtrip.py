@@ -623,6 +623,12 @@ class TestAPIRoundtrips:
                 "from math import pi",
                 "3.141592653589793",
             ),
+            "loop_else_break": (
+                "from math import pi",
+                "for _ in (1,):\n    break\nelse:\n    pi = 0\nvalue = pi",
+                "from math import pi",
+                "3.141592653589793",
+            ),
             "try": (
                 "from math import pi",
                 "try:\n    if False:\n        pi = 0\nexcept Exception:\n    pass\nvalue = pi",
