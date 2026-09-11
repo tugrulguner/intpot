@@ -522,6 +522,47 @@ class _SpecialScopeReadCollector(ast.NodeVisitor):
             return
         self.generic_visit(node)
 
+    def visit_BoolOp(self, node: ast.BoolOp) -> None:
+        if not self._in_class_scope() or not node.values:
+            self.generic_visit(node)
+            return
+        self.visit(node.values[0])
+        definite = set(self._class_bound[-1])
+        path_bound = set(definite)
+        for value in node.values[1:]:
+            self._class_bound[-1] = path_bound
+            self.visit(value)
+            path_bound = set(self._class_bound[-1])
+        self._class_bound[-1] = definite
+
+    def visit_Compare(self, node: ast.Compare) -> None:
+        if not self._in_class_scope() or not node.comparators:
+            self.generic_visit(node)
+            return
+        self.visit(node.left)
+        self.visit(node.comparators[0])
+        definite = set(self._class_bound[-1])
+        path_bound = set(definite)
+        for comparator in node.comparators[1:]:
+            self._class_bound[-1] = path_bound
+            self.visit(comparator)
+            path_bound = set(self._class_bound[-1])
+        self._class_bound[-1] = definite
+
+    def visit_IfExp(self, node: ast.IfExp) -> None:
+        if not self._in_class_scope():
+            self.generic_visit(node)
+            return
+        self.visit(node.test)
+        before = set(self._class_bound[-1])
+        self._class_bound[-1] = set(before)
+        self.visit(node.body)
+        body_bound = set(self._class_bound[-1])
+        self._class_bound[-1] = set(before)
+        self.visit(node.orelse)
+        else_bound = set(self._class_bound[-1])
+        self._class_bound[-1] = body_bound & else_bound
+
     def visit_Match(self, node: ast.Match) -> None:
         if not self._in_class_scope():
             self.generic_visit(node)
@@ -667,13 +708,28 @@ def _nested_annotation_names(tree: ast.AST) -> set[str]:
     referenced: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.arg) and node.annotation is not None:
-            referenced.update(_annotation_ast_names(node.annotation))
+            referenced.update(_quoted_annotation_names(node.annotation))
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if node.returns is not None:
-                referenced.update(_annotation_ast_names(node.returns))
+                referenced.update(_quoted_annotation_names(node.returns))
         elif isinstance(node, ast.AnnAssign):
-            referenced.update(_annotation_ast_names(node.annotation))
+            referenced.update(_quoted_annotation_names(node.annotation))
     return referenced
+
+
+def _quoted_annotation_names(node: ast.AST) -> set[str]:
+    """Collect names introduced only by strings inside an annotation AST.
+
+    Ordinary annotation expressions are represented accurately by the symbol
+    table, including enclosing-function locals. String annotations are absent
+    from that table and therefore need this supplemental traversal.
+    """
+    direct_names = {
+        child.id
+        for child in ast.walk(node)
+        if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+    }
+    return _annotation_ast_names(node) - direct_names
 
 
 def _loaded_names(source: str, *, mode: str) -> set[str]:

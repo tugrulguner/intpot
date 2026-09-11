@@ -474,6 +474,39 @@ class TestAPIRoundtrips:
         assert result.exit_code == 0, result.exception
         assert result.output.strip() == "Decimal"
 
+    def test_api_to_cli_drops_a_locally_bound_nested_annotation_import(
+        self, tmp_path: Path
+    ) -> None:
+        source = textwrap.dedent("""\
+            from decimal import Decimal as endpoint
+            from fastapi import FastAPI
+
+            app = FastAPI()
+
+            @app.get("/")
+            def endpoint() -> int:
+                endpoint = int
+
+                def inner(value: endpoint):
+                    return value
+
+                return inner(7)
+        """)
+        path = tmp_path / "local_nested_annotation_api.py"
+        path.write_text(source)
+
+        cli_code = load(path).to_cli()
+        generated = ModuleType("generated_local_nested_annotation_cli")
+        exec(
+            compile(cli_code, "generated_local_nested_annotation_cli.py", "exec"),
+            generated.__dict__,
+        )
+        result = CliRunner().invoke(generated.app)
+
+        assert "from decimal import Decimal as endpoint" not in cli_code
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "7"
+
     def test_api_to_cli_drops_an_import_shadowed_earlier_in_a_class(
         self, tmp_path: Path
     ) -> None:
@@ -609,6 +642,24 @@ class TestAPIRoundtrips:
                 "from math import pi as m",
                 "value = (m := m)",
                 "from math import pi as m",
+                "3.141592653589793",
+            ),
+            "short_circuit_named_expression": (
+                "from math import pi",
+                "unused = False and (pi := 0)\nvalue = pi",
+                "from math import pi",
+                "3.141592653589793",
+            ),
+            "conditional_expression_named_expression": (
+                "from math import pi",
+                "unused = 0 if True else (pi := 0)\nvalue = pi",
+                "from math import pi",
+                "3.141592653589793",
+            ),
+            "comparison_named_expression": (
+                "from math import pi",
+                "unused = True == False == (pi := 0)\nvalue = pi",
+                "from math import pi",
                 "3.141592653589793",
             ),
             "conditional": (
