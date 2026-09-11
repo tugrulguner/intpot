@@ -717,19 +717,33 @@ def _nested_annotation_names(tree: ast.AST) -> set[str]:
     return referenced
 
 
-def _quoted_annotation_names(node: ast.AST) -> set[str]:
-    """Collect names introduced only by strings inside an annotation AST.
-
-    Ordinary annotation expressions are represented accurately by the symbol
-    table, including enclosing-function locals. String annotations are absent
-    from that table and therefore need this supplemental traversal.
-    """
-    direct_names = {
-        child.id
-        for child in ast.walk(node)
-        if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
-    }
-    return _annotation_ast_names(node) - direct_names
+def _quoted_annotation_names(node: ast.AST, *, parse_strings: bool = True) -> set[str]:
+    """Collect names introduced only by strings inside an annotation AST."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return _loaded_names(node.value, mode="eval") if parse_strings else set()
+    if isinstance(node, ast.Subscript):
+        root = node.value
+        subscript_name = (
+            root.attr
+            if isinstance(root, ast.Attribute)
+            else (root.id if isinstance(root, ast.Name) else None)
+        )
+        elements = (
+            list(node.slice.elts) if isinstance(node.slice, ast.Tuple) else [node.slice]
+        )
+        names = _quoted_annotation_names(root, parse_strings=parse_strings)
+        if subscript_name == "Literal":
+            return names
+        if subscript_name == "Annotated" and elements:
+            names.update(_quoted_annotation_names(elements[0], parse_strings=True))
+            return names
+        for element in elements:
+            names.update(_quoted_annotation_names(element, parse_strings=parse_strings))
+        return names
+    names: set[str] = set()
+    for child in ast.iter_child_nodes(node):
+        names.update(_quoted_annotation_names(child, parse_strings=parse_strings))
+    return names
 
 
 def _loaded_names(source: str, *, mode: str) -> set[str]:

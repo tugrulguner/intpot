@@ -507,6 +507,41 @@ class TestAPIRoundtrips:
         assert result.exit_code == 0, result.exception
         assert result.output.strip() == "7"
 
+    def test_api_to_cli_keeps_a_quoted_annotation_also_bound_locally(
+        self, tmp_path: Path
+    ) -> None:
+        source = textwrap.dedent("""\
+            from decimal import Decimal as T
+            import typing
+            from fastapi import FastAPI
+
+            app = FastAPI()
+
+            @app.get("/")
+            def endpoint() -> str:
+                T = int
+
+                def inner(value: tuple[T, "T"]):
+                    return value
+
+                resolved = typing.get_type_hints(inner)["value"]
+                return resolved.__args__[1].__name__
+        """)
+        path = tmp_path / "mixed_nested_annotation_api.py"
+        path.write_text(source)
+
+        cli_code = load(path).to_cli()
+        generated = ModuleType("generated_mixed_nested_annotation_cli")
+        exec(
+            compile(cli_code, "generated_mixed_nested_annotation_cli.py", "exec"),
+            generated.__dict__,
+        )
+        result = CliRunner().invoke(generated.app)
+
+        assert "from decimal import Decimal as T" in cli_code
+        assert result.exit_code == 0, result.exception
+        assert result.output.strip() == "Decimal"
+
     def test_api_to_cli_drops_an_import_shadowed_earlier_in_a_class(
         self, tmp_path: Path
     ) -> None:
