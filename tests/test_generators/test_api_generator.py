@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pathlib import Path
+from typing import Any, get_type_hints
 
 from intpot.core.generators.api import APIGenerator
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
@@ -85,6 +86,41 @@ def test_generated_app_serves_a_real_request():
 
     assert response.status_code == 200
     assert response.json() == 5
+
+
+def test_generated_api_keeps_imports_inside_nested_forward_annotations():
+    tool = ToolInfo(
+        name="paths",
+        description="Return paths.",
+        return_type='list["Path"]',
+        function_body="return []",
+        source_imports=["from pathlib import Path"],
+    )
+
+    code = APIGenerator().generate([tool])
+    namespace: dict[str, Any] = {}
+    exec(compile(code, "<generated>", "exec", dont_inherit=True), namespace)
+
+    assert "from pathlib import Path" in code
+    assert get_type_hints(namespace["paths"])["return"] == list[Path]
+    assert namespace["paths"]() == []
+
+
+def test_generated_api_keeps_an_aliased_typing_import():
+    tool = ToolInfo(
+        name="maybe",
+        description="Return an optional value.",
+        return_type="Opt[str]",
+        function_body="return None",
+        source_imports=["from typing import Optional as Opt"],
+    )
+
+    code = APIGenerator().generate([tool])
+    namespace: dict[str, Any] = {}
+    exec(compile(code, "<generated>", "exec", dont_inherit=True), namespace)
+
+    assert "from typing import Optional as Opt" in code
+    assert get_type_hints(namespace["maybe"])["return"] == str | None
 
 
 def test_blank_lines_inside_a_body_are_preserved():

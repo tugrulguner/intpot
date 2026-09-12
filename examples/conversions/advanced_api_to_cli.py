@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 
+from fastapi import status
 import json
 
 from typing import Optional
-import typer
+import typer as _intpot_cli_typer
 
-app = typer.Typer(name='advanced_api')
+app = _intpot_cli_typer.Typer(name='advanced_api')
 
 
 def _create_user_impl(
@@ -16,19 +17,25 @@ def _create_user_impl(
     role: str,
 ) -> dict:
     """Create a new user account."""
-    return {"username": username, "email": email, "role": role, "created": True}
+    return {
+        "username": username,
+        "email": email,
+        "role": role,
+        "created": True,
+        "status": status.HTTP_201_CREATED,
+    }
 
 
 @app.command()
 def create_user(
-    username: str = typer.Argument(..., help='Unique username'),
-    email: str = typer.Argument(..., help='Email address'),
-    role: str = typer.Option('member', help='User role'),
+    username: str = _intpot_cli_typer.Argument(..., help='Unique username'),
+    email: str = _intpot_cli_typer.Argument(..., help='Email address'),
+    role: str = _intpot_cli_typer.Option('member', help='User role'),
 ) -> None:
     """Create a new user account."""
     result = _create_user_impl(username, email, role)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _get_user_impl(
@@ -42,12 +49,12 @@ def _get_user_impl(
 
 @app.command()
 def get_user(
-    user_id: str = typer.Argument(..., help='Path parameter from /users/{user_id}'),
+    user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
 ) -> None:
     """Retrieve a user by their ID."""
     result = _get_user_impl(user_id)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _update_user_impl(
@@ -66,14 +73,14 @@ def _update_user_impl(
 
 @app.command()
 def update_user(
-    user_id: str = typer.Argument(..., help='Path parameter from /users/{user_id}'),
-    email: Optional[str] = typer.Option(None, help='New email address'),
-    role: Optional[str] = typer.Option(None, help='New role'),
+    user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
+    email: Optional[str] = _intpot_cli_typer.Option(None, help='New email address'),
+    role: Optional[str] = _intpot_cli_typer.Option(None, help='New role'),
 ) -> None:
     """Update user fields."""
     result = _update_user_impl(user_id, email, role)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _delete_user_impl(
@@ -85,12 +92,12 @@ def _delete_user_impl(
 
 @app.command()
 def delete_user(
-    user_id: str = typer.Argument(..., help='Path parameter from /users/{user_id}'),
+    user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
 ) -> None:
     """Delete a user by their ID."""
     result = _delete_user_impl(user_id)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _list_users_impl(
@@ -103,13 +110,13 @@ def _list_users_impl(
 
 @app.command()
 def list_users(
-    limit: int = typer.Option(20, help=''),
-    offset: int = typer.Option(0, help=''),
+    limit: int = _intpot_cli_typer.Option(20, help=''),
+    offset: int = _intpot_cli_typer.Option(0, help=''),
 ) -> None:
     """List users with pagination."""
     result = _list_users_impl(limit, offset)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _bulk_create_impl(
@@ -122,12 +129,12 @@ def _bulk_create_impl(
 
 @app.command()
 def bulk_create(
-    payload: str = typer.Argument(..., help='JSON array of user objects'),
+    payload: str = _intpot_cli_typer.Argument(..., help='JSON array of user objects'),
 ) -> None:
     """Create multiple users from a JSON payload."""
     result = _bulk_create_impl(payload)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 if __name__ == "__main__":

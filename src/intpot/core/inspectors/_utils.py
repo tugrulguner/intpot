@@ -163,6 +163,20 @@ def extract_source_imports(fn: Any) -> list[str]:
             if isinstance(root, ast.Name):
                 body_names.add(root.id)
 
+    # Quoted forward references are constants in the source AST, but target
+    # frameworks resolve them against the generated module's globals later.
+    annotation_nodes: list[ast.expr] = []
+    for node in ast.walk(fn_tree):
+        if isinstance(node, ast.arg) and node.annotation is not None:
+            annotation_nodes.append(node.annotation)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.returns is not None:
+                annotation_nodes.append(node.returns)
+        elif isinstance(node, ast.AnnAssign):
+            annotation_nodes.append(node.annotation)
+    for annotation in annotation_nodes:
+        body_names.update(_annotation_names(annotation))
+
     # Keep only imports whose bound name appears in body
     result: list[str] = []
     seen: set[str] = set()
@@ -174,6 +188,48 @@ def extract_source_imports(fn: Any) -> list[str]:
                 result.append(line)
 
     return result
+
+
+def _annotation_names(annotation: ast.AST, *, parse_strings: bool = True) -> set[str]:
+    """Collect annotation globals without treating Literal values as types."""
+    if isinstance(annotation, ast.Name):
+        return {annotation.id}
+    if isinstance(annotation, ast.Constant) and isinstance(annotation.value, str):
+        if not parse_strings:
+            return set()
+        try:
+            nested = ast.parse(annotation.value, mode="eval")
+        except SyntaxError:
+            return set()
+        return _annotation_names(nested.body)
+    if isinstance(annotation, ast.Subscript):
+        names = _annotation_names(annotation.value, parse_strings=parse_strings)
+        root = annotation.value
+        subscript_name = (
+            root.attr
+            if isinstance(root, ast.Attribute)
+            else (root.id if isinstance(root, ast.Name) else None)
+        )
+        elements = (
+            list(annotation.slice.elts)
+            if isinstance(annotation.slice, ast.Tuple)
+            else [annotation.slice]
+        )
+        if subscript_name == "Literal":
+            for element in elements:
+                names.update(_annotation_names(element, parse_strings=False))
+        elif subscript_name == "Annotated" and elements:
+            names.update(_annotation_names(elements[0], parse_strings=True))
+            for element in elements[1:]:
+                names.update(_annotation_names(element, parse_strings=False))
+        else:
+            for element in elements:
+                names.update(_annotation_names(element, parse_strings=parse_strings))
+        return names
+    names: set[str] = set()
+    for child in ast.iter_child_nodes(annotation):
+        names.update(_annotation_names(child, parse_strings=parse_strings))
+    return names
 
 
 def extract_function_body(fn: Any) -> str | None:

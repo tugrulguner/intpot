@@ -27,7 +27,7 @@ def greet(
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn as _intpot_api_uvicorn
 
     # Loopback only. Change to "0.0.0.0" to expose this on the network.
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    _intpot_api_uvicorn.run(app, host="127.0.0.1", port=8000)

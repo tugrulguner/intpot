@@ -11,11 +11,11 @@ from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
 {%- set needs_asyncio = tools | selectattr("is_async") | selectattr("function_body") | list %}
 {%- if needs_asyncio %}
-import asyncio
+import asyncio as {{ generated_aliases["cli:asyncio"] }}
 {% endif %}
-import typer
+import typer as {{ generated_aliases["cli:typer"] }}
 
-app = typer.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
+app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
 {% for tool in tools %}
 {%- if tool.function_body %}
 
@@ -36,20 +36,20 @@ app = typer.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if not param.required %} = typer.Option({{ param.default | source_default }}, help={{ param.description | repr }})
-{%- else %} = typer.Argument(..., help={{ param.description | repr }})
+{%- if not param.required %} = {{ generated_aliases["cli:typer"] }}.Option({{ param.default | source_default }}, help={{ param.description | repr }})
+{%- else %} = {{ generated_aliases["cli:typer"] }}.Argument(..., help={{ param.description | repr }})
 {%- endif %},
 {%- endfor %}
 ) -> None:
     """{{ tool.description | escape_doc }}"""
 {%- if tool.function_body %}
 {%- set call = "_" + tool.name + "_impl(" + (tool.parameters | map(attribute="name") | join(", ")) + ")" %}
-    result = {% if tool.is_async %}asyncio.run({{ call }}){% else %}{{ call }}{% endif %}
+    result = {% if tool.is_async %}{{ generated_aliases["cli:asyncio"] }}.run({{ call }}){% else %}{{ call }}{% endif %}
     if result is not None:
-        typer.echo(result)
+        {{ generated_aliases["cli:typer"] }}.echo(result)
 {%- else %}
     # TODO: implement
-    typer.echo("{{ tool.name }} called")
+    {{ generated_aliases["cli:typer"] }}.echo("{{ tool.name }} called")
 {%- endif %}
 {% endfor %}
 

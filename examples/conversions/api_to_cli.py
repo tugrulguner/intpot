@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 
-import typer
+import typer as _intpot_cli_typer
 
-app = typer.Typer(name='api_app')
+app = _intpot_cli_typer.Typer(name='api_app')
 
 
 def _add_impl(
@@ -17,13 +17,13 @@ def _add_impl(
 
 @app.command()
 def add(
-    a: int = typer.Argument(..., help=''),
-    b: int = typer.Argument(..., help=''),
+    a: int = _intpot_cli_typer.Argument(..., help=''),
+    b: int = _intpot_cli_typer.Argument(..., help=''),
 ) -> None:
     """Add two numbers together."""
     result = _add_impl(a, b)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 def _greet_impl(
@@ -36,13 +36,13 @@ def _greet_impl(
 
 @app.command()
 def greet(
-    name: str = typer.Argument(..., help=''),
-    greeting: str = typer.Option('Hello', help=''),
+    name: str = _intpot_cli_typer.Argument(..., help=''),
+    greeting: str = _intpot_cli_typer.Option('Hello', help=''),
 ) -> None:
     """Greet someone by name."""
     result = _greet_impl(name, greeting)
     if result is not None:
-        typer.echo(result)
+        _intpot_cli_typer.echo(result)
 
 
 if __name__ == "__main__":
