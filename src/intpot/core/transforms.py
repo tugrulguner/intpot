@@ -11,8 +11,104 @@ from __future__ import annotations
 
 import ast
 import copy
+import textwrap
+from collections.abc import Sequence
+from types import CodeType
 
 from intpot.core.models import SourceType, ToolInfo
+
+
+class _GlobalBindingRewriter(ast.NodeTransformer):
+    """Retarget aliases emitted by :func:`bind_global_name`."""
+
+    def __init__(self, original: str, replacement: str) -> None:
+        self.original = original
+        self.replacement = replacement
+        self.changed = False
+
+    def visit_Assign(self, node: ast.Assign) -> ast.AST:
+        self.generic_visit(node)
+        value = node.value
+        if not (
+            isinstance(value, ast.Subscript)
+            and isinstance(value.value, ast.Attribute)
+            and value.value.attr == "__globals__"
+            and isinstance(value.value.value, ast.Lambda)
+            and isinstance(value.slice, ast.Constant)
+            and value.slice.value == self.original
+        ):
+            return node
+        value.slice = ast.copy_location(ast.Constant(self.replacement), value.slice)
+        self.changed = True
+        return node
+
+
+class _GlobalDeclarationRewriter(ast.NodeTransformer):
+    """Make explicit self-reference globals close over the generated alias."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def visit_Global(self, node: ast.Global) -> ast.AST | None:
+        names = [name for name in node.names if name != self.name]
+        if not names:
+            return None
+        node.names = names
+        return node
+
+
+def bind_global_name(
+    body: str,
+    parameters: Sequence[str],
+    original: str,
+    replacement: str,
+    *,
+    is_async: bool = False,
+) -> str:
+    """Bind a renamed global without rewriting shadowed names in nested scopes."""
+    try:
+        body_tree = ast.parse(body)
+    except SyntaxError:
+        return body
+
+    marker_rewriter = _GlobalBindingRewriter(original, replacement)
+    marker_rewriter.visit(body_tree)
+    if marker_rewriter.changed:
+        ast.fix_missing_locations(body_tree)
+        return ast.unparse(body_tree)
+    if original == replacement:
+        return body
+
+    arguments = ", ".join(parameters)
+    indented = textwrap.indent(body or "pass", "    ")
+    declaration = "async def" if is_async else "def"
+    source = f"{declaration} _intpot_tool({arguments}):\n{indented}\n"
+    try:
+        normalized_body = ast.unparse(body_tree)
+        module_code = compile(source, "<intpot-tool>", "exec")
+    except SyntaxError:
+        return body
+    function_code = next(
+        code
+        for code in module_code.co_consts
+        if isinstance(code, CodeType) and code.co_name == "_intpot_tool"
+    )
+
+    if original in {*function_code.co_varnames, *function_code.co_cellvars}:
+        return normalized_body
+
+    if not any(
+        isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id == original
+        for node in ast.walk(body_tree)
+    ):
+        return normalized_body
+    body_tree = _GlobalDeclarationRewriter(original).visit(body_tree)
+    ast.fix_missing_locations(body_tree)
+    normalized_body = ast.unparse(body_tree)
+    lookup = f"(lambda: None).__globals__[{replacement!r}]"
+    return f"{original} = {lookup}\n{normalized_body}"
 
 
 def transform_tools(

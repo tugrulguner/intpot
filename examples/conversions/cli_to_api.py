@@ -6,7 +6,7 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='cli_app')
 
 
-@app.post("/add")
+@app.post("/add", name='add')
 def add(
     a: int = _intpot_fastapi_Body(..., description='First number'),
     b: int = _intpot_fastapi_Body(..., description='Second number'),
@@ -16,7 +16,7 @@ def add(
     return {'result': a + b}
 
 
-@app.post("/greet")
+@app.post("/greet", name='greet')
 def greet(
     name: str = _intpot_fastapi_Body(..., description='Name to greet'),
     greeting: str = _intpot_fastapi_Body(default='Hello', description='Greeting to use'),

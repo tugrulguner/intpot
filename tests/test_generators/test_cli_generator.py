@@ -35,7 +35,8 @@ def test_generate_cli_app():
 
     assert "import typer as _intpot_cli_typer" in code
     assert "app = _intpot_cli_typer.Typer()" in code
-    assert "@app.command()" in code
+    assert "@app.command(name='add')" in code
+    assert "@app.command(name='greet')" in code
     assert "def add(" in code
     assert "def greet(" in code
     assert "_intpot_cli_typer.Argument(..." in code

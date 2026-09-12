@@ -6,9 +6,12 @@ from fastapi import status
 import json
 
 from typing import Optional
+import asyncio as _intpot_cli_asyncio
+import inspect as _intpot_cli_inspect
+
 import typer as _intpot_cli_typer
 
-app = _intpot_cli_typer.Typer(name='advanced_api')
+app = _intpot_cli_typer.Typer(name='advanced_api', help='advanced_api — powered by intpot')
 
 
 def _create_user_impl(
@@ -17,16 +20,10 @@ def _create_user_impl(
     role: str,
 ) -> dict:
     """Create a new user account."""
-    return {
-        "username": username,
-        "email": email,
-        "role": role,
-        "created": True,
-        "status": status.HTTP_201_CREATED,
-    }
+    return {'username': username, 'email': email, 'role': role, 'created': True, 'status': status.HTTP_201_CREATED}
 
 
-@app.command()
+@app.command(name='create_user')
 def create_user(
     username: str = _intpot_cli_typer.Argument(..., help='Unique username'),
     email: str = _intpot_cli_typer.Argument(..., help='Email address'),
@@ -34,6 +31,8 @@ def create_user(
 ) -> None:
     """Create a new user account."""
     result = _create_user_impl(username, email, role)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -43,16 +42,18 @@ def _get_user_impl(
 ) -> dict:
     """Retrieve a user by their ID."""
     if user_id:
-        return {"user_id": user_id, "username": "example", "role": "member"}
-    raise ValueError("user_id is required")
+        return {'user_id': user_id, 'username': 'example', 'role': 'member'}
+    raise ValueError('user_id is required')
 
 
-@app.command()
+@app.command(name='get_user')
 def get_user(
     user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
 ) -> None:
     """Retrieve a user by their ID."""
     result = _get_user_impl(user_id)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -65,13 +66,13 @@ def _update_user_impl(
     """Update user fields."""
     changes = {}
     if email is not None:
-        changes["email"] = email
+        changes['email'] = email
     if role is not None:
-        changes["role"] = role
-    return {"user_id": user_id, "updated": changes}
+        changes['role'] = role
+    return {'user_id': user_id, 'updated': changes}
 
 
-@app.command()
+@app.command(name='update_user')
 def update_user(
     user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
     email: Optional[str] = _intpot_cli_typer.Option(None, help='New email address'),
@@ -79,6 +80,8 @@ def update_user(
 ) -> None:
     """Update user fields."""
     result = _update_user_impl(user_id, email, role)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -87,15 +90,17 @@ def _delete_user_impl(
     user_id: str,
 ) -> dict:
     """Delete a user by their ID."""
-    return {"user_id": user_id, "deleted": True}
+    return {'user_id': user_id, 'deleted': True}
 
 
-@app.command()
+@app.command(name='delete_user')
 def delete_user(
     user_id: str = _intpot_cli_typer.Argument(..., help='Path parameter from /users/{user_id}'),
 ) -> None:
     """Delete a user by their ID."""
     result = _delete_user_impl(user_id)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -105,16 +110,18 @@ def _list_users_impl(
     offset: int,
 ) -> dict:
     """List users with pagination."""
-    return {"users": [], "limit": limit, "offset": offset, "total": 0}
+    return {'users': [], 'limit': limit, 'offset': offset, 'total': 0}
 
 
-@app.command()
+@app.command(name='list_users')
 def list_users(
     limit: int = _intpot_cli_typer.Option(20, help=''),
     offset: int = _intpot_cli_typer.Option(0, help=''),
 ) -> None:
     """List users with pagination."""
     result = _list_users_impl(limit, offset)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -124,15 +131,17 @@ def _bulk_create_impl(
 ) -> dict:
     """Create multiple users from a JSON payload."""
     users = json.loads(payload)
-    return {"created": len(users), "users": users}
+    return {'created': len(users), 'users': users}
 
 
-@app.command()
+@app.command(name='bulk_create')
 def bulk_create(
     payload: str = _intpot_cli_typer.Argument(..., help='JSON array of user objects'),
 ) -> None:
     """Create multiple users from a JSON payload."""
     result = _bulk_create_impl(payload)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 

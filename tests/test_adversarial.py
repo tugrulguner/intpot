@@ -199,7 +199,9 @@ class TestAsyncTools:
         code = CLIGenerator().generate([tool])
 
         assert "async def _async_tool_impl(" in code
-        assert "asyncio.run(_async_tool_impl())" in code
+        assert "result = _async_tool_impl()" in code
+        assert "_intpot_cli_inspect.iscoroutine(result)" in code
+        assert "_intpot_cli_asyncio.run(result)" in code
         assert "async def async_tool(" not in code
 
 
