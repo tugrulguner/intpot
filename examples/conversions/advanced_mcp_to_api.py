@@ -10,7 +10,7 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='notes-server')
 
 
-@app.post("/create_note")
+@app.post("/create_note", name='create_note')
 def create_note(
     title: str = _intpot_fastapi_Body(...),
     body: str = _intpot_fastapi_Body(...),
@@ -24,7 +24,7 @@ def create_note(
     return {'result': json.dumps(note, indent=2)}
 
 
-@app.post("/search_notes")
+@app.post("/search_notes", name='search_notes')
 def search_notes(
     query: str = _intpot_fastapi_Body(...),
     max_results: int = _intpot_fastapi_Body(default=5),
@@ -35,7 +35,7 @@ def search_notes(
     return {'result': json.dumps(results[:max_results])}
 
 
-@app.post("/summarize")
+@app.post("/summarize", name='summarize')
 async def summarize(
     note_ids: str = _intpot_fastapi_Body(...),
 ) -> dict:
@@ -45,7 +45,7 @@ async def summarize(
     return {'result': json.dumps({'summarized': len(ids), 'ids': ids})}
 
 
-@app.post("/export_all")
+@app.post("/export_all", name='export_all')
 def export_all(
     format: str = _intpot_fastapi_Body(default='json'),
 ) -> dict:

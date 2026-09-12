@@ -26,7 +26,7 @@ def test_generate_api_app():
 
     assert "from fastapi import FastAPI" in code
     assert "Body" in code
-    assert 'app.post("/add")' in code
+    assert "app.post(\"/add\", name='add')" in code
     assert "def add(" in code
     assert "a: int" in code
     assert "b: int" in code

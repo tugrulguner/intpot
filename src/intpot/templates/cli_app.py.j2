@@ -9,13 +9,14 @@ from __future__ import annotations
 {% if typing_imports %}
 from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
-{%- set needs_asyncio = tools | selectattr("is_async") | selectattr("function_body") | list %}
-{%- if needs_asyncio %}
+{%- set has_implementation = tools | selectattr("function_body") | list %}
+{%- if has_implementation %}
 import asyncio as {{ generated_aliases["cli:asyncio"] }}
+import inspect as {{ generated_aliases["cli:inspect"] }}
 {% endif %}
 import typer as {{ generated_aliases["cli:typer"] }}
 
-app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}{% endif %})
+app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}, help={{ (app_name ~ " — powered by intpot") | repr }}{% endif %})
 {% for tool in tools %}
 {%- if tool.function_body %}
 
@@ -25,14 +26,14 @@ app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_na
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
-    {{ tool.function_body | indent(4) }}
+    {{ tool.function_body | rewrite_name_loads(tool.name, "_" ~ tool.name ~ "_impl") | indent(4) }}
 {%- endif %}
 
 
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
-@app.command()
+@app.command(name={{ tool.name | repr }})
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
@@ -44,7 +45,9 @@ def {{ tool.name }}(
     """{{ tool.description | escape_doc }}"""
 {%- if tool.function_body %}
 {%- set call = "_" + tool.name + "_impl(" + (tool.parameters | map(attribute="name") | join(", ")) + ")" %}
-    result = {% if tool.is_async %}{{ generated_aliases["cli:asyncio"] }}.run({{ call }}){% else %}{{ call }}{% endif %}
+    result = {{ call }}
+    if {{ generated_aliases["cli:inspect"] }}.iscoroutine(result):
+        result = {{ generated_aliases["cli:asyncio"] }}.run(result)
     if result is not None:
         {{ generated_aliases["cli:typer"] }}.echo(result)
 {%- else %}
