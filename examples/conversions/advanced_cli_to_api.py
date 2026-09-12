@@ -8,7 +8,7 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='advanced_cli')
 
 
-@app.post("/create")
+@app.post("/create", name='create')
 def create(
     title: str = _intpot_fastapi_Body(..., description='Task title'),
     priority: int = _intpot_fastapi_Body(default=3, description='Priority level 1-5'),
@@ -21,7 +21,7 @@ def create(
     return {'result': json.dumps(task, indent=2)}
 
 
-@app.post("/search")
+@app.post("/search", name='search')
 def search(
     query: str = _intpot_fastapi_Body(..., description='Search query'),
     limit: int = _intpot_fastapi_Body(default=10, description='Max results to return'),
@@ -35,7 +35,7 @@ def search(
     return {'result': json.dumps(results[:limit], indent=2)}
 
 
-@app.post("/stats")
+@app.post("/stats", name='stats')
 def stats() -> dict:
     """Show task statistics."""
 

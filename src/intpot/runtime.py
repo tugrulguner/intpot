@@ -22,7 +22,9 @@ from intpot.core.models import (
     ParameterInfo,
     SourceType,
     ToolInfo,
+    sanitize_identifier,
 )
+from intpot.core.transforms import rewrite_name_loads
 
 
 @dataclass
@@ -220,7 +222,7 @@ def _build_tool_info(
     description_override: str | None = None,
 ) -> ToolInfo:
     """Build a ToolInfo from a plain Python function."""
-    tool_name = name_override or func.__name__
+    tool_name = sanitize_identifier(name_override or func.__name__)
     description = (
         description_override
         if description_override is not None
@@ -276,6 +278,8 @@ def _build_tool_info(
 
     # Extract function body and imports for eject
     function_body = extract_function_body(func)
+    if function_body:
+        function_body = rewrite_name_loads(function_body, func.__name__, tool_name)
     source_imports = extract_source_imports(func)
 
     return ToolInfo(

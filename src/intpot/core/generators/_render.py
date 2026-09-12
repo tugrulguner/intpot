@@ -13,8 +13,19 @@ from jinja2 import Environment, FileSystemLoader
 
 from intpot.core.generators.base import RenderableTool
 from intpot.core.models import _default_imports, _source_default
+from intpot.core.transforms import rewrite_name_loads
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
+
+_HTTP_METHODS = frozenset(
+    {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"}
+)
+
+
+def _http_method(value: str) -> str:
+    method = value.upper()
+    return method.lower() if method in _HTTP_METHODS else "post"
+
 
 _TYPING_NAMES = {
     "Any",
@@ -112,7 +123,7 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
         )
     }
     for framework, names in {
-        "cli": ("asyncio", "typer"),
+        "cli": ("asyncio", "inspect", "typer"),
         "mcp": ("FastMCP",),
         "api": ("uvicorn",),
     }.items():
@@ -876,6 +887,8 @@ def render_template(template_name: str, **kwargs: object) -> str:
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
+    env.filters["rewrite_name_loads"] = rewrite_name_loads
+    env.filters["http_method"] = _http_method
     template = env.get_template(template_name)
 
     # Auto-extract typing imports and extra imports if tools are provided

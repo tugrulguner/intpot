@@ -17,8 +17,10 @@ _HTTP_METHODS = frozenset(
 )
 
 
-def _restore_positional_only(func: Callable[..., Any]) -> Callable[..., Any]:
-    """Expose positional-only parameters by name, then restore them on invocation."""
+def _restore_positional_only(
+    func: Callable[..., Any], info: ToolInfo | None = None
+) -> Callable[..., Any]:
+    """Expose the canonical parameter contract while restoring positional calls."""
     import functools
     import inspect
 
@@ -28,7 +30,20 @@ def _restore_positional_only(func: Callable[..., Any]) -> Callable[..., Any]:
         for param in signature.parameters.values()
         if param.kind == inspect.Parameter.POSITIONAL_ONLY
     )
-    if not positional_only:
+    canonical_strings = (
+        set()
+        if info is None
+        else {
+            parameter.name
+            for parameter in info.parameters
+            if parameter.type_annotation == "str"
+        }
+    )
+    needs_annotations = any(
+        param.annotation is inspect.Parameter.empty and param.name in canonical_strings
+        for param in signature.parameters.values()
+    )
+    if not positional_only and not needs_annotations:
         return func
 
     def call_arguments(
@@ -58,14 +73,34 @@ def _restore_positional_only(func: Callable[..., Any]) -> Callable[..., Any]:
 
         wrapper = _sync_wrapper
 
-    wrapper.__signature__ = signature.replace(  # type: ignore[attr-defined]
+    exposed_signature = signature.replace(
         parameters=[
-            param.replace(kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            if param.kind == inspect.Parameter.POSITIONAL_ONLY
-            else param
+            param.replace(
+                kind=(
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    if param.kind == inspect.Parameter.POSITIONAL_ONLY
+                    else param.kind
+                ),
+                annotation=(
+                    str
+                    if param.annotation is inspect.Parameter.empty
+                    and param.name in canonical_strings
+                    else param.annotation
+                ),
+            )
             for param in signature.parameters.values()
         ]
     )
+    wrapper.__signature__ = exposed_signature  # type: ignore[attr-defined]
+    if needs_annotations:
+        wrapper.__annotations__ = dict(wrapper.__annotations__)
+        for parameter in exposed_signature.parameters.values():
+            original = signature.parameters[parameter.name]
+            if (
+                original.annotation is inspect.Parameter.empty
+                and parameter.annotation is not inspect.Parameter.empty
+            ):
+                wrapper.__annotations__[parameter.name] = parameter.annotation
     return wrapper
 
 
@@ -98,7 +133,7 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
 
     cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
     for tool in tools:
-        wrapped = _echoing(_restore_positional_only(tool.func))
+        wrapped = _echoing(_restore_positional_only(tool.func, tool.info))
         cli_app.command(name=tool.info.name, help=tool.info.description)(wrapped)
     return cli_app
 
@@ -124,7 +159,13 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
         ParamSource.header: Header,
         ParamSource.path: Path,
     }
-    sources = {p.name: p.param_source for p in info.parameters}
+    sources = {param.name: param.param_source for param in info.parameters}
+    descriptions = {param.name: param.description for param in info.parameters}
+    canonical_strings = {
+        parameter.name
+        for parameter in info.parameters
+        if parameter.type_annotation == "str"
+    }
 
     try:
         hints = get_type_hints(func)
@@ -157,16 +198,27 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
             # KEYWORD_ONLY produced a signature FastAPI could not serve.
             continue
         marker = markers[sources.get(param_name) or ParamSource.body]
-        declared = (
-            marker(...)
-            if param.default is inspect.Parameter.empty
-            else marker(param.default)
+        marker_kwargs = (
+            {"description": descriptions[param_name]}
+            if descriptions.get(param_name)
+            else {}
         )
+        declared = (
+            marker(..., **marker_kwargs)
+            if param.default is inspect.Parameter.empty
+            else marker(param.default, **marker_kwargs)
+        )
+        annotation = hints.get(param_name, param.annotation)
         parameters.append(
             param.replace(
                 default=declared,
                 kind=inspect.Parameter.KEYWORD_ONLY,
-                annotation=hints.get(param_name, param.annotation),
+                annotation=(
+                    str
+                    if annotation is inspect.Parameter.empty
+                    and param_name in canonical_strings
+                    else annotation
+                ),
             )
         )
 
@@ -215,6 +267,7 @@ def build_fastapi_app(name: str, tools: list[RegisteredTool]) -> object:
             route_path,
             _fastapi_endpoint(tool.func, tool.info),
             methods=[method],
+            name=tool.info.name,
             summary=tool.info.description,
         )
     return api_app
@@ -233,6 +286,6 @@ def build_fastmcp_app(name: str, tools: list[RegisteredTool]) -> object:
     mcp = FastMCP(name)
     for tool in tools:
         mcp.tool(name=tool.info.name, description=tool.info.description)(
-            _restore_positional_only(tool.func)
+            _restore_positional_only(tool.func, tool.info)
         )
     return mcp

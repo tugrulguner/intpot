@@ -15,6 +15,32 @@ import copy
 from intpot.core.models import SourceType, ToolInfo
 
 
+class _NameLoadRewriter(ast.NodeTransformer):
+    """Rewrite references to a generated function binding."""
+
+    def __init__(self, original: str, replacement: str) -> None:
+        self.original = original
+        self.replacement = replacement
+
+    def visit_Name(self, node: ast.Name) -> ast.AST:
+        if isinstance(node.ctx, ast.Load) and node.id == self.original:
+            return ast.copy_location(ast.Name(id=self.replacement, ctx=node.ctx), node)
+        return node
+
+
+def rewrite_name_loads(body: str, original: str, replacement: str) -> str:
+    """Rewrite loaded names in a preserved body, leaving bindings unchanged."""
+    if original == replacement:
+        return body
+    try:
+        tree = ast.parse(body)
+    except SyntaxError:
+        return body
+    rewritten = _NameLoadRewriter(original, replacement).visit(tree)
+    ast.fix_missing_locations(rewritten)
+    return ast.unparse(rewritten)
+
+
 def transform_tools(
     tools: list[ToolInfo],
     source: SourceType,

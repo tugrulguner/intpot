@@ -7,10 +7,11 @@ import hashlib
 import json
 
 import asyncio as _intpot_cli_asyncio
+import inspect as _intpot_cli_inspect
 
 import typer as _intpot_cli_typer
 
-app = _intpot_cli_typer.Typer(name='notes-server')
+app = _intpot_cli_typer.Typer(name='notes-server', help='notes-server — powered by intpot')
 
 
 def _create_note_impl(
@@ -20,18 +21,12 @@ def _create_note_impl(
 ) -> str:
     """Create a new note with a generated ID."""
     note_id = hashlib.md5(title.encode()).hexdigest()[:8]
-    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-    note = {
-        "id": note_id,
-        "title": title,
-        "body": body,
-        "tags": tag_list,
-        "created": datetime.now().isoformat(),
-    }
+    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+    note = {'id': note_id, 'title': title, 'body': body, 'tags': tag_list, 'created': datetime.now().isoformat()}
     return json.dumps(note, indent=2)
 
 
-@app.command()
+@app.command(name='create_note')
 def create_note(
     title: str = _intpot_cli_typer.Argument(..., help=''),
     body: str = _intpot_cli_typer.Argument(..., help=''),
@@ -39,6 +34,8 @@ def create_note(
 ) -> None:
     """Create a new note with a generated ID."""
     result = _create_note_impl(title, body, tags)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -48,17 +45,19 @@ def _search_notes_impl(
     max_results: int,
 ) -> str:
     """Search notes by keyword in title or body."""
-    results = [{"id": "abc123", "title": f"Match: {query}", "snippet": "..."}]
+    results = [{'id': 'abc123', 'title': f'Match: {query}', 'snippet': '...'}]
     return json.dumps(results[:max_results])
 
 
-@app.command()
+@app.command(name='search_notes')
 def search_notes(
     query: str = _intpot_cli_typer.Argument(..., help=''),
     max_results: int = _intpot_cli_typer.Option(5, help=''),
 ) -> None:
     """Search notes by keyword in title or body."""
     result = _search_notes_impl(query, max_results)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -67,16 +66,18 @@ async def _summarize_impl(
     note_ids: str,
 ) -> str:
     """Summarize multiple notes by their IDs (comma-separated)."""
-    ids = [nid.strip() for nid in note_ids.split(",")]
-    return json.dumps({"summarized": len(ids), "ids": ids})
+    ids = [nid.strip() for nid in note_ids.split(',')]
+    return json.dumps({'summarized': len(ids), 'ids': ids})
 
 
-@app.command()
+@app.command(name='summarize')
 def summarize(
     note_ids: str = _intpot_cli_typer.Argument(..., help=''),
 ) -> None:
     """Summarize multiple notes by their IDs (comma-separated)."""
-    result = _intpot_cli_asyncio.run(_summarize_impl(note_ids))
+    result = _summarize_impl(note_ids)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -85,17 +86,19 @@ def _export_all_impl(
     format: str,
 ) -> str:
     """Export all notes in the specified format."""
-    if format == "json":
-        return json.dumps({"notes": [], "count": 0})
-    return "No notes found."
+    if format == 'json':
+        return json.dumps({'notes': [], 'count': 0})
+    return 'No notes found.'
 
 
-@app.command()
+@app.command(name='export_all')
 def export_all(
     format: str = _intpot_cli_typer.Option('json', help=''),
 ) -> None:
     """Export all notes in the specified format."""
     result = _export_all_impl(format)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
