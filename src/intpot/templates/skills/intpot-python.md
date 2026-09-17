@@ -155,9 +155,12 @@ for tool in app.tools:
 `function_body`, `is_async`, `route_path`, `dependencies`, `source_imports`.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
-`param_source`, plus a `required` property. **The type field is `type_annotation`, not
-`annotation`.** `default` is a private sentinel when the parameter is required — check
-`param.required` rather than comparing against `None`.
+`param_source`, `placement`, plus a `required` property. `placement` is the explicit target
+location selected by a projection (`cli_argument`, `cli_option`, `api_body`, `api_query`,
+`api_header`, `api_path`, or `mcp_parameter`); source inspection may leave it as `None`.
+**The type field is `type_annotation`, not `annotation`.** `default` is a private sentinel
+when the parameter is required — check `param.required` rather than comparing against
+`None`.
 
 `param_source` is `ParamSource.query` / `header` / `path` / `body` for FastAPI sources
 that declared one, otherwise `None`.

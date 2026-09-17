@@ -8,9 +8,14 @@ from intpot.core.generators.base import (
     GenerationInput,
     generation_context,
 )
+from intpot.core.models import SourceType
 
 
 class MCPGenerator(BaseGenerator):
     def generate(self, source: GenerationInput) -> str:
-        tools, app_name = generation_context(source, default_name="generated-server")
-        return render_template("mcp_server.py.j2", tools=tools, app_name=app_name)
+        schema = generation_context(
+            source, default_name="generated-server", target=SourceType.MCP
+        )
+        return render_template(
+            "mcp_server.py.j2", tools=schema.tools, app_name=schema.name, schema=schema
+        )

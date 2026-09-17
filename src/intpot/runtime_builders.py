@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from intpot.core.models import ParamSource, ToolInfo
+from intpot.core.models import ParameterPlacement, SourceType, ToolInfo
+from intpot.core.projections import resolve_parameter_placement
 
 if TYPE_CHECKING:
     import typer as _typer
@@ -112,6 +113,31 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
 
     import typer
 
+    def _command_endpoint(
+        func: Callable[..., Any], info: ToolInfo
+    ) -> Callable[..., Any]:
+        restored = _restore_positional_only(func, info)
+
+        @functools.wraps(restored)
+        def endpoint(*args: Any, **kwargs: Any) -> Any:
+            return restored(*args, **kwargs)
+
+        signature = inspect.signature(restored)
+        metadata = {parameter.name: parameter for parameter in info.parameters}
+        parameters = []
+        for parameter in signature.parameters.values():
+            contract = metadata[parameter.name]
+            placement = resolve_parameter_placement(contract, SourceType.CLI)
+            if placement is ParameterPlacement.CLI_ARGUMENT:
+                default = typer.Argument(..., help=contract.description)
+            else:
+                default = typer.Option(contract.default, help=contract.description)
+            parameters.append(parameter.replace(default=default))
+        endpoint.__signature__ = signature.replace(  # type: ignore[attr-defined]
+            parameters=parameters
+        )
+        return endpoint
+
     def _echoing(fn: Callable[..., Any]) -> Callable[..., None]:
         """Print what the tool returns; Typer discards return values.
 
@@ -133,7 +159,7 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
 
     cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
     for tool in tools:
-        wrapped = _echoing(_restore_positional_only(tool.func, tool.info))
+        wrapped = _echoing(_command_endpoint(tool.func, tool.info))
         cli_app.command(name=tool.info.name, help=tool.info.description)(wrapped)
     return cli_app
 
@@ -154,13 +180,12 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
     from fastapi import Body, Header, Path, Query
 
     markers = {
-        ParamSource.body: Body,
-        ParamSource.query: Query,
-        ParamSource.header: Header,
-        ParamSource.path: Path,
+        ParameterPlacement.API_BODY: Body,
+        ParameterPlacement.API_QUERY: Query,
+        ParameterPlacement.API_HEADER: Header,
+        ParameterPlacement.API_PATH: Path,
     }
-    sources = {param.name: param.param_source for param in info.parameters}
-    descriptions = {param.name: param.description for param in info.parameters}
+    contracts = {param.name: param for param in info.parameters}
     canonical_strings = {
         parameter.name
         for parameter in info.parameters
@@ -197,16 +222,16 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
             # what an empty tuple and dict amount to anyway; rewriting them to
             # KEYWORD_ONLY produced a signature FastAPI could not serve.
             continue
-        marker = markers[sources.get(param_name) or ParamSource.body]
+        contract = contracts[param_name]
+        placement = resolve_parameter_placement(contract, SourceType.API)
+        marker = markers[placement]
         marker_kwargs = (
-            {"description": descriptions[param_name]}
-            if descriptions.get(param_name)
-            else {}
+            {"description": contract.description} if contract.description else {}
         )
         declared = (
             marker(..., **marker_kwargs)
-            if param.default is inspect.Parameter.empty
-            else marker(param.default, **marker_kwargs)
+            if contract.required
+            else marker(contract.default, **marker_kwargs)
         )
         annotation = hints.get(param_name, param.annotation)
         parameters.append(

@@ -140,6 +140,7 @@ def test_schema_serializes_required_parameters_without_leaking_the_sentinel(
         "type_annotation": "str",
         "description": "",
         "param_source": None,
+        "placement": None,
         "required": True,
     }
     assert data["tools"][0]["parameters"][1]["default"] is False
