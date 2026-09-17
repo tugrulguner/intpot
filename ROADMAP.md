@@ -95,15 +95,18 @@ audit findings must be reproduced before treating their fixes as verified.
 
 ## Phase 2 — Complete the shared interface contract
 
-- [ ] Centralize target decisions for names, parameter placement, required/default rules,
-      descriptions, and response policy. Projections should expose those decisions rather
-      than leave hidden defaults to templates.
-- [ ] Reuse shared interface decisions in live builders and source renderers while keeping
-      callable bindings separate from recovered source. Do not make live serving depend
-      on every value being serializable or exportable.
-- [ ] Transform immutable schema records directly and share unchanged parameters. Keep
-      mutable `ToolInfo` adaptation at compatibility boundaries rather than repeatedly
-      thawing, deep-copying, and refreezing records during projection.
+- [x] Centralize target parameter placement for CLI, FastAPI, and FastMCP in an immutable
+      schema projection, and make templates consume the explicit placement.
+- [ ] Centralize the remaining target decisions for names, required/default rules,
+      descriptions, and response policy. Canonical schema values remain authoritative,
+      but this focused slice does not unify those policies.
+- [x] Reuse the parameter-placement resolver in live builders and source renderers without
+      requiring live serving to construct an `ApplicationSchema`; runtime-only opaque
+      defaults remain usable.
+- [x] Transform this focused projection with `dataclasses.replace` and share unchanged
+      parameters and tools. Mutable `ToolInfo` remains a compatibility boundary.
+- [ ] Extend the same shared immutable boundary to the remaining interface and response
+      decisions without changing established response policy in the placement slice.
 - [ ] Isolate existing default-value freezing, serialization, identity, and source-rendering
       behavior behind a small private module. Preserve supported values and regression
       coverage; do not replace these contracts with generic `repr()` or JSON conversion.
