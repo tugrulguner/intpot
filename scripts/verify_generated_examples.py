@@ -27,14 +27,14 @@ def verify_generated_cli() -> None:
         "intpot_generated_advanced_cli",
         ROOT / "examples" / "conversions" / "advanced_api_to_cli.py",
     )
-    result = CliRunner().invoke(module.app, ["get-user", "7"])
+    result = CliRunner().invoke(module.app, ["get_user", "7"])
     assert result.exit_code == 0, result.exception
     assert result.stdout == (
         "{'user_id': '7', 'username': 'example', 'role': 'member'}\n"
     )
     created = CliRunner().invoke(
         module.app,
-        ["create-user", "ada", "ada@example.com"],
+        ["create_user", "ada", "ada@example.com"],
     )
     assert created.exit_code == 0, created.exception
     assert created.stdout == (

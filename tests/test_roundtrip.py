@@ -362,7 +362,10 @@ class TestAPIRoundtrips:
             app = FastAPI()
 
             @app.get("/sync")
-            def sync_echo(_intpot_cli_typer: str) -> str:
+            def sync_echo(
+                _intpot_cli_typer: str,
+                _intpot_cli_inspect: str = "unused",
+            ) -> str:
                 return _intpot_cli_typer
 
             @app.get("/async")
@@ -378,8 +381,8 @@ class TestAPIRoundtrips:
             compile(cli_code, "generated_helper_alias_cli.py", "exec"),
             generated.__dict__,
         )
-        sync_result = CliRunner().invoke(generated.app, ["sync-echo", "hello"])
-        async_result = CliRunner().invoke(generated.app, ["async-echo", "world"])
+        sync_result = CliRunner().invoke(generated.app, ["sync_echo", "hello"])
+        async_result = CliRunner().invoke(generated.app, ["async_echo", "world"])
 
         assert sync_result.exit_code == 0, sync_result.exception
         assert sync_result.output.strip() == "hello"

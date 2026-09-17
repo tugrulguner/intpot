@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 
+import asyncio as _intpot_cli_asyncio
+import inspect as _intpot_cli_inspect
+
 import typer as _intpot_cli_typer
 
-app = _intpot_cli_typer.Typer(name='api_app')
+app = _intpot_cli_typer.Typer(name='api_app', help='api_app — powered by intpot')
 
 
 def _add_impl(
@@ -12,16 +15,18 @@ def _add_impl(
     b: int,
 ) -> dict:
     """Add two numbers together."""
-    return {"result": a + b}
+    return {'result': a + b}
 
 
-@app.command()
+@app.command(name='add')
 def add(
     a: int = _intpot_cli_typer.Argument(..., help=''),
     b: int = _intpot_cli_typer.Argument(..., help=''),
 ) -> None:
     """Add two numbers together."""
     result = _add_impl(a, b)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 
@@ -31,16 +36,18 @@ def _greet_impl(
     greeting: str,
 ) -> dict:
     """Greet someone by name."""
-    return {"message": f"{greeting}, {name}!"}
+    return {'message': f'{greeting}, {name}!'}
 
 
-@app.command()
+@app.command(name='greet')
 def greet(
     name: str = _intpot_cli_typer.Argument(..., help=''),
     greeting: str = _intpot_cli_typer.Option('Hello', help=''),
 ) -> None:
     """Greet someone by name."""
     result = _greet_impl(name, greeting)
+    if _intpot_cli_inspect.iscoroutine(result):
+        result = _intpot_cli_asyncio.run(result)
     if result is not None:
         _intpot_cli_typer.echo(result)
 

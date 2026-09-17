@@ -74,10 +74,12 @@ different capabilities: a callable may depend on runtime values that cannot be e
 - [x] Preserve control flow in API/MCP-to-CLI conversion, including early returns, loop
       returns, and unreachable side effects. Implementation returns are retained and the
       outer CLI wrapper prints their values ([#131](https://github.com/tugrulguner/intpot/pull/131)).
-- [ ] Replace substring-based import filtering with structural binding analysis. Remove
-      imports only when their uses have actually been removed or translated.
-- [ ] Add behavioral live-versus-ejected tests for parameter placement, defaults, response
-      shapes, async behavior, errors, and naming—not only route/schema presence.
+- [x] Replace substring-based import filtering with structural binding analysis. Remove
+      imports only when their uses have actually been removed or translated
+      ([#132](https://github.com/tugrulguner/intpot/pull/132)).
+- [x] Add behavioral live-versus-ejected tests for parameter placement, defaults, response
+      shapes, async behavior, errors, and naming—not only route/schema presence. CLI,
+      FastAPI, and FastMCP now execute the same registered tools through both paths.
 - [ ] Align the README, architecture illustrations, cookbook, and shipped skills with the
       implementation. Distinguish `App` from `IntpotApp`, including `.project()` and `.tools`
       behavior; keep public-command guidance in parity ([#121](https://github.com/tugrulguner/intpot/issues/121)).

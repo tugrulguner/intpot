@@ -6,7 +6,7 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='example-server')
 
 
-@app.post("/add")
+@app.post("/add", name='add')
 def add(
     a: int = _intpot_fastapi_Body(...),
     b: int = _intpot_fastapi_Body(...),
@@ -16,7 +16,7 @@ def add(
     return {'result': a + b}
 
 
-@app.post("/greet")
+@app.post("/greet", name='greet')
 def greet(
     name: str = _intpot_fastapi_Body(...),
     greeting: str = _intpot_fastapi_Body(default='Hello'),

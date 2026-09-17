@@ -29,7 +29,7 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
-@app.{{ tool.http_method | lower }}("{{ tool.route_path or '/' + tool.name }}")
+@app.{{ tool.http_method | http_method }}("{{ tool.route_path or '/' + tool.name }}", name={{ tool.name | repr }})
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- if tool.parameters %}
 {%- for param in tool.parameters %}
