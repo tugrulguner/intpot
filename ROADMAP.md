@@ -96,13 +96,14 @@ audit findings must be reproduced before treating their fixes as verified.
 ## Phase 2 — Complete the shared interface contract
 
 - [x] Centralize target parameter placement for CLI, FastAPI, and FastMCP in an immutable
-      schema projection, and make templates consume the explicit placement.
+      schema projection. CLI and FastAPI renderers consume the choice; FastMCP records its
+      single native parameter placement without adding a redundant adapter.
 - [ ] Centralize the remaining target decisions for names, required/default rules,
       descriptions, and response policy. Canonical schema values remain authoritative,
       but this focused slice does not unify those policies.
-- [x] Reuse the parameter-placement resolver in live builders and source renderers without
-      requiring live serving to construct an `ApplicationSchema`; runtime-only opaque
-      defaults remain usable.
+- [x] Reuse the parameter-placement resolver where live CLI and FastAPI builders choose a
+      location, without requiring live serving to construct an `ApplicationSchema`;
+      runtime-only opaque defaults remain usable. FastMCP has no competing location choice.
 - [x] Transform this focused projection with `dataclasses.replace` and share unchanged
       parameters and tools. Mutable `ToolInfo` remains a compatibility boundary.
 - [ ] Extend the same shared immutable boundary to the remaining interface and response

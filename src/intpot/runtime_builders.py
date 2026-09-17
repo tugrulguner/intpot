@@ -310,8 +310,6 @@ def build_fastmcp_app(name: str, tools: list[RegisteredTool]) -> object:
 
     mcp = FastMCP(name)
     for tool in tools:
-        for parameter in tool.info.parameters:
-            resolve_parameter_placement(parameter, SourceType.MCP)
         mcp.tool(name=tool.info.name, description=tool.info.description)(
             _restore_positional_only(tool.func, tool.info)
         )
