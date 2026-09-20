@@ -5,7 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from intpot.core.models import ParameterPlacement, SourceType, ToolInfo
+from intpot.core.models import (
+    ParameterInfo,
+    ParameterPlacement,
+    SourceType,
+    ToolInfo,
+    deduplicate_identifiers,
+    sanitize_identifier,
+)
 from intpot.core.projections import resolve_parameter_placement
 
 if TYPE_CHECKING:
@@ -16,6 +23,41 @@ if TYPE_CHECKING:
 _HTTP_METHODS = frozenset(
     {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"}
 )
+
+
+def _parameter_contracts(
+    func: Callable[..., Any], info: ToolInfo
+) -> dict[str, ParameterInfo]:
+    """Map callable names to canonical metadata without assuming equal spelling.
+
+    ``ParameterInfo`` sanitizes and deduplicates names, while the live callable
+    retains its original Python signature. Rebuilding that canonical identity
+    map keeps colliding source names distinct without relying on metadata order.
+    """
+    import inspect
+
+    variadic = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    callable_parameters = [
+        parameter
+        for parameter in inspect.signature(func).parameters.values()
+        if parameter.kind not in variadic
+    ]
+    canonical_names = deduplicate_identifiers(
+        [sanitize_identifier(parameter.name) for parameter in callable_parameters]
+    )
+    contracts_by_name = {parameter.name: parameter for parameter in info.parameters}
+    if len(contracts_by_name) != len(info.parameters) or set(canonical_names) != set(
+        contracts_by_name
+    ):
+        raise ValueError(
+            f"Tool {info.name!r} callable parameters do not match its parameter contracts"
+        )
+    return {
+        parameter.name: contracts_by_name[canonical_name]
+        for parameter, canonical_name in zip(
+            callable_parameters, canonical_names, strict=True
+        )
+    }
 
 
 def _restore_positional_only(
@@ -31,15 +73,12 @@ def _restore_positional_only(
         for param in signature.parameters.values()
         if param.kind == inspect.Parameter.POSITIONAL_ONLY
     )
-    canonical_strings = (
-        set()
-        if info is None
-        else {
-            parameter.name
-            for parameter in info.parameters
-            if parameter.type_annotation == "str"
-        }
-    )
+    contracts = {} if info is None else _parameter_contracts(func, info)
+    canonical_strings = {
+        name
+        for name, parameter in contracts.items()
+        if parameter.type_annotation == "str"
+    }
     needs_annotations = any(
         param.annotation is inspect.Parameter.empty and param.name in canonical_strings
         for param in signature.parameters.values()
@@ -123,10 +162,10 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
             return restored(*args, **kwargs)
 
         signature = inspect.signature(restored)
-        metadata = {parameter.name: parameter for parameter in info.parameters}
+        contracts = _parameter_contracts(restored, info)
         parameters = []
         for parameter in signature.parameters.values():
-            contract = metadata[parameter.name]
+            contract = contracts[parameter.name]
             placement = resolve_parameter_placement(contract, SourceType.CLI)
             if placement is ParameterPlacement.CLI_ARGUMENT:
                 default = typer.Argument(..., help=contract.description)
@@ -185,10 +224,10 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
         ParameterPlacement.API_HEADER: Header,
         ParameterPlacement.API_PATH: Path,
     }
-    contracts = {param.name: param for param in info.parameters}
+    contracts = _parameter_contracts(func, info)
     canonical_strings = {
-        parameter.name
-        for parameter in info.parameters
+        name
+        for name, parameter in contracts.items()
         if parameter.type_annotation == "str"
     }
 
