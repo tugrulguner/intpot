@@ -13,7 +13,10 @@ from intpot.core.models import (
     deduplicate_identifiers,
     sanitize_identifier,
 )
-from intpot.core.projections import resolve_parameter_placement
+from intpot.core.projections import (
+    resolve_parameter_placement,
+    resolve_tool_interface_name,
+)
 
 if TYPE_CHECKING:
     import typer as _typer
@@ -199,7 +202,10 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
     cli_app = typer.Typer(name=name, help=f"{name} — powered by intpot")
     for tool in tools:
         wrapped = _echoing(_command_endpoint(tool.func, tool.info))
-        cli_app.command(name=tool.info.name, help=tool.info.description)(wrapped)
+        cli_app.command(
+            name=resolve_tool_interface_name(tool.info, SourceType.CLI),
+            help=tool.info.description,
+        )(wrapped)
     return cli_app
 
 
@@ -323,7 +329,8 @@ def build_fastapi_app(name: str, tools: list[RegisteredTool]) -> object:
 
     api_app = FastAPI(title=name)
     for tool in tools:
-        route_path = tool.info.route_path or f"/{tool.info.name}"
+        interface_name = resolve_tool_interface_name(tool.info, SourceType.API)
+        route_path = tool.info.route_path or f"/{interface_name}"
         method = (tool.info.http_method or "POST").upper()
         if method not in _HTTP_METHODS:
             method = "POST"
@@ -331,7 +338,7 @@ def build_fastapi_app(name: str, tools: list[RegisteredTool]) -> object:
             route_path,
             _fastapi_endpoint(tool.func, tool.info),
             methods=[method],
-            name=tool.info.name,
+            name=interface_name,
             summary=tool.info.description,
         )
     return api_app
@@ -349,7 +356,8 @@ def build_fastmcp_app(name: str, tools: list[RegisteredTool]) -> object:
 
     mcp = FastMCP(name)
     for tool in tools:
-        mcp.tool(name=tool.info.name, description=tool.info.description)(
-            _restore_positional_only(tool.func, tool.info)
-        )
+        mcp.tool(
+            name=resolve_tool_interface_name(tool.info, SourceType.MCP),
+            description=tool.info.description,
+        )(_restore_positional_only(tool.func, tool.info))
     return mcp

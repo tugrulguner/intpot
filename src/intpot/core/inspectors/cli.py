@@ -135,10 +135,10 @@ class CLIInspector(BaseInspector):
             if not callable(callback):
                 continue
 
-            command_name = (
-                _text_name(getattr(command, "name", None)) or callback.__name__
-            )
-            name = f"{prefix}{command_name}".replace("-", "_")
+            declared_name = _text_name(getattr(command, "name", None))
+            command_name = declared_name or callback.__name__.replace("_", "-")
+            interface_name = f"{prefix}{command_name}"
+            name = interface_name.replace("-", "_")
             description = (
                 getattr(command, "help", None) or inspect.getdoc(callback) or ""
             )
@@ -167,6 +167,7 @@ class CLIInspector(BaseInspector):
             tools.append(
                 ToolInfo(
                     name=name,
+                    interface_name=interface_name,
                     description=description,
                     parameters=parameters,
                     return_type="str",
@@ -207,19 +208,21 @@ class CLIInspector(BaseInspector):
             if cmd_name is None:
                 continue
 
-            full_name = f"{prefix}{cmd_name}".replace("-", "_")
+            interface_name = f"{prefix}{cmd_name}"
+            full_name = interface_name.replace("-", "_")
 
             # Recurse into sub-groups
             if _child_commands(cmd) is not None:
                 self._extract_commands(cmd, tools, prefix=f"{full_name}_")
                 continue
 
-            self._extract_single_command(cmd, full_name, tools)
+            self._extract_single_command(cmd, full_name, interface_name, tools)
 
     def _extract_single_command(
         self,
         cmd: Any,
         name: str,
+        interface_name: str,
         tools: list[ToolInfo],
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
@@ -272,6 +275,7 @@ class CLIInspector(BaseInspector):
         tools.append(
             ToolInfo(
                 name=name,
+                interface_name=interface_name,
                 description=description,
                 parameters=params,
                 return_type="str",

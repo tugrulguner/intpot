@@ -16,7 +16,7 @@ mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
-@mcp.tool()
+@mcp.tool(name={{ tool.interface_name | repr }})
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}

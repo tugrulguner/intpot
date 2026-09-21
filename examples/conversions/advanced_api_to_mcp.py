@@ -10,7 +10,7 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('advanced_api')
 
 
-@mcp.tool()
+@mcp.tool(name='create_user')
 def create_user(
     username: str,
     email: str,
@@ -27,7 +27,7 @@ def create_user(
     }
 
 
-@mcp.tool()
+@mcp.tool(name='get_user')
 def get_user(
     user_id: str,
 ) -> dict:
@@ -38,7 +38,7 @@ def get_user(
     raise ValueError("user_id is required")
 
 
-@mcp.tool()
+@mcp.tool(name='update_user')
 def update_user(
     user_id: str,
     email: Optional[str] = None,
@@ -54,7 +54,7 @@ def update_user(
     return {"user_id": user_id, "updated": changes}
 
 
-@mcp.tool()
+@mcp.tool(name='delete_user')
 def delete_user(
     user_id: str,
 ) -> dict:
@@ -63,7 +63,7 @@ def delete_user(
     return {"user_id": user_id, "deleted": True}
 
 
-@mcp.tool()
+@mcp.tool(name='list_users')
 def list_users(
     limit: int = 20,
     offset: int = 0,
@@ -73,7 +73,7 @@ def list_users(
     return {"users": [], "limit": limit, "offset": offset, "total": 0}
 
 
-@mcp.tool()
+@mcp.tool(name='bulk_create')
 def bulk_create(
     payload: str,
 ) -> dict:

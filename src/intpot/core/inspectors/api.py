@@ -107,6 +107,7 @@ class APIInspector(BaseInspector):
             # `root` — i.e. the usual handler for `/`.
             endpoint = route.endpoint
             name = endpoint.__name__
+            interface_name = getattr(route, "name", None) or name
 
             description = endpoint.__doc__ or ""
             description = description.strip()
@@ -193,6 +194,7 @@ class APIInspector(BaseInspector):
             tools.append(
                 ToolInfo(
                     name=name,
+                    interface_name=interface_name,
                     description=description,
                     parameters=params,
                     return_type=return_type,

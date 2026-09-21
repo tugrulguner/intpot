@@ -98,9 +98,12 @@ audit findings must be reproduced before treating their fixes as verified.
 - [x] Centralize target parameter placement for CLI, FastAPI, and FastMCP in an immutable
       schema projection. CLI and FastAPI renderers consume the choice; FastMCP records its
       single native parameter placement without adding a redundant adapter.
-- [ ] Centralize the remaining target decisions for names, required/default rules,
-      descriptions, and response policy. Canonical schema values remain authoritative,
-      but this focused slice does not unify those policies.
+- [x] Preserve framework-visible tool names separately from sanitized Python bindings and
+      make default API routes explicit in the target projection. Live and generated CLI,
+      FastAPI, and FastMCP interfaces consume the shared name policy.
+- [ ] Centralize the remaining target decisions for parameter names and aliases,
+      required/default rules, descriptions, and response policy. Canonical schema values
+      remain authoritative, but the focused tool-name slice does not unify those policies.
 - [x] Reuse the parameter-placement resolver where live CLI and FastAPI builders choose a
       location, without requiring live serving to construct an `ApplicationSchema`;
       runtime-only opaque defaults remain usable. FastMCP has no competing location choice.

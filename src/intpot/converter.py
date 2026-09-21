@@ -8,7 +8,7 @@ from typing import Any
 
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
-from intpot.core.projections import project_parameter_placement
+from intpot.core.projections import project_parameter_placement, project_tool_names
 
 
 class UnsupportedFastAPIDependencyError(Exception):
@@ -122,7 +122,7 @@ def project_schema(
     ):
         _guard_fastapi_dependencies(schema.to_tools())
     transformed = transform_schema(schema, target)
-    return project_parameter_placement(transformed, target)
+    return project_tool_names(project_parameter_placement(transformed, target), target)
 
 
 def tools_for_target(

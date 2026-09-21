@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo, ToolSchema
-from intpot.core.projections import project_parameter_placement
+from intpot.core.projections import project_parameter_placement, project_tool_names
 
 GenerationInput = ApplicationSchema | Sequence[ToolInfo]
 RenderableTool = ToolInfo | ToolSchema
@@ -27,7 +27,7 @@ def generation_context(
             source_type=target,
             tools=source,
         )
-    return project_parameter_placement(schema, target)
+    return project_tool_names(project_parameter_placement(schema, target), target)
 
 
 class BaseGenerator(ABC):
