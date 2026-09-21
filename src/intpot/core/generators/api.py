@@ -8,9 +8,14 @@ from intpot.core.generators.base import (
     GenerationInput,
     generation_context,
 )
+from intpot.core.models import SourceType
 
 
 class APIGenerator(BaseGenerator):
     def generate(self, source: GenerationInput) -> str:
-        tools, app_name = generation_context(source, default_name="FastAPI")
-        return render_template("api_app.py.j2", tools=tools, app_name=app_name)
+        schema = generation_context(
+            source, default_name="FastAPI", target=SourceType.API
+        )
+        return render_template(
+            "api_app.py.j2", tools=schema.tools, app_name=schema.name, schema=schema
+        )

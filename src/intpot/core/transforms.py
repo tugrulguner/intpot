@@ -13,9 +13,10 @@ import ast
 import copy
 import textwrap
 from collections.abc import Sequence
+from dataclasses import replace
 from types import CodeType
 
-from intpot.core.models import SourceType, ToolInfo
+from intpot.core.models import ApplicationSchema, SourceType, ToolInfo, ToolSchema
 
 
 class _GlobalBindingRewriter(ast.NodeTransformer):
@@ -137,12 +138,48 @@ def transform_tools(
     return result
 
 
+def transform_schema(
+    schema: ApplicationSchema, target: SourceType
+) -> ApplicationSchema:
+    """Transform immutable tool behavior while sharing unchanged nested records."""
+    transformed_tools = []
+    changed = False
+    for tool in schema.tools:
+        function_body = tool.function_body
+        if function_body:
+            function_body = _transform_body(function_body, schema.source_type, target)
+            if (
+                target is SourceType.API
+                and schema.source_type is not target
+                and not _is_dict_type(tool.return_type)
+            ):
+                function_body = _wrap_returns_in_dict(function_body)
+        transformed_tool = replace(tool, function_body=function_body)
+        return_type = _target_return_type(transformed_tool, schema.source_type, target)
+        if function_body == tool.function_body and return_type == tool.return_type:
+            transformed_tools.append(tool)
+        else:
+            transformed_tools.append(
+                replace(
+                    tool,
+                    function_body=function_body,
+                    return_type=return_type,
+                )
+            )
+            changed = True
+    if not changed:
+        return schema
+    return replace(schema, tools=tuple(transformed_tools))
+
+
 def _is_dict_type(return_type: str) -> bool:
     """Whether an annotation already denotes a mapping FastAPI can serve as-is."""
     return return_type.lstrip("\"'").lower().startswith("dict")
 
 
-def _target_return_type(tool: ToolInfo, source: SourceType, target: SourceType) -> str:
+def _target_return_type(
+    tool: ToolInfo | ToolSchema, source: SourceType, target: SourceType
+) -> str:
     """Determine the correct return type for the target framework."""
     if target == SourceType.CLI:
         # The generated command wrapper returns None, but its implementation
