@@ -55,6 +55,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 default=_copy_compatibility_default(parameter.default),
                 description=parameter.description,
                 param_source=parameter.param_source,
+                placement=parameter.placement,
             )
             for parameter in info.parameters
         ],

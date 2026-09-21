@@ -10,13 +10,9 @@ from typing import {{ typing_imports | join(", ") }}
 {%- set ns = namespace(imports=[]) %}
 {%- for tool in tools %}
   {%- for param in tool.parameters %}
-    {%- if param.param_source %}
-      {%- set src = param.param_source.fastapi_class %}
-      {%- if src not in ns.imports %}
-        {%- set ns.imports = ns.imports + [src] %}
-      {%- endif %}
-    {%- elif "Body" not in ns.imports %}
-      {%- set ns.imports = ns.imports + ["Body"] %}
+    {%- set src = param.placement.fastapi_class %}
+    {%- if src not in ns.imports %}
+      {%- set ns.imports = ns.imports + [src] %}
     {%- endif %}
   {%- endfor %}
 {%- endfor %}
@@ -34,7 +30,7 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {%- if tool.parameters %}
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- set fa_type = (param.param_source.fastapi_class | fastapi_alias) if param.param_source else ("Body" | fastapi_alias) %}
+{%- set fa_type = param.placement.fastapi_class | fastapi_alias %}
 {%- if not param.required %} = {{ fa_type }}(default={{ param.default | source_default }}{% if param.description %}, description={{ param.description | repr }}{% endif %})
 {%- else %} = {{ fa_type }}(...{% if param.description %}, description={{ param.description | repr }}{% endif %})
 {%- endif %},
