@@ -683,6 +683,28 @@ class ParamSource(str, Enum):
         }[self]
 
 
+class ParameterPlacement(str, Enum):
+    """Explicit target-framework placement for one parameter."""
+
+    CLI_ARGUMENT = "cli_argument"
+    CLI_OPTION = "cli_option"
+    API_BODY = "api_body"
+    API_QUERY = "api_query"
+    API_HEADER = "api_header"
+    API_PATH = "api_path"
+    MCP_PARAMETER = "mcp_parameter"
+
+    @property
+    def fastapi_class(self) -> str:
+        """Return the FastAPI marker represented by an API placement."""
+        return {
+            ParameterPlacement.API_BODY: "Body",
+            ParameterPlacement.API_QUERY: "Query",
+            ParameterPlacement.API_HEADER: "Header",
+            ParameterPlacement.API_PATH: "Path",
+        }[self]
+
+
 @dataclass
 class ParameterInfo:
     name: str
@@ -690,6 +712,7 @@ class ParameterInfo:
     default: Any = _SENTINEL  # _SENTINEL means required (no default)
     description: str = ""
     param_source: ParamSource | None = None
+    placement: ParameterPlacement | None = None
 
     def __post_init__(self) -> None:
         self.name = sanitize_identifier(self.name)
@@ -751,6 +774,7 @@ class ParameterSchema:
     default: Any = _SENTINEL
     description: str = ""
     param_source: ParamSource | None = None
+    placement: ParameterPlacement | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "name", sanitize_identifier(self.name))
@@ -765,12 +789,14 @@ class ParameterSchema:
             _default_identity(self.default),
             self.description,
             self.param_source,
+            self.placement,
         ) == (
             other.name,
             other.type_annotation,
             _default_identity(other.default),
             other.description,
             other.param_source,
+            other.placement,
         )
 
     def __hash__(self) -> int:
@@ -781,6 +807,7 @@ class ParameterSchema:
                 _default_identity(self.default),
                 self.description,
                 self.param_source,
+                self.placement,
             )
         )
 
@@ -792,6 +819,7 @@ class ParameterSchema:
             default=_freeze_default(parameter.default),
             description=parameter.description,
             param_source=parameter.param_source,
+            placement=parameter.placement,
         )
 
     @property
@@ -806,6 +834,7 @@ class ParameterSchema:
             default=_thaw_default(self.default),
             description=self.description,
             param_source=self.param_source,
+            placement=self.placement,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -815,6 +844,7 @@ class ParameterSchema:
             "type_annotation": self.type_annotation,
             "description": self.description,
             "param_source": self.param_source.value if self.param_source else None,
+            "placement": self.placement.value if self.placement else None,
             "required": self.required,
         }
         if not self.required:

@@ -53,6 +53,106 @@ def test_build_fastapi_app():
     assert "/greet" in route_paths
 
 
+def test_typer_builder_maps_sanitized_metadata_to_original_parameter_names():
+    from intpot.runtime_builders import build_typer_app
+
+    app = App("sanitized-parameter")
+
+    @app.tool()
+    def show(user__id) -> str:
+        return user__id.upper()
+
+    result = CliRunner().invoke(build_typer_app("test", app._tools), ["hello"])
+
+    assert result.exit_code == 0, result.exception
+    assert result.stdout == "HELLO\n"
+
+
+def test_fastapi_builder_maps_sanitized_metadata_to_original_parameter_names():
+    from fastapi.testclient import TestClient
+
+    from intpot.runtime_builders import build_fastapi_app
+
+    app = App("sanitized-parameter")
+
+    @app.tool()
+    def show(user__id) -> str:
+        return user__id.upper()
+
+    api_app: Any = build_fastapi_app("test", app._tools)
+    response = TestClient(api_app).post("/show", json="hello")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == "HELLO"
+
+
+def test_live_builders_do_not_conflate_colliding_sanitized_parameter_names():
+    from fastapi.testclient import TestClient
+
+    from intpot.runtime_builders import build_fastapi_app, build_typer_app
+
+    app = App("sanitized-collision")
+
+    @app.tool()
+    def combine(user__id: str, user_id: str = "right") -> str:
+        return f"{user__id}:{user_id}"
+
+    assert [parameter.name for parameter in app._tools[0].info.parameters] == [
+        "user_id",
+        "user_id_2",
+    ]
+    # ToolInfo is a mutable compatibility model. Contract identity, not list
+    # position, must preserve the mapping if a caller reorders its parameters.
+    app._tools[0].info.parameters.reverse()
+
+    cli_result = CliRunner().invoke(
+        build_typer_app("test", app._tools), ["left", "--user-id", "right"]
+    )
+    api_app: Any = build_fastapi_app("test", app._tools)
+    api_response = TestClient(api_app).post(
+        "/combine", json={"user__id": "left", "user_id": "right"}
+    )
+
+    assert cli_result.exit_code == 0, cli_result.exception
+    assert cli_result.stdout == "left:right\n"
+    assert api_response.status_code == 200, api_response.text
+    assert api_response.json() == "left:right"
+
+
+def test_fastapi_builder_maps_reordered_contracts_by_canonical_identity():
+    from fastapi.testclient import TestClient
+
+    from intpot.core.models import ParameterInfo, ParamSource, ToolInfo
+    from intpot.runtime_builders import build_fastapi_app
+
+    def pair(first: str, second: str) -> str:
+        return f"{first}:{second}"
+
+    registered = RegisteredTool(
+        func=pair,
+        info=ToolInfo(
+            name="pair",
+            parameters=[
+                ParameterInfo("second", param_source=ParamSource.header),
+                ParameterInfo("first", param_source=ParamSource.query),
+            ],
+        ),
+    )
+
+    api_app: Any = build_fastapi_app("test", [registered])
+    operation = api_app.openapi()["paths"]["/pair"]["post"]
+    response = TestClient(api_app).post("/pair?first=left", headers={"second": "right"})
+
+    assert {
+        (parameter["name"], parameter["in"]) for parameter in operation["parameters"]
+    } == {
+        ("first", "query"),
+        ("second", "header"),
+    }
+    assert response.status_code == 200, response.text
+    assert response.json() == "left:right"
+
+
 def test_build_fastmcp_app():
     from intpot.runtime_builders import build_fastmcp_app
 
