@@ -22,7 +22,7 @@ app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_na
 
 {% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
 {%- for param in tool.parameters %}
-    {{ param.name }}: {{ param.type_annotation }},
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""

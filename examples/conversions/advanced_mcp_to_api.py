@@ -10,6 +10,18 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='notes-server')
 
 
+def _create_note_impl(
+    title: str,
+    body: str,
+    tags: str,
+) -> dict:
+    """Create a new note with a generated ID."""
+    note_id = hashlib.md5(title.encode()).hexdigest()[:8]
+    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+    note = {'id': note_id, 'title': title, 'body': body, 'tags': tag_list, 'created': datetime.now().isoformat()}
+    return {'result': json.dumps(note, indent=2)}
+
+
 @app.post('/create_note', name='create_note')
 def create_note(
     title: str = _intpot_fastapi_Body(...),
@@ -18,10 +30,15 @@ def create_note(
 ) -> dict:
     """Create a new note with a generated ID."""
 
-    note_id = hashlib.md5(title.encode()).hexdigest()[:8]
-    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-    note = {'id': note_id, 'title': title, 'body': body, 'tags': tag_list, 'created': datetime.now().isoformat()}
-    return {'result': json.dumps(note, indent=2)}
+    return _create_note_impl(title, body, tags)
+
+def _search_notes_impl(
+    query: str,
+    max_results: int,
+) -> dict:
+    """Search notes by keyword in title or body."""
+    results = [{'id': 'abc123', 'title': f'Match: {query}', 'snippet': '...'}]
+    return {'result': json.dumps(results[:max_results])}
 
 
 @app.post('/search_notes', name='search_notes')
@@ -31,8 +48,14 @@ def search_notes(
 ) -> dict:
     """Search notes by keyword in title or body."""
 
-    results = [{'id': 'abc123', 'title': f'Match: {query}', 'snippet': '...'}]
-    return {'result': json.dumps(results[:max_results])}
+    return _search_notes_impl(query, max_results)
+
+async def _summarize_impl(
+    note_ids: str,
+) -> dict:
+    """Summarize multiple notes by their IDs (comma-separated)."""
+    ids = [nid.strip() for nid in note_ids.split(',')]
+    return {'result': json.dumps({'summarized': len(ids), 'ids': ids})}
 
 
 @app.post('/summarize', name='summarize')
@@ -41,8 +64,15 @@ async def summarize(
 ) -> dict:
     """Summarize multiple notes by their IDs (comma-separated)."""
 
-    ids = [nid.strip() for nid in note_ids.split(',')]
-    return {'result': json.dumps({'summarized': len(ids), 'ids': ids})}
+    return await _summarize_impl(note_ids)
+
+def _export_all_impl(
+    format: str,
+) -> dict:
+    """Export all notes in the specified format."""
+    if format == 'json':
+        return {'result': json.dumps({'notes': [], 'count': 0})}
+    return {'result': 'No notes found.'}
 
 
 @app.post('/export_all', name='export_all')
@@ -51,9 +81,7 @@ def export_all(
 ) -> dict:
     """Export all notes in the specified format."""
 
-    if format == 'json':
-        return {'result': json.dumps({'notes': [], 'count': 0})}
-    return {'result': 'No notes found.'}
+    return _export_all_impl(format)
 
 
 if __name__ == "__main__":

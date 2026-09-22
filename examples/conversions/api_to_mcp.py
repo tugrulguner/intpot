@@ -6,6 +6,14 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('api_app')
 
 
+def _add_impl(
+    a: int,
+    b: int,
+) -> dict:
+    """Add two numbers together."""
+    return {"result": a + b}
+
+
 @mcp.tool(name='add')
 def add(
     a: int,
@@ -13,7 +21,14 @@ def add(
 ) -> dict:
     """Add two numbers together."""
 
-    return {"result": a + b}
+    return _add_impl(a, b)
+
+def _greet_impl(
+    name: str,
+    greeting: str,
+) -> dict:
+    """Greet someone by name."""
+    return {"message": f"{greeting}, {name}!"}
 
 
 @mcp.tool(name='greet')
@@ -23,7 +38,7 @@ def greet(
 ) -> dict:
     """Greet someone by name."""
 
-    return {"message": f"{greeting}, {name}!"}
+    return _greet_impl(name, greeting)
 
 
 if __name__ == "__main__":

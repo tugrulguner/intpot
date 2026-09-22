@@ -8,6 +8,17 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('advanced_cli')
 
 
+def _create_impl(
+    title: str,
+    priority: int,
+    tags: str,
+) -> str:
+    """Create a new task with optional priority and tags."""
+    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+    task = {'title': title, 'priority': priority, 'tags': tag_list}
+    return json.dumps(task, indent=2)
+
+
 @mcp.tool(name='create')
 def create(
     title: str,
@@ -16,9 +27,18 @@ def create(
 ) -> str:
     """Create a new task with optional priority and tags."""
 
-    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-    task = {'title': title, 'priority': priority, 'tags': tag_list}
-    return json.dumps(task, indent=2)
+    return _create_impl(title, priority, tags)
+
+def _search_impl(
+    query: str,
+    limit: int,
+    include_done: bool,
+) -> str:
+    """Search tasks by title or tag."""
+    results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
+    if not include_done:
+        results = [r for r in results if not r['done']]
+    return json.dumps(results[:limit], indent=2)
 
 
 @mcp.tool(name='search')
@@ -29,10 +49,13 @@ def search(
 ) -> str:
     """Search tasks by title or tag."""
 
-    results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
-    if not include_done:
-        results = [r for r in results if not r['done']]
-    return json.dumps(results[:limit], indent=2)
+    return _search_impl(query, limit, include_done)
+
+def _stats_impl(
+) -> str:
+    """Show task statistics."""
+    summary = {'total': 42, 'done': 15, 'pending': 27}
+    return json.dumps(summary)
 
 
 @mcp.tool(name='stats')
@@ -40,8 +63,7 @@ def stats(
 ) -> str:
     """Show task statistics."""
 
-    summary = {'total': 42, 'done': 15, 'pending': 27}
-    return json.dumps(summary)
+    return _stats_impl()
 
 
 if __name__ == "__main__":

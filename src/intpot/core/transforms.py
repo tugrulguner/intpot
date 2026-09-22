@@ -65,6 +65,7 @@ def bind_global_name(
     replacement: str,
     *,
     is_async: bool = False,
+    preserve_unmodified: bool = False,
 ) -> str:
     """Bind a renamed global without rewriting shadowed names in nested scopes."""
     try:
@@ -96,7 +97,7 @@ def bind_global_name(
     )
 
     if original in {*function_code.co_varnames, *function_code.co_cellvars}:
-        return normalized_body
+        return body if preserve_unmodified else normalized_body
 
     if not any(
         isinstance(node, ast.Name)
@@ -104,7 +105,7 @@ def bind_global_name(
         and node.id == original
         for node in ast.walk(body_tree)
     ):
-        return normalized_body
+        return body if preserve_unmodified else normalized_body
     body_tree = _GlobalDeclarationRewriter(original).visit(body_tree)
     ast.fix_missing_locations(body_tree)
     normalized_body = ast.unparse(body_tree)

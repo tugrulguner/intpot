@@ -6,6 +6,14 @@ from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_
 app = _intpot_fastapi_FastAPI(title='cli_app')
 
 
+def _add_impl(
+    a: int,
+    b: int,
+) -> dict:
+    """Add two numbers together."""
+    return {'result': a + b}
+
+
 @app.post('/add', name='add')
 def add(
     a: int = _intpot_fastapi_Body(..., description='First number'),
@@ -13,7 +21,14 @@ def add(
 ) -> dict:
     """Add two numbers together."""
 
-    return {'result': a + b}
+    return _add_impl(a, b)
+
+def _greet_impl(
+    name: str,
+    greeting: str,
+) -> dict:
+    """Greet someone by name."""
+    return {'result': f'{greeting}, {name}!'}
 
 
 @app.post('/greet', name='greet')
@@ -23,7 +38,7 @@ def greet(
 ) -> dict:
     """Greet someone by name."""
 
-    return {'result': f'{greeting}, {name}!'}
+    return _greet_impl(name, greeting)
 
 
 if __name__ == "__main__":

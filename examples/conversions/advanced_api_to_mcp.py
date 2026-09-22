@@ -10,14 +10,12 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('advanced_api')
 
 
-@mcp.tool(name='create_user')
-def create_user(
+def _create_user_impl(
     username: str,
     email: str,
-    role: str = 'member',
+    role: str,
 ) -> dict:
     """Create a new user account."""
-
     return {
         "username": username,
         "email": email,
@@ -27,15 +25,45 @@ def create_user(
     }
 
 
+@mcp.tool(name='create_user')
+def create_user(
+    username: str,
+    email: str,
+    role: str = 'member',
+) -> dict:
+    """Create a new user account."""
+
+    return _create_user_impl(username, email, role)
+
+def _get_user_impl(
+    user_id: str,
+) -> dict:
+    """Retrieve a user by their ID."""
+    if user_id:
+        return {"user_id": user_id, "username": "example", "role": "member"}
+    raise ValueError("user_id is required")
+
+
 @mcp.tool(name='get_user')
 def get_user(
     user_id: str,
 ) -> dict:
     """Retrieve a user by their ID."""
 
-    if user_id:
-        return {"user_id": user_id, "username": "example", "role": "member"}
-    raise ValueError("user_id is required")
+    return _get_user_impl(user_id)
+
+def _update_user_impl(
+    user_id: str,
+    email: Optional[str],
+    role: Optional[str],
+) -> dict:
+    """Update user fields."""
+    changes = {}
+    if email is not None:
+        changes["email"] = email
+    if role is not None:
+        changes["role"] = role
+    return {"user_id": user_id, "updated": changes}
 
 
 @mcp.tool(name='update_user')
@@ -46,12 +74,13 @@ def update_user(
 ) -> dict:
     """Update user fields."""
 
-    changes = {}
-    if email is not None:
-        changes["email"] = email
-    if role is not None:
-        changes["role"] = role
-    return {"user_id": user_id, "updated": changes}
+    return _update_user_impl(user_id, email, role)
+
+def _delete_user_impl(
+    user_id: str,
+) -> dict:
+    """Delete a user by their ID."""
+    return {"user_id": user_id, "deleted": True}
 
 
 @mcp.tool(name='delete_user')
@@ -60,7 +89,14 @@ def delete_user(
 ) -> dict:
     """Delete a user by their ID."""
 
-    return {"user_id": user_id, "deleted": True}
+    return _delete_user_impl(user_id)
+
+def _list_users_impl(
+    limit: int,
+    offset: int,
+) -> dict:
+    """List users with pagination."""
+    return {"users": [], "limit": limit, "offset": offset, "total": 0}
 
 
 @mcp.tool(name='list_users')
@@ -70,7 +106,14 @@ def list_users(
 ) -> dict:
     """List users with pagination."""
 
-    return {"users": [], "limit": limit, "offset": offset, "total": 0}
+    return _list_users_impl(limit, offset)
+
+def _bulk_create_impl(
+    payload: str,
+) -> dict:
+    """Create multiple users from a JSON payload."""
+    users = json.loads(payload)
+    return {"created": len(users), "users": users}
 
 
 @mcp.tool(name='bulk_create')
@@ -79,8 +122,7 @@ def bulk_create(
 ) -> dict:
     """Create multiple users from a JSON payload."""
 
-    users = json.loads(payload)
-    return {"created": len(users), "users": users}
+    return _bulk_create_impl(payload)
 
 
 if __name__ == "__main__":

@@ -157,7 +157,9 @@ for tool in app.tools:
 framework-visible spelling such as `send-email` when it differs.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
-`param_source`, `placement`, plus a `required` property. `placement` is the explicit target
+`param_source`, `placement`, `binding_name`, plus a `required` property. `binding_name`
+preserves a source callable's valid Python parameter spelling when canonical sanitization
+changes it. `placement` is the explicit target
 location selected by a projection (`cli_argument`, `cli_option`, `api_body`, `api_query`,
 `api_header`, `api_path`, or `mcp_parameter`); source inspection may leave it as `None`.
 **The type field is `type_annotation`, not `annotation`.** `default` is a private sentinel

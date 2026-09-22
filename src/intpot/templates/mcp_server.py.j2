@@ -11,6 +11,16 @@ from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
 
 mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
 {% for tool in tools %}
+{%- if tool.function_body %}
+
+{% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
+{%- for param in tool.parameters %}
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }},
+{%- endfor %}
+) -> {{ tool.return_type }}:
+    """{{ tool.description | escape_doc }}"""
+    {{ tool.function_body | bind_tool_name(tool, "_" ~ tool.name ~ "_impl", true) | indent(4) }}
+{%- endif %}
 
 
 {% if tool.dependencies -%}
@@ -26,7 +36,7 @@ mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
 {% if tool.function_body %}
-    {{ tool.function_body | indent(4) }}
+    return {% if tool.is_async %}await {% endif %}_{{ tool.name }}_impl({{ tool.parameters | map(attribute="name") | join(", ") }})
 {%- else %}
     # TODO: implement
     return "{{ tool.name }} called"

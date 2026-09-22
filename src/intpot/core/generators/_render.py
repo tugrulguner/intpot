@@ -99,7 +99,9 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     """Choose deterministic helper aliases that cannot collide with source globals."""
     occupied = {tool.name for tool in tools}
     for tool in tools:
-        occupied.update(parameter.name for parameter in tool.parameters)
+        occupied.update(
+            parameter.binding_name or parameter.name for parameter in tool.parameters
+        )
         for source_import in tool.source_imports:
             occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
 
@@ -175,9 +177,11 @@ def _generated_binding_collisions(
     elif template_name == "mcp_server.py.j2":
         generated = {"mcp"}
         generated.update(tool.name for tool in tools)
+        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     elif template_name == "api_app.py.j2":
         generated = {"app"}
         generated.update(tool.name for tool in tools)
+        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     else:
         generated = set()
     return retained & generated
@@ -220,7 +224,9 @@ def _referenced_names(tools: Sequence[RenderableTool]) -> set[str]:
 
 def _body_global_names(tool: RenderableTool) -> set[str]:
     """Return globals loaded by a body, excluding parameters and local bindings."""
-    parameters = ", ".join(parameter.name for parameter in tool.parameters)
+    parameters = ", ".join(
+        parameter.binding_name or parameter.name for parameter in tool.parameters
+    )
     body = textwrap.indent(tool.function_body or "pass", "    ")
     declaration = "async def" if tool.is_async else "def"
     source = f"{declaration} _intpot_generated_tool({parameters}):\n{body}\n"
@@ -229,7 +235,9 @@ def _body_global_names(tool: RenderableTool) -> set[str]:
         module_table = symtable.symtable(source, "<intpot-tool>", "exec")
     except SyntaxError:
         loaded = _loaded_names(tool.function_body or "", mode="exec")
-        return loaded - {parameter.name for parameter in tool.parameters}
+        return loaded - {
+            parameter.binding_name or parameter.name for parameter in tool.parameters
+        }
 
     referenced: set[str] = set()
 
@@ -887,12 +895,18 @@ def render_template(template_name: str, **kwargs: object) -> str:
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
-    env.filters["bind_tool_name"] = lambda body, tool, replacement: bind_global_name(
-        body,
-        tuple(parameter.name for parameter in tool.parameters),
-        tool.name,
-        replacement,
-        is_async=tool.is_async,
+    env.filters["bind_tool_name"] = lambda body, tool, replacement, preserve=False: (
+        bind_global_name(
+            body,
+            tuple(
+                parameter.binding_name or parameter.name
+                for parameter in tool.parameters
+            ),
+            tool.name,
+            replacement,
+            is_async=tool.is_async,
+            preserve_unmodified=preserve,
+        )
     )
     env.filters["http_method"] = _http_method
     template = env.get_template(template_name)

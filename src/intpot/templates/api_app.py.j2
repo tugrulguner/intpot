@@ -20,6 +20,16 @@ from fastapi import FastAPI as {{ "FastAPI" | fastapi_alias }}{% for imp in ns.i
 
 app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {% for tool in tools %}
+{%- if tool.function_body %}
+
+{% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
+{%- for param in tool.parameters %}
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }},
+{%- endfor %}
+) -> {{ tool.return_type }}:
+    """{{ tool.description | escape_doc }}"""
+    {{ tool.function_body | bind_tool_name(tool, "_" ~ tool.name ~ "_impl", true) | indent(4) }}
+{%- endif %}
 
 
 {% if tool.dependencies -%}
@@ -41,7 +51,7 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
     """{{ tool.description | escape_doc }}"""
 {%- endif %}
 {% if tool.function_body %}
-    {{ tool.function_body | indent(4) }}
+    return {% if tool.is_async %}await {% endif %}_{{ tool.name }}_impl({{ tool.parameters | map(attribute="name") | join(", ") }})
 {%- else %}
     # TODO: implement
     return {"result": "{{ tool.name }} called"}
