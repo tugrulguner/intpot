@@ -4,13 +4,18 @@
 from fastmcp import FastMCP as _intpot_mcp_fastmcp
 
 mcp = _intpot_mcp_fastmcp('cli_app')
+_intpot_required = object()
 
 
 def _add_impl(
-    a: int,
-    b: int,
+    a: int = _intpot_required,
+    b: int = _intpot_required,
 ) -> str:
     """Add two numbers together."""
+    if a is _intpot_required:
+        raise TypeError('Missing required argument: a')
+    if b is _intpot_required:
+        raise TypeError('Missing required argument: b')
     return a + b
 
 
@@ -24,10 +29,12 @@ def add(
     return _add_impl(a, b)
 
 def _greet_impl(
-    name: str,
-    greeting: str,
+    name: str = _intpot_required,
+    greeting: str = 'Hello',
 ) -> str:
     """Greet someone by name."""
+    if name is _intpot_required:
+        raise TypeError('Missing required argument: name')
     return f'{greeting}, {name}!'
 
 

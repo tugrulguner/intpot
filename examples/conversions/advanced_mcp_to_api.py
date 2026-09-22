@@ -8,14 +8,19 @@ import json
 from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_Body
 
 app = _intpot_fastapi_FastAPI(title='notes-server')
+_intpot_required = object()
 
 
 def _create_note_impl(
-    title: str,
-    body: str,
-    tags: str,
+    title: str = _intpot_required,
+    body: str = _intpot_required,
+    tags: str = '',
 ) -> dict:
     """Create a new note with a generated ID."""
+    if title is _intpot_required:
+        raise TypeError('Missing required argument: title')
+    if body is _intpot_required:
+        raise TypeError('Missing required argument: body')
     note_id = hashlib.md5(title.encode()).hexdigest()[:8]
     tag_list = [t.strip() for t in tags.split(',') if t.strip()]
     note = {'id': note_id, 'title': title, 'body': body, 'tags': tag_list, 'created': datetime.now().isoformat()}
@@ -33,10 +38,12 @@ def create_note(
     return _create_note_impl(title, body, tags)
 
 def _search_notes_impl(
-    query: str,
-    max_results: int,
+    query: str = _intpot_required,
+    max_results: int = 5,
 ) -> dict:
     """Search notes by keyword in title or body."""
+    if query is _intpot_required:
+        raise TypeError('Missing required argument: query')
     results = [{'id': 'abc123', 'title': f'Match: {query}', 'snippet': '...'}]
     return {'result': json.dumps(results[:max_results])}
 
@@ -51,9 +58,11 @@ def search_notes(
     return _search_notes_impl(query, max_results)
 
 async def _summarize_impl(
-    note_ids: str,
+    note_ids: str = _intpot_required,
 ) -> dict:
     """Summarize multiple notes by their IDs (comma-separated)."""
+    if note_ids is _intpot_required:
+        raise TypeError('Missing required argument: note_ids')
     ids = [nid.strip() for nid in note_ids.split(',')]
     return {'result': json.dumps({'summarized': len(ids), 'ids': ids})}
 
@@ -67,7 +76,7 @@ async def summarize(
     return await _summarize_impl(note_ids)
 
 def _export_all_impl(
-    format: str,
+    format: str = 'json',
 ) -> dict:
     """Export all notes in the specified format."""
     if format == 'json':

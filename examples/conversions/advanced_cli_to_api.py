@@ -6,14 +6,17 @@ import json
 from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_Body
 
 app = _intpot_fastapi_FastAPI(title='advanced_cli')
+_intpot_required = object()
 
 
 def _create_impl(
-    title: str,
-    priority: int,
-    tags: str,
+    title: str = _intpot_required,
+    priority: int = 3,
+    tags: str = '',
 ) -> dict:
     """Create a new task with optional priority and tags."""
+    if title is _intpot_required:
+        raise TypeError('Missing required argument: title')
     tag_list = [t.strip() for t in tags.split(',') if t.strip()]
     task = {'title': title, 'priority': priority, 'tags': tag_list}
     return {'result': json.dumps(task, indent=2)}
@@ -30,11 +33,13 @@ def create(
     return _create_impl(title, priority, tags)
 
 def _search_impl(
-    query: str,
-    limit: int,
-    include_done: bool,
+    query: str = _intpot_required,
+    limit: int = 10,
+    include_done: bool = False,
 ) -> dict:
     """Search tasks by title or tag."""
+    if query is _intpot_required:
+        raise TypeError('Missing required argument: query')
     results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
     if not include_done:
         results = [r for r in results if not r['done']]

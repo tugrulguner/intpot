@@ -99,6 +99,7 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     """Choose deterministic helper aliases that cannot collide with source globals."""
     occupied = {tool.name for tool in tools}
     for tool in tools:
+        occupied.update(parameter.name for parameter in tool.parameters)
         occupied.update(
             parameter.binding_name or parameter.name for parameter in tool.parameters
         )
@@ -144,6 +145,10 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
         "Query",
     ):
         aliases[f"fastapi:{name}"] = unique(f"_intpot_fastapi_{name}")
+    aliases["helper:required"] = unique("_intpot_required")
+    for tool in tools:
+        if tool.function_body:
+            aliases[f"impl:{tool.name}"] = unique(f"_{tool.name}_impl")
     return aliases
 
 
@@ -160,6 +165,7 @@ def _generated_binding_collisions(
     tools: Sequence[RenderableTool],
     extra_imports: Sequence[str],
     typing_imports: Sequence[str],
+    aliases: dict[str, str],
 ) -> set[str]:
     retained = set(typing_imports)
     for source_import in extra_imports:
@@ -173,17 +179,17 @@ def _generated_binding_collisions(
     if template_name == "cli_app.py.j2":
         generated = {"app"}
         generated.update(tool.name for tool in tools)
-        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     elif template_name == "mcp_server.py.j2":
         generated = {"mcp"}
         generated.update(tool.name for tool in tools)
-        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     elif template_name == "api_app.py.j2":
         generated = {"app"}
         generated.update(tool.name for tool in tools)
-        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     else:
         generated = set()
+    generated.update(
+        aliases[f"impl:{tool.name}"] for tool in tools if tool.function_body
+    )
     return retained & generated
 
 
@@ -922,6 +928,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
             tools,
             kwargs["extra_imports"],  # type: ignore[arg-type]
             kwargs["typing_imports"],  # type: ignore[arg-type]
+            aliases,
         )
         if collisions:
             names = ", ".join(sorted(collisions))

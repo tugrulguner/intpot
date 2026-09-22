@@ -12,14 +12,19 @@ import inspect as _intpot_cli_inspect
 import typer as _intpot_cli_typer
 
 app = _intpot_cli_typer.Typer(name='advanced_api', help='advanced_api — powered by intpot')
+_intpot_required = object()
 
 
 def _create_user_impl(
-    username: str,
-    email: str,
-    role: str,
+    username: str = _intpot_required,
+    email: str = _intpot_required,
+    role: str = 'member',
 ) -> dict:
     """Create a new user account."""
+    if username is _intpot_required:
+        raise TypeError('Missing required argument: username')
+    if email is _intpot_required:
+        raise TypeError('Missing required argument: email')
     return {'username': username, 'email': email, 'role': role, 'created': True, 'status': status.HTTP_201_CREATED}
 
 
@@ -38,9 +43,11 @@ def create_user(
 
 
 def _get_user_impl(
-    user_id: str,
+    user_id: str = _intpot_required,
 ) -> dict:
     """Retrieve a user by their ID."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     if user_id:
         return {'user_id': user_id, 'username': 'example', 'role': 'member'}
     raise ValueError('user_id is required')
@@ -59,11 +66,13 @@ def get_user(
 
 
 def _update_user_impl(
-    user_id: str,
-    email: Optional[str],
-    role: Optional[str],
+    user_id: str = _intpot_required,
+    email: Optional[str] = None,
+    role: Optional[str] = None,
 ) -> dict:
     """Update user fields."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     changes = {}
     if email is not None:
         changes['email'] = email
@@ -87,9 +96,11 @@ def update_user(
 
 
 def _delete_user_impl(
-    user_id: str,
+    user_id: str = _intpot_required,
 ) -> dict:
     """Delete a user by their ID."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     return {'user_id': user_id, 'deleted': True}
 
 
@@ -106,8 +117,8 @@ def delete_user(
 
 
 def _list_users_impl(
-    limit: int,
-    offset: int,
+    limit: int = 20,
+    offset: int = 0,
 ) -> dict:
     """List users with pagination."""
     return {'users': [], 'limit': limit, 'offset': offset, 'total': 0}
@@ -127,9 +138,11 @@ def list_users(
 
 
 def _bulk_create_impl(
-    payload: str,
+    payload: str = _intpot_required,
 ) -> dict:
     """Create multiple users from a JSON payload."""
+    if payload is _intpot_required:
+        raise TypeError('Missing required argument: payload')
     users = json.loads(payload)
     return {'created': len(users), 'users': users}
 

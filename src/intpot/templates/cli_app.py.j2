@@ -17,16 +17,22 @@ import inspect as {{ generated_aliases["cli:inspect"] }}
 import typer as {{ generated_aliases["cli:typer"] }}
 
 app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}, help={{ (app_name ~ " — powered by intpot") | repr }}{% endif %})
+{% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
+{% endif %}
 {% for tool in tools %}
 {%- if tool.function_body %}
 
-{% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
+{% if tool.is_async %}async {% endif %}def {{ generated_aliases["impl:" ~ tool.name] }}(
 {%- for param in tool.parameters %}
-    {{ param.binding_name or param.name }}: {{ param.type_annotation }},
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
-    {{ tool.function_body | bind_tool_name(tool, "_" ~ tool.name ~ "_impl") | indent(4) }}
+{%- for param in tool.parameters if param.required %}
+    if {{ param.binding_name or param.name }} is {{ generated_aliases["helper:required"] }}:
+        raise TypeError({{ ("Missing required argument: " ~ (param.binding_name or param.name)) | repr }})
+{%- endfor %}
+    {{ tool.function_body | bind_tool_name(tool, generated_aliases["impl:" ~ tool.name]) | indent(4) }}
 {%- endif %}
 
 
@@ -44,7 +50,7 @@ def {{ tool.name }}(
 ) -> None:
     """{{ tool.description | escape_doc }}"""
 {%- if tool.function_body %}
-{%- set call = "_" + tool.name + "_impl(" + (tool.parameters | map(attribute="name") | join(", ")) + ")" %}
+{%- set call = generated_aliases["impl:" ~ tool.name] + "(" + (tool.parameters | map(attribute="name") | join(", ")) + ")" %}
     result = {{ call }}
     if {{ generated_aliases["cli:inspect"] }}.iscoroutine(result):
         result = {{ generated_aliases["cli:asyncio"] }}.run(result)

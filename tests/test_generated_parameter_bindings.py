@@ -221,12 +221,11 @@ def test_recursive_generated_bindings_execute_in_every_target() -> None:
     app = App("recursive-parameter-bindings")
 
     @app.tool()
-    def countdown(user__remaining: int = 2, user_remaining: int = 10) -> int:
+    def countdown(user__remaining: int = 3, user_remaining: int = 1) -> int:
         if user__remaining <= 0:
-            return user_remaining
-        return countdown(
-            user__remaining=user__remaining - 1,
-            user_remaining=user_remaining + 1,
+            return 0
+        return 1 + countdown(
+            user__remaining=user__remaining - user_remaining,
         )
 
     @app.tool()
@@ -236,32 +235,28 @@ def test_recursive_generated_bindings_execute_in_every_target() -> None:
     cli = _ejected(app, "cli")
     cli_result = CliRunner().invoke(
         cli.app,
-        ["countdown", "--user-remaining", "2", "--user-remaining-2", "10"],
+        ["countdown", "--user-remaining", "3"],
     )
     assert cli_result.exit_code == 0, cli_result.exception
-    assert cli_result.stdout == "12\n"
+    assert cli_result.stdout == "3\n"
 
     api = _ejected(app, "api")
-    api_response = TestClient(api.app).post(
-        "/countdown", json={"user_remaining": 2, "user_remaining_2": 10}
-    )
+    api_response = TestClient(api.app).post("/countdown", json={"user_remaining": 3})
     assert api_response.status_code == 200
-    assert api_response.json() == 12
+    assert api_response.json() == 3
 
     mcp: Any = _ejected(app, "mcp")
 
     async def call_mcp() -> str:
-        result = await mcp.mcp.call_tool(
-            "countdown", {"user_remaining": 2, "user_remaining_2": 10}
-        )
+        result = await mcp.mcp.call_tool("countdown", {"user_remaining": 3})
         content = result if isinstance(result, list) else result.content
         return content[0].text
 
-    assert asyncio.run(call_mcp()) == "12"
+    assert asyncio.run(call_mcp()) == "3"
 
 
 @pytest.mark.parametrize("generator", [APIGenerator, MCPGenerator])
-def test_private_implementation_names_reject_retained_import_collisions(
+def test_private_implementation_names_avoid_retained_import_collisions(
     generator,
 ) -> None:
     tool = ToolInfo(
@@ -272,5 +267,43 @@ def test_private_implementation_names_reject_retained_import_collisions(
         source_imports=["from math import sqrt as _square_root_impl"],
     )
 
-    with pytest.raises(ValueError, match="collide with generated names"):
-        generator().generate([tool])
+    module = ModuleType(f"generated_{generator.__name__}_import_collision")
+    exec(compile(generator().generate([tool]), "<generated>", "exec"), module.__dict__)
+
+    if generator is APIGenerator:
+        response = TestClient(module.app).post("/square_root", json=9.0)
+        assert response.status_code == 200
+        assert response.json() == 3.0
+    else:
+
+        async def call_mcp() -> str:
+            result = await module.mcp.call_tool("square_root", {"value": 9.0})
+            content = result if isinstance(result, list) else result.content
+            return content[0].text
+
+        assert asyncio.run(call_mcp()) == "3.0"
+
+
+@pytest.mark.parametrize("target", ["api", "mcp"])
+def test_public_parameter_cannot_shadow_private_implementation(target: str) -> None:
+    app = App("implementation-shadow")
+
+    @app.tool()
+    def echo(_echo_impl: str) -> str:
+        return _echo_impl.upper()
+
+    generated: Any = _ejected(app, target)
+    assert "def _echo_impl_(" in app.eject(target)
+
+    if target == "api":
+        response = TestClient(generated.app).post("/echo", json="hello")
+        assert response.status_code == 200
+        assert response.json() == "HELLO"
+    else:
+
+        async def call_mcp() -> str:
+            result = await generated.mcp.call_tool("echo", {"_echo_impl": "hello"})
+            content = result if isinstance(result, list) else result.content
+            return content[0].text
+
+        assert asyncio.run(call_mcp()) == "HELLO"

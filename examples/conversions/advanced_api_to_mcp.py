@@ -8,14 +8,19 @@ from typing import Optional
 from fastmcp import FastMCP as _intpot_mcp_fastmcp
 
 mcp = _intpot_mcp_fastmcp('advanced_api')
+_intpot_required = object()
 
 
 def _create_user_impl(
-    username: str,
-    email: str,
-    role: str,
+    username: str = _intpot_required,
+    email: str = _intpot_required,
+    role: str = 'member',
 ) -> dict:
     """Create a new user account."""
+    if username is _intpot_required:
+        raise TypeError('Missing required argument: username')
+    if email is _intpot_required:
+        raise TypeError('Missing required argument: email')
     return {
         "username": username,
         "email": email,
@@ -36,9 +41,11 @@ def create_user(
     return _create_user_impl(username, email, role)
 
 def _get_user_impl(
-    user_id: str,
+    user_id: str = _intpot_required,
 ) -> dict:
     """Retrieve a user by their ID."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     if user_id:
         return {"user_id": user_id, "username": "example", "role": "member"}
     raise ValueError("user_id is required")
@@ -53,11 +60,13 @@ def get_user(
     return _get_user_impl(user_id)
 
 def _update_user_impl(
-    user_id: str,
-    email: Optional[str],
-    role: Optional[str],
+    user_id: str = _intpot_required,
+    email: Optional[str] = None,
+    role: Optional[str] = None,
 ) -> dict:
     """Update user fields."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     changes = {}
     if email is not None:
         changes["email"] = email
@@ -77,9 +86,11 @@ def update_user(
     return _update_user_impl(user_id, email, role)
 
 def _delete_user_impl(
-    user_id: str,
+    user_id: str = _intpot_required,
 ) -> dict:
     """Delete a user by their ID."""
+    if user_id is _intpot_required:
+        raise TypeError('Missing required argument: user_id')
     return {"user_id": user_id, "deleted": True}
 
 
@@ -92,8 +103,8 @@ def delete_user(
     return _delete_user_impl(user_id)
 
 def _list_users_impl(
-    limit: int,
-    offset: int,
+    limit: int = 20,
+    offset: int = 0,
 ) -> dict:
     """List users with pagination."""
     return {"users": [], "limit": limit, "offset": offset, "total": 0}
@@ -109,9 +120,11 @@ def list_users(
     return _list_users_impl(limit, offset)
 
 def _bulk_create_impl(
-    payload: str,
+    payload: str = _intpot_required,
 ) -> dict:
     """Create multiple users from a JSON payload."""
+    if payload is _intpot_required:
+        raise TypeError('Missing required argument: payload')
     users = json.loads(payload)
     return {"created": len(users), "users": users}
 

@@ -8,13 +8,18 @@ import inspect as _intpot_cli_inspect
 import typer as _intpot_cli_typer
 
 app = _intpot_cli_typer.Typer(name='api_app', help='api_app — powered by intpot')
+_intpot_required = object()
 
 
 def _add_impl(
-    a: int,
-    b: int,
+    a: int = _intpot_required,
+    b: int = _intpot_required,
 ) -> dict:
     """Add two numbers together."""
+    if a is _intpot_required:
+        raise TypeError('Missing required argument: a')
+    if b is _intpot_required:
+        raise TypeError('Missing required argument: b')
     return {'result': a + b}
 
 
@@ -32,10 +37,12 @@ def add(
 
 
 def _greet_impl(
-    name: str,
-    greeting: str,
+    name: str = _intpot_required,
+    greeting: str = 'Hello',
 ) -> dict:
     """Greet someone by name."""
+    if name is _intpot_required:
+        raise TypeError('Missing required argument: name')
     return {'message': f'{greeting}, {name}!'}
 
 

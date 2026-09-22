@@ -19,16 +19,23 @@ from typing import {{ typing_imports | join(", ") }}
 from fastapi import FastAPI as {{ "FastAPI" | fastapi_alias }}{% for imp in ns.imports | sort %}, {{ imp }} as {{ imp | fastapi_alias }}{% endfor %}
 
 app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
+{%- set has_implementation = tools | selectattr("function_body") | list %}
+{% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
+{% endif %}
 {% for tool in tools %}
 {%- if tool.function_body %}
 
-{% if tool.is_async %}async {% endif %}def _{{ tool.name }}_impl(
+{% if tool.is_async %}async {% endif %}def {{ generated_aliases["impl:" ~ tool.name] }}(
 {%- for param in tool.parameters %}
-    {{ param.binding_name or param.name }}: {{ param.type_annotation }},
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
-    {{ tool.function_body | bind_tool_name(tool, "_" ~ tool.name ~ "_impl", true) | indent(4) }}
+{%- for param in tool.parameters if param.required %}
+    if {{ param.binding_name or param.name }} is {{ generated_aliases["helper:required"] }}:
+        raise TypeError({{ ("Missing required argument: " ~ (param.binding_name or param.name)) | repr }})
+{%- endfor %}
+    {{ tool.function_body | bind_tool_name(tool, generated_aliases["impl:" ~ tool.name], true) | indent(4) }}
 {%- endif %}
 
 
@@ -51,7 +58,7 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
     """{{ tool.description | escape_doc }}"""
 {%- endif %}
 {% if tool.function_body %}
-    return {% if tool.is_async %}await {% endif %}_{{ tool.name }}_impl({{ tool.parameters | map(attribute="name") | join(", ") }})
+    return {% if tool.is_async %}await {% endif %}{{ generated_aliases["impl:" ~ tool.name] }}({{ tool.parameters | map(attribute="name") | join(", ") }})
 {%- else %}
     # TODO: implement
     return {"result": "{{ tool.name }} called"}
