@@ -194,18 +194,19 @@ def test_parameter_help_falls_back_to_callback_metadata():
 
 
 def test_registered_callbacks_are_inspected_when_click_tree_cannot_be_built():
-    def search(
+    def search_tasks(
         query: str = typer.Argument(..., help="Search query"),
         include_done: bool = typer.Option(False, help="Include completed tasks"),
     ) -> None:
         """Search tasks."""
         pass
 
-    app = _StubRegisteredApp([_StubCommandInfo(search)])
+    app = _StubRegisteredApp([_StubCommandInfo(search_tasks)])
 
     tools = CLIInspector().inspect(app)
 
-    assert [tool.name for tool in tools] == ["search"]
+    assert [tool.name for tool in tools] == ["search_tasks"]
+    assert tools[0].interface_name == "search-tasks"
     assert tools[0].description == "Search tasks."
     assert [(param.name, param.type_annotation) for param in tools[0].parameters] == [
         ("query", "str"),

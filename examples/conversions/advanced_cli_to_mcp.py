@@ -8,7 +8,7 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('advanced_cli')
 
 
-@mcp.tool()
+@mcp.tool(name='create')
 def create(
     title: str,
     priority: int = 3,
@@ -21,7 +21,7 @@ def create(
     return json.dumps(task, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(name='search')
 def search(
     query: str,
     limit: int = 10,
@@ -35,7 +35,7 @@ def search(
     return json.dumps(results[:limit], indent=2)
 
 
-@mcp.tool()
+@mcp.tool(name='stats')
 def stats(
 ) -> str:
     """Show task statistics."""

@@ -24,7 +24,7 @@ def test_generate_mcp_server():
     code = MCPGenerator().generate(tools)
 
     assert "from fastmcp import FastMCP" in code
-    assert "@mcp.tool()" in code
+    assert "@mcp.tool(name='add')" in code
     assert "def add(" in code
     assert "a: int," in code
 

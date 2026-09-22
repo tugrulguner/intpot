@@ -66,6 +66,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
         route_path=info.route_path,
         dependencies=list(info.dependencies),
         source_imports=list(info.source_imports),
+        interface_name=info.interface_name,
     )
 
 
@@ -223,7 +224,8 @@ def _build_tool_info(
     description_override: str | None = None,
 ) -> ToolInfo:
     """Build a ToolInfo from a plain Python function."""
-    tool_name = sanitize_identifier(name_override or func.__name__)
+    interface_name = name_override or func.__name__
+    tool_name = sanitize_identifier(interface_name)
     description = (
         description_override
         if description_override is not None
@@ -291,6 +293,7 @@ def _build_tool_info(
 
     return ToolInfo(
         name=tool_name,
+        interface_name=interface_name,
         description=description,
         parameters=parameters,
         return_type=return_type,

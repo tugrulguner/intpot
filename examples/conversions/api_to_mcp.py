@@ -6,7 +6,7 @@ from fastmcp import FastMCP as _intpot_mcp_fastmcp
 mcp = _intpot_mcp_fastmcp('api_app')
 
 
-@mcp.tool()
+@mcp.tool(name='add')
 def add(
     a: int,
     b: int,
@@ -16,7 +16,7 @@ def add(
     return {"result": a + b}
 
 
-@mcp.tool()
+@mcp.tool(name='greet')
 def greet(
     name: str,
     greeting: str = 'Hello',

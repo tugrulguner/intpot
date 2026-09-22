@@ -33,7 +33,7 @@ app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_na
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
-@app.command(name={{ tool.name | repr }})
+@app.command(name={{ tool.interface_name | repr }})
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}

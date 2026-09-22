@@ -755,9 +755,13 @@ class ToolInfo:
     route_path: str | None = None
     dependencies: list[str] = field(default_factory=list)
     source_imports: list[str] = field(default_factory=list)
+    interface_name: str | None = None
 
     def __post_init__(self) -> None:
-        self.name = sanitize_identifier(self.name)
+        canonical_name = sanitize_identifier(self.name)
+        if self.interface_name is None and canonical_name != self.name:
+            self.interface_name = self.name
+        self.name = canonical_name
         # Parameter names are sanitised individually, so two distinct source
         # names can arrive here already collapsed onto one identifier.
         unique = deduplicate_identifiers([p.name for p in self.parameters])
@@ -866,9 +870,13 @@ class ToolSchema:
     route_path: str | None = None
     dependencies: tuple[str, ...] = ()
     source_imports: tuple[str, ...] = ()
+    interface_name: str | None = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "name", sanitize_identifier(self.name))
+        canonical_name = sanitize_identifier(self.name)
+        if self.interface_name is None and canonical_name != self.name:
+            object.__setattr__(self, "interface_name", self.name)
+        object.__setattr__(self, "name", canonical_name)
         object.__setattr__(self, "parameters", tuple(self.parameters))
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
         object.__setattr__(self, "source_imports", tuple(self.source_imports))
@@ -886,6 +894,7 @@ class ToolSchema:
             route_path=tool.route_path,
             dependencies=tuple(tool.dependencies),
             source_imports=tuple(tool.source_imports),
+            interface_name=tool.interface_name,
         )
 
     def to_info(self) -> ToolInfo:
@@ -901,6 +910,7 @@ class ToolSchema:
             route_path=self.route_path,
             dependencies=list(self.dependencies),
             source_imports=list(self.source_imports),
+            interface_name=self.interface_name,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -916,6 +926,7 @@ class ToolSchema:
             "route_path": self.route_path,
             "dependencies": list(self.dependencies),
             "source_imports": list(self.source_imports),
+            "interface_name": self.interface_name,
         }
 
 

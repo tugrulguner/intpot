@@ -152,7 +152,9 @@ for tool in app.tools:
 ```
 
 `ToolInfo` fields: `name`, `description`, `parameters`, `return_type`, `http_method`,
-`function_body`, `is_async`, `route_path`, `dependencies`, `source_imports`.
+`function_body`, `is_async`, `route_path`, `dependencies`, `source_imports`,
+`interface_name`. `name` is a Python-safe binding; `interface_name` preserves an explicit
+framework-visible spelling such as `send-email` when it differs.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
 `param_source`, `placement`, plus a `required` property. `placement` is the explicit target

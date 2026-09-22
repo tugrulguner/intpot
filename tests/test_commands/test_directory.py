@@ -211,9 +211,9 @@ def test_each_generated_file_kept_its_own_tool(tmp_path: Path):
 
     runner.invoke(app, ["to", "mcp", str(project), "-o", str(out)])
 
-    assert _tool_names(out / "alpha" / "tools_mcp.py") == ["alpha_only"]
-    assert _tool_names(out / "beta" / "tools_mcp.py") == ["beta_only"]
-    assert _tool_names(out / "root_tool_mcp.py") == ["root_only"]
+    assert _tool_names(out / "alpha" / "tools_mcp.py") == ["alpha-only"]
+    assert _tool_names(out / "beta" / "tools_mcp.py") == ["beta-only"]
+    assert _tool_names(out / "root_tool_mcp.py") == ["root-only"]
 
 
 def test_a_root_level_source_stays_at_the_output_root(tmp_path: Path):
