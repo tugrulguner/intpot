@@ -103,6 +103,26 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
         occupied.update(
             parameter.binding_name or parameter.name for parameter in tool.parameters
         )
+        if tool.function_body:
+            body = ast.parse(tool.function_body)
+            for node in ast.walk(body):
+                if isinstance(node, ast.Name):
+                    occupied.add(node.id)
+                elif isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                ):
+                    occupied.add(node.name)
+                elif isinstance(node, ast.arg):
+                    occupied.add(node.arg)
+                elif isinstance(node, ast.alias):
+                    occupied.add(node.asname or node.name.split(".", 1)[0])
+                elif isinstance(node, (ast.Global, ast.Nonlocal)):
+                    occupied.update(node.names)
+                elif (
+                    isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar))
+                    and node.name
+                ):
+                    occupied.add(node.name)
         for source_import in tool.source_imports:
             occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
 

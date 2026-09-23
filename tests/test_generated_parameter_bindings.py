@@ -307,3 +307,32 @@ def test_public_parameter_cannot_shadow_private_implementation(target: str) -> N
             return content[0].text
 
         assert asyncio.run(call_mcp()) == "HELLO"
+
+
+@pytest.mark.parametrize("target", ["cli", "api", "mcp"])
+def test_body_local_cannot_shadow_required_parameter_sentinel(target: str) -> None:
+    app = App("required-sentinel-shadow")
+
+    @app.tool()
+    def show(value: str) -> str:
+        _intpot_required = value.upper()
+        return _intpot_required
+
+    generated: Any = _ejected(app, target)
+
+    if target == "cli":
+        result = CliRunner().invoke(generated.app, ["hello"])
+        assert result.exit_code == 0, result.exception
+        assert result.stdout == "HELLO\n"
+    elif target == "api":
+        response = TestClient(generated.app).post("/show", json="hello")
+        assert response.status_code == 200
+        assert response.json() == "HELLO"
+    else:
+
+        async def call_mcp() -> str:
+            result = await generated.mcp.call_tool("show", {"value": "hello"})
+            content = result if isinstance(result, list) else result.content
+            return content[0].text
+
+        assert asyncio.run(call_mcp()) == "HELLO"
