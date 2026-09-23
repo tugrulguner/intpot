@@ -123,6 +123,8 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
                     and node.name
                 ):
                     occupied.add(node.name)
+                elif isinstance(node, ast.MatchMapping) and node.rest:
+                    occupied.add(node.rest)
         for source_import in tool.source_imports:
             occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
 

@@ -336,3 +336,34 @@ def test_body_local_cannot_shadow_required_parameter_sentinel(target: str) -> No
             return content[0].text
 
         assert asyncio.run(call_mcp()) == "HELLO"
+
+
+@pytest.mark.parametrize("target", ["cli", "api", "mcp"])
+def test_mapping_rest_cannot_shadow_required_parameter_sentinel(target: str) -> None:
+    app = App("required-sentinel-mapping-rest")
+
+    @app.tool()
+    def show(value: str) -> str:
+        match {}:
+            case {**_intpot_required}:
+                pass
+        return value.upper()
+
+    generated: Any = _ejected(app, target)
+
+    if target == "cli":
+        result = CliRunner().invoke(generated.app, ["hello"])
+        assert result.exit_code == 0, result.exception
+        assert result.stdout == "HELLO\n"
+    elif target == "api":
+        response = TestClient(generated.app).post("/show", json="hello")
+        assert response.status_code == 200
+        assert response.json() == "HELLO"
+    else:
+
+        async def call_mapping_rest_mcp() -> str:
+            result = await generated.mcp.call_tool("show", {"value": "hello"})
+            content = result if isinstance(result, list) else result.content
+            return content[0].text
+
+        assert asyncio.run(call_mapping_rest_mcp()) == "HELLO"
