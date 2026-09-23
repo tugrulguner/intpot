@@ -100,6 +100,31 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     occupied = {tool.name for tool in tools}
     for tool in tools:
         occupied.update(parameter.name for parameter in tool.parameters)
+        occupied.update(
+            parameter.binding_name or parameter.name for parameter in tool.parameters
+        )
+        if tool.function_body:
+            body = ast.parse(tool.function_body)
+            for node in ast.walk(body):
+                if isinstance(node, ast.Name):
+                    occupied.add(node.id)
+                elif isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                ):
+                    occupied.add(node.name)
+                elif isinstance(node, ast.arg):
+                    occupied.add(node.arg)
+                elif isinstance(node, ast.alias):
+                    occupied.add(node.asname or node.name.split(".", 1)[0])
+                elif isinstance(node, (ast.Global, ast.Nonlocal)):
+                    occupied.update(node.names)
+                elif (
+                    isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar))
+                    and node.name
+                ):
+                    occupied.add(node.name)
+                elif isinstance(node, ast.MatchMapping) and node.rest:
+                    occupied.add(node.rest)
         for source_import in tool.source_imports:
             occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
 
@@ -142,6 +167,10 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
         "Query",
     ):
         aliases[f"fastapi:{name}"] = unique(f"_intpot_fastapi_{name}")
+    aliases["helper:required"] = unique("_intpot_required")
+    for tool in tools:
+        if tool.function_body:
+            aliases[f"impl:{tool.name}"] = unique(f"_{tool.name}_impl")
     return aliases
 
 
@@ -158,6 +187,7 @@ def _generated_binding_collisions(
     tools: Sequence[RenderableTool],
     extra_imports: Sequence[str],
     typing_imports: Sequence[str],
+    aliases: dict[str, str],
 ) -> set[str]:
     retained = set(typing_imports)
     for source_import in extra_imports:
@@ -171,7 +201,6 @@ def _generated_binding_collisions(
     if template_name == "cli_app.py.j2":
         generated = {"app"}
         generated.update(tool.name for tool in tools)
-        generated.update(f"_{tool.name}_impl" for tool in tools if tool.function_body)
     elif template_name == "mcp_server.py.j2":
         generated = {"mcp"}
         generated.update(tool.name for tool in tools)
@@ -180,6 +209,9 @@ def _generated_binding_collisions(
         generated.update(tool.name for tool in tools)
     else:
         generated = set()
+    generated.update(
+        aliases[f"impl:{tool.name}"] for tool in tools if tool.function_body
+    )
     return retained & generated
 
 
@@ -220,7 +252,9 @@ def _referenced_names(tools: Sequence[RenderableTool]) -> set[str]:
 
 def _body_global_names(tool: RenderableTool) -> set[str]:
     """Return globals loaded by a body, excluding parameters and local bindings."""
-    parameters = ", ".join(parameter.name for parameter in tool.parameters)
+    parameters = ", ".join(
+        parameter.binding_name or parameter.name for parameter in tool.parameters
+    )
     body = textwrap.indent(tool.function_body or "pass", "    ")
     declaration = "async def" if tool.is_async else "def"
     source = f"{declaration} _intpot_generated_tool({parameters}):\n{body}\n"
@@ -229,7 +263,9 @@ def _body_global_names(tool: RenderableTool) -> set[str]:
         module_table = symtable.symtable(source, "<intpot-tool>", "exec")
     except SyntaxError:
         loaded = _loaded_names(tool.function_body or "", mode="exec")
-        return loaded - {parameter.name for parameter in tool.parameters}
+        return loaded - {
+            parameter.binding_name or parameter.name for parameter in tool.parameters
+        }
 
     referenced: set[str] = set()
 
@@ -887,12 +923,18 @@ def render_template(template_name: str, **kwargs: object) -> str:
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
-    env.filters["bind_tool_name"] = lambda body, tool, replacement: bind_global_name(
-        body,
-        tuple(parameter.name for parameter in tool.parameters),
-        tool.name,
-        replacement,
-        is_async=tool.is_async,
+    env.filters["bind_tool_name"] = lambda body, tool, replacement, preserve=False: (
+        bind_global_name(
+            body,
+            tuple(
+                parameter.binding_name or parameter.name
+                for parameter in tool.parameters
+            ),
+            tool.name,
+            replacement,
+            is_async=tool.is_async,
+            preserve_unmodified=preserve,
+        )
     )
     env.filters["http_method"] = _http_method
     template = env.get_template(template_name)
@@ -908,6 +950,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
             tools,
             kwargs["extra_imports"],  # type: ignore[arg-type]
             kwargs["typing_imports"],  # type: ignore[arg-type]
+            aliases,
         )
         if collisions:
             names = ", ".join(sorted(collisions))

@@ -16,7 +16,7 @@ from decimal import Decimal
 from enum import Enum
 from fractions import Fraction
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 
@@ -705,17 +705,50 @@ class ParameterPlacement(str, Enum):
         }[self]
 
 
+def _validate_binding_name(name: str) -> None:
+    """Reject names that cannot be emitted as Python parameters."""
+    if not name.isidentifier() or keyword.iskeyword(name):
+        raise ValueError(f"Invalid Python parameter binding name: {name!r}")
+
+
+def _allocate_identifier(name: str, occupied: set[str]) -> str:
+    """Allocate a unique identifier without changing its valid base spelling."""
+    candidate = name
+    counter = 2
+    while candidate in occupied:
+        candidate = f"{name}_{counter}"
+        counter += 1
+    occupied.add(candidate)
+    return candidate
+
+
 @dataclass
 class ParameterInfo:
+    _source_binding_name: ClassVar[str | None] = None
+
     name: str
     type_annotation: str = "str"
     default: Any = _SENTINEL  # _SENTINEL means required (no default)
     description: str = ""
     param_source: ParamSource | None = None
     placement: ParameterPlacement | None = None
+    binding_name: str | None = None
 
     def __post_init__(self) -> None:
-        self.name = sanitize_identifier(self.name)
+        source_name = self.name
+        if self.binding_name is not None:
+            _validate_binding_name(self.binding_name)
+            self._source_binding_name = self.binding_name
+        elif source_name.isidentifier() and not keyword.iskeyword(source_name):
+            self._source_binding_name = source_name
+        self.name = sanitize_identifier(source_name)
+        if (
+            self.binding_name is None
+            and source_name != self.name
+            and source_name.isidentifier()
+            and not keyword.iskeyword(source_name)
+        ):
+            self.binding_name = source_name
 
     @property
     def required(self) -> bool:
@@ -736,7 +769,7 @@ def deduplicate_identifiers(names: list[str]) -> list[str]:
         candidate = name
         counter = 2
         while candidate in seen:
-            candidate = f"{name}_{counter}"
+            candidate = sanitize_identifier(f"{name}_{counter}")
             counter += 1
         seen.add(candidate)
         result.append(candidate)
@@ -765,7 +798,21 @@ class ToolInfo:
         # Parameter names are sanitised individually, so two distinct source
         # names can arrive here already collapsed onto one identifier.
         unique = deduplicate_identifiers([p.name for p in self.parameters])
-        for param, name in zip(self.parameters, unique, strict=True):
+        source_bindings: list[str | None] = []
+        occupied: set[str] = set()
+        for param in self.parameters:
+            source_binding = param._source_binding_name
+            if source_binding in occupied:
+                source_binding = None
+            if source_binding is not None:
+                occupied.add(source_binding)
+            source_bindings.append(source_binding)
+
+        for param, name, source_binding in zip(
+            self.parameters, unique, source_bindings, strict=True
+        ):
+            binding_name = source_binding or _allocate_identifier(name, occupied)
+            param.binding_name = binding_name if binding_name != name else None
             param.name = name
 
 
@@ -779,9 +826,21 @@ class ParameterSchema:
     description: str = ""
     param_source: ParamSource | None = None
     placement: ParameterPlacement | None = None
+    binding_name: str | None = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "name", sanitize_identifier(self.name))
+        source_name = self.name
+        canonical_name = sanitize_identifier(source_name)
+        if self.binding_name is not None:
+            _validate_binding_name(self.binding_name)
+        if (
+            self.binding_name is None
+            and source_name != canonical_name
+            and source_name.isidentifier()
+            and not keyword.iskeyword(source_name)
+        ):
+            object.__setattr__(self, "binding_name", source_name)
+        object.__setattr__(self, "name", canonical_name)
         object.__setattr__(self, "default", _freeze_default(self.default))
 
     def __eq__(self, other: object) -> bool:
@@ -794,6 +853,7 @@ class ParameterSchema:
             self.description,
             self.param_source,
             self.placement,
+            self.binding_name,
         ) == (
             other.name,
             other.type_annotation,
@@ -801,6 +861,7 @@ class ParameterSchema:
             other.description,
             other.param_source,
             other.placement,
+            other.binding_name,
         )
 
     def __hash__(self) -> int:
@@ -812,6 +873,7 @@ class ParameterSchema:
                 self.description,
                 self.param_source,
                 self.placement,
+                self.binding_name,
             )
         )
 
@@ -824,6 +886,7 @@ class ParameterSchema:
             description=parameter.description,
             param_source=parameter.param_source,
             placement=parameter.placement,
+            binding_name=parameter.binding_name,
         )
 
     @property
@@ -839,6 +902,7 @@ class ParameterSchema:
             description=self.description,
             param_source=self.param_source,
             placement=self.placement,
+            binding_name=self.binding_name,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -849,6 +913,7 @@ class ParameterSchema:
             "description": self.description,
             "param_source": self.param_source.value if self.param_source else None,
             "placement": self.placement.value if self.placement else None,
+            "binding_name": self.binding_name,
             "required": self.required,
         }
         if not self.required:
@@ -877,7 +942,22 @@ class ToolSchema:
         if self.interface_name is None and canonical_name != self.name:
             object.__setattr__(self, "interface_name", self.name)
         object.__setattr__(self, "name", canonical_name)
-        object.__setattr__(self, "parameters", tuple(self.parameters))
+        parameters = tuple(self.parameters)
+        public_names = [parameter.name for parameter in parameters]
+        private_names = [
+            parameter.binding_name or parameter.name for parameter in parameters
+        ]
+        if deduplicate_identifiers(public_names) != public_names or len(
+            set(private_names)
+        ) != len(private_names):
+            normalized = ToolInfo(
+                name=canonical_name,
+                parameters=[parameter.to_info() for parameter in parameters],
+            ).parameters
+            parameters = tuple(
+                ParameterSchema.from_info(parameter) for parameter in normalized
+            )
+        object.__setattr__(self, "parameters", parameters)
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
         object.__setattr__(self, "source_imports", tuple(self.source_imports))
 

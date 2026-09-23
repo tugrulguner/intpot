@@ -10,7 +10,24 @@ from typing import {{ typing_imports | join(", ") }}
 from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
 
 mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
+{%- set has_implementation = tools | selectattr("function_body") | list %}
+{% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
+{% endif %}
 {% for tool in tools %}
+{%- if tool.function_body %}
+
+{% if tool.is_async %}async {% endif %}def {{ generated_aliases["impl:" ~ tool.name] }}(
+{%- for param in tool.parameters %}
+    {{ param.binding_name or param.name }}: {{ param.type_annotation }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
+{%- endfor %}
+) -> {{ tool.return_type }}:
+    """{{ tool.description | escape_doc }}"""
+{%- for param in tool.parameters if param.required %}
+    if {{ param.binding_name or param.name }} is {{ generated_aliases["helper:required"] }}:
+        raise TypeError({{ ("Missing required argument: " ~ (param.binding_name or param.name)) | repr }})
+{%- endfor %}
+    {{ tool.function_body | bind_tool_name(tool, generated_aliases["impl:" ~ tool.name], true) | indent(4) }}
+{%- endif %}
 
 
 {% if tool.dependencies -%}
@@ -26,7 +43,7 @@ mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
 {% if tool.function_body %}
-    {{ tool.function_body | indent(4) }}
+    return {% if tool.is_async %}await {% endif %}{{ generated_aliases["impl:" ~ tool.name] }}({{ tool.parameters | map(attribute="name") | join(", ") }})
 {%- else %}
     # TODO: implement
     return "{{ tool.name }} called"

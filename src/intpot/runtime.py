@@ -56,6 +56,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 description=parameter.description,
                 param_source=parameter.param_source,
                 placement=parameter.placement,
+                binding_name=parameter.binding_name,
             )
             for parameter in info.parameters
         ],

@@ -6,6 +6,20 @@ import json
 from fastapi import FastAPI as _intpot_fastapi_FastAPI, Body as _intpot_fastapi_Body
 
 app = _intpot_fastapi_FastAPI(title='advanced_cli')
+_intpot_required = object()
+
+
+def _create_impl(
+    title: str = _intpot_required,
+    priority: int = 3,
+    tags: str = '',
+) -> dict:
+    """Create a new task with optional priority and tags."""
+    if title is _intpot_required:
+        raise TypeError('Missing required argument: title')
+    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+    task = {'title': title, 'priority': priority, 'tags': tag_list}
+    return {'result': json.dumps(task, indent=2)}
 
 
 @app.post('/create', name='create')
@@ -16,9 +30,20 @@ def create(
 ) -> dict:
     """Create a new task with optional priority and tags."""
 
-    tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-    task = {'title': title, 'priority': priority, 'tags': tag_list}
-    return {'result': json.dumps(task, indent=2)}
+    return _create_impl(title, priority, tags)
+
+def _search_impl(
+    query: str = _intpot_required,
+    limit: int = 10,
+    include_done: bool = False,
+) -> dict:
+    """Search tasks by title or tag."""
+    if query is _intpot_required:
+        raise TypeError('Missing required argument: query')
+    results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
+    if not include_done:
+        results = [r for r in results if not r['done']]
+    return {'result': json.dumps(results[:limit], indent=2)}
 
 
 @app.post('/search', name='search')
@@ -29,18 +54,20 @@ def search(
 ) -> dict:
     """Search tasks by title or tag."""
 
-    results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
-    if not include_done:
-        results = [r for r in results if not r['done']]
-    return {'result': json.dumps(results[:limit], indent=2)}
+    return _search_impl(query, limit, include_done)
+
+def _stats_impl(
+) -> dict:
+    """Show task statistics."""
+    summary = {'total': 42, 'done': 15, 'pending': 27}
+    return {'result': json.dumps(summary)}
 
 
 @app.post('/stats', name='stats')
 def stats() -> dict:
     """Show task statistics."""
 
-    summary = {'total': 42, 'done': 15, 'pending': 27}
-    return {'result': json.dumps(summary)}
+    return _stats_impl()
 
 
 if __name__ == "__main__":
