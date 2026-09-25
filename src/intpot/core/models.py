@@ -733,6 +733,8 @@ class ParameterInfo:
     param_source: ParamSource | None = None
     placement: ParameterPlacement | None = None
     binding_name: str | None = None
+    interface_name: str | None = None
+    aliases: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         source_name = self.name
@@ -832,6 +834,8 @@ class ParameterSchema:
     param_source: ParamSource | None = None
     placement: ParameterPlacement | None = None
     binding_name: str | None = None
+    interface_name: str | None = None
+    aliases: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         source_name = self.name
@@ -847,6 +851,7 @@ class ParameterSchema:
             object.__setattr__(self, "binding_name", source_name)
         object.__setattr__(self, "name", canonical_name)
         object.__setattr__(self, "default", _freeze_default(self.default))
+        object.__setattr__(self, "aliases", tuple(self.aliases))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ParameterSchema):
@@ -859,6 +864,8 @@ class ParameterSchema:
             self.param_source,
             self.placement,
             self.binding_name,
+            self.interface_name,
+            self.aliases,
         ) == (
             other.name,
             other.type_annotation,
@@ -867,6 +874,8 @@ class ParameterSchema:
             other.param_source,
             other.placement,
             other.binding_name,
+            other.interface_name,
+            other.aliases,
         )
 
     def __hash__(self) -> int:
@@ -879,6 +888,8 @@ class ParameterSchema:
                 self.param_source,
                 self.placement,
                 self.binding_name,
+                self.interface_name,
+                self.aliases,
             )
         )
 
@@ -892,6 +903,8 @@ class ParameterSchema:
             param_source=parameter.param_source,
             placement=parameter.placement,
             binding_name=parameter.binding_name,
+            interface_name=parameter.interface_name,
+            aliases=tuple(parameter.aliases),
         )
 
     @property
@@ -908,11 +921,13 @@ class ParameterSchema:
             param_source=self.param_source,
             placement=self.placement,
             binding_name=self.binding_name,
+            interface_name=self.interface_name,
+            aliases=list(self.aliases),
         )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a sentinel-free representation suitable for JSON encoding."""
-        result: dict[str, Any] = {
+        data: dict[str, Any] = {
             "name": self.name,
             "type_annotation": self.type_annotation,
             "description": self.description,
@@ -921,9 +936,13 @@ class ParameterSchema:
             "binding_name": self.binding_name,
             "required": self.required,
         }
+        if self.interface_name is not None:
+            data["interface_name"] = self.interface_name
+        if self.aliases:
+            data["aliases"] = list(self.aliases)
         if not self.required:
-            result["default"] = _json_default(self.default)
-        return result
+            data["default"] = _json_default(self.default)
+        return data
 
 
 @dataclass(frozen=True, slots=True)

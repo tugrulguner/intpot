@@ -14,6 +14,7 @@ from intpot.core.models import (
     sanitize_identifier,
 )
 from intpot.core.projections import (
+    resolve_cli_aliases,
     resolve_parameter_placement,
     resolve_tool_interface_name,
 )
@@ -173,7 +174,12 @@ def build_typer_app(name: str, tools: list[RegisteredTool]) -> _typer.Typer:
             if placement is ParameterPlacement.CLI_ARGUMENT:
                 default = typer.Argument(..., help=contract.description)
             else:
-                default = typer.Option(contract.default, help=contract.description)
+                option_default = ... if contract.required else contract.default
+                default = typer.Option(
+                    option_default,
+                    *resolve_cli_aliases(contract),
+                    help=contract.description,
+                )
             parameters.append(parameter.replace(default=default))
         endpoint.__signature__ = signature.replace(  # type: ignore[attr-defined]
             parameters=parameters
@@ -273,6 +279,8 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
         marker_kwargs = (
             {"description": contract.description} if contract.description else {}
         )
+        if contract.interface_name is not None:
+            marker_kwargs["alias"] = contract.interface_name
         declared = (
             marker(..., **marker_kwargs)
             if contract.required
