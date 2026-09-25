@@ -153,7 +153,8 @@ for tool in app.tools:
 
 `ToolInfo` fields: `name`, `description`, `parameters`, `return_type`, `http_method`,
 `function_body`, `is_async`, `route_path`, `dependencies`, `source_imports`,
-`interface_name`. `name` is a Python-safe binding; `interface_name` preserves an explicit
+`interface_name`, `operation_id`, `route_summary`, `route_description`, `route_tags`,
+`route_deprecated`. `name` is a Python-safe binding; `interface_name` preserves an explicit
 framework-visible spelling such as `send-email` when it differs.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,

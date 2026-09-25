@@ -22,7 +22,12 @@ def _create_impl(
     return {'result': json.dumps(task, indent=2)}
 
 
-@app.post('/create', name='create')
+@app.post(
+    '/create',
+    name='create',
+    summary='Create a new task with optional priority and tags.',
+    description='Create a new task with optional priority and tags.',
+)
 def create(
     title: str = _intpot_fastapi_Body(..., description='Task title'),
     priority: int = _intpot_fastapi_Body(default=3, description='Priority level 1-5'),
@@ -46,7 +51,12 @@ def _search_impl(
     return {'result': json.dumps(results[:limit], indent=2)}
 
 
-@app.post('/search', name='search')
+@app.post(
+    '/search',
+    name='search',
+    summary='Search tasks by title or tag.',
+    description='Search tasks by title or tag.',
+)
 def search(
     query: str = _intpot_fastapi_Body(..., description='Search query'),
     limit: int = _intpot_fastapi_Body(default=10, description='Max results to return'),
@@ -63,7 +73,12 @@ def _stats_impl(
     return {'result': json.dumps(summary)}
 
 
-@app.post('/stats', name='stats')
+@app.post(
+    '/stats',
+    name='stats',
+    summary='Show task statistics.',
+    description='Show task statistics.',
+)
 def stats() -> dict:
     """Show task statistics."""
 

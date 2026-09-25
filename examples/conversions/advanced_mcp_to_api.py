@@ -27,7 +27,12 @@ def _create_note_impl(
     return {'result': json.dumps(note, indent=2)}
 
 
-@app.post('/create_note', name='create_note')
+@app.post(
+    '/create_note',
+    name='create_note',
+    summary='Create a new note with a generated ID.',
+    description='Create a new note with a generated ID.',
+)
 def create_note(
     title: str = _intpot_fastapi_Body(...),
     body: str = _intpot_fastapi_Body(...),
@@ -48,7 +53,12 @@ def _search_notes_impl(
     return {'result': json.dumps(results[:max_results])}
 
 
-@app.post('/search_notes', name='search_notes')
+@app.post(
+    '/search_notes',
+    name='search_notes',
+    summary='Search notes by keyword in title or body.',
+    description='Search notes by keyword in title or body.',
+)
 def search_notes(
     query: str = _intpot_fastapi_Body(...),
     max_results: int = _intpot_fastapi_Body(default=5),
@@ -67,7 +77,12 @@ async def _summarize_impl(
     return {'result': json.dumps({'summarized': len(ids), 'ids': ids})}
 
 
-@app.post('/summarize', name='summarize')
+@app.post(
+    '/summarize',
+    name='summarize',
+    summary='Summarize multiple notes by their IDs (comma-separated).',
+    description='Summarize multiple notes by their IDs (comma-separated).',
+)
 async def summarize(
     note_ids: str = _intpot_fastapi_Body(...),
 ) -> dict:
@@ -84,7 +99,12 @@ def _export_all_impl(
     return {'result': 'No notes found.'}
 
 
-@app.post('/export_all', name='export_all')
+@app.post(
+    '/export_all',
+    name='export_all',
+    summary='Export all notes in the specified format.',
+    description='Export all notes in the specified format.',
+)
 def export_all(
     format: str = _intpot_fastapi_Body(default='json'),
 ) -> dict:

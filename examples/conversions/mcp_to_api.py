@@ -19,7 +19,12 @@ def _add_impl(
     return {'result': a + b}
 
 
-@app.post('/add', name='add')
+@app.post(
+    '/add',
+    name='add',
+    summary='Add two numbers together.',
+    description='Add two numbers together.',
+)
 def add(
     a: int = _intpot_fastapi_Body(...),
     b: int = _intpot_fastapi_Body(...),
@@ -38,7 +43,12 @@ def _greet_impl(
     return {'result': f'{greeting}, {name}!'}
 
 
-@app.post('/greet', name='greet')
+@app.post(
+    '/greet',
+    name='greet',
+    summary='Greet someone by name.',
+    description='Greet someone by name.',
+)
 def greet(
     name: str = _intpot_fastapi_Body(...),
     greeting: str = _intpot_fastapi_Body(default='Hello'),

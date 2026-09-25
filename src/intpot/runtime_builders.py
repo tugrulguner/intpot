@@ -339,7 +339,19 @@ def build_fastapi_app(name: str, tools: list[RegisteredTool]) -> object:
             _fastapi_endpoint(tool.func, tool.info),
             methods=[method],
             name=interface_name,
-            summary=tool.info.description,
+            operation_id=tool.info.operation_id,
+            summary=(
+                tool.info.route_summary
+                if tool.info.route_summary is not None
+                else tool.info.description
+            ),
+            description=(
+                tool.info.route_description
+                if tool.info.route_description is not None
+                else tool.info.description
+            ),
+            tags=list(tool.info.route_tags) or None,
+            deprecated=tool.info.route_deprecated,
         )
     return api_app
 

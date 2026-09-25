@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import re
 from collections.abc import Iterable, Iterator
+from enum import Enum
 from typing import Any, cast
 
 from intpot.core.inspectors._utils import (
@@ -45,6 +46,12 @@ def _get_param_source(obj: Any) -> ParamSource | None:
 def _is_normalized_api_route(route: Any) -> bool:
     """Recognize the FastAPI route shape consumed by this inspector."""
     return all(hasattr(route, attr) for attr in ("endpoint", "dependant", "methods"))
+
+
+def _route_tag_name(tag: Any) -> str:
+    """Normalize FastAPI's string-or-Enum tag contract for standalone source."""
+    value = tag.value if isinstance(tag, Enum) else tag
+    return value if isinstance(value, str) else str(value)
 
 
 def _iter_api_routes(app: Any) -> Iterator[Any]:
@@ -203,6 +210,14 @@ class APIInspector(BaseInspector):
                     source_imports=extract_source_imports(endpoint),
                     is_async=asyncio.iscoroutinefunction(endpoint),
                     route_path=route_path,
+                    operation_id=getattr(route, "operation_id", None),
+                    route_summary=getattr(route, "summary", None),
+                    route_description=getattr(route, "description", None),
+                    route_tags=[
+                        _route_tag_name(tag)
+                        for tag in (getattr(route, "tags", None) or ())
+                    ],
+                    route_deprecated=getattr(route, "deprecated", None),
                     dependencies=dependencies,
                 )
             )
