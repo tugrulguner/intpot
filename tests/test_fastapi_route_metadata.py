@@ -103,6 +103,66 @@ def test_fastapi_inspector_preserves_effective_route_metadata() -> None:
     compile(APIGenerator().generate(schema), "<generated>", "exec")
 
 
+def test_inferred_fastapi_summary_survives_inspection_live_and_generation() -> None:
+    source = FastAPI()
+
+    @source.get("/health", name="public-health")
+    def health() -> dict[str, str]:
+        """Report service health.
+
+        This detail belongs in the operation description, not its summary.
+        """
+        return {"status": "ok"}
+
+    expected_operation = source.openapi()["paths"]["/health"]["get"]
+    assert expected_operation["summary"] == "Public-Health"
+
+    [info] = APIInspector().inspect(source)
+    assert info.route_summary == "Public-Health"
+
+    live: Any = build_fastapi_app("metadata", [RegisteredTool(func=health, info=info)])
+    schema = ApplicationSchema.from_tools(
+        name="metadata", source_type=SourceType.API, tools=(info,)
+    )
+    generated = ModuleType("generated_inferred_summary")
+    exec(
+        compile(APIGenerator().generate(schema), "<generated>", "exec"),
+        generated.__dict__,
+    )
+
+    for app in (live, generated.app):
+        operation = app.openapi()["paths"]["/health"]["get"]
+        assert operation["summary"] == expected_operation["summary"]
+        assert operation["description"] == expected_operation["description"]
+        assert TestClient(app).get("/health").json() == {"status": "ok"}
+
+
+def test_empty_fastapi_route_name_and_its_inferred_summary_are_preserved() -> None:
+    source = FastAPI()
+
+    @source.get("/health", name="")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    [info] = APIInspector().inspect(source)
+    assert info.interface_name == ""
+    assert info.route_summary == ""
+
+    schema = ApplicationSchema.from_tools(
+        name="metadata", source_type=SourceType.API, tools=(info,)
+    )
+    generated = ModuleType("generated_empty_route_name")
+    exec(
+        compile(APIGenerator().generate(schema), "<generated>", "exec"),
+        generated.__dict__,
+    )
+
+    source_route = _route(source, "/health")
+    generated_route = _route(generated.app, "/health")
+    assert generated_route.name == source_route.name == ""
+    assert generated.app.openapi()["paths"]["/health"]["get"]["summary"] == ""
+
+
 def test_live_and_generated_fastapi_preserve_route_metadata_and_execute() -> None:
     def health() -> dict[str, str]:
         return {"status": "ok"}

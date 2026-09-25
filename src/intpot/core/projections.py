@@ -48,7 +48,7 @@ def resolve_tool_interface_name(tool: ToolNameContract, target: SourceType) -> s
     """Resolve the framework-visible name without changing its Python binding."""
     if target not in (SourceType.CLI, SourceType.API, SourceType.MCP):
         raise ValueError(f"Tool names are not defined for target {target.value!r}")
-    return tool.interface_name or tool.name
+    return tool.name if tool.interface_name is None else tool.interface_name
 
 
 def project_tool_names(
