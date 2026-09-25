@@ -789,6 +789,11 @@ class ToolInfo:
     dependencies: list[str] = field(default_factory=list)
     source_imports: list[str] = field(default_factory=list)
     interface_name: str | None = None
+    operation_id: str | None = None
+    route_summary: str | None = None
+    route_description: str | None = None
+    route_tags: list[str] = field(default_factory=list)
+    route_deprecated: bool | None = None
 
     def __post_init__(self) -> None:
         canonical_name = sanitize_identifier(self.name)
@@ -936,6 +941,11 @@ class ToolSchema:
     dependencies: tuple[str, ...] = ()
     source_imports: tuple[str, ...] = ()
     interface_name: str | None = None
+    operation_id: str | None = None
+    route_summary: str | None = None
+    route_description: str | None = None
+    route_tags: tuple[str, ...] = ()
+    route_deprecated: bool | None = None
 
     def __post_init__(self) -> None:
         canonical_name = sanitize_identifier(self.name)
@@ -958,6 +968,7 @@ class ToolSchema:
                 ParameterSchema.from_info(parameter) for parameter in normalized
             )
         object.__setattr__(self, "parameters", parameters)
+        object.__setattr__(self, "route_tags", tuple(self.route_tags))
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
         object.__setattr__(self, "source_imports", tuple(self.source_imports))
 
@@ -972,6 +983,11 @@ class ToolSchema:
             function_body=tool.function_body,
             is_async=tool.is_async,
             route_path=tool.route_path,
+            operation_id=tool.operation_id,
+            route_summary=tool.route_summary,
+            route_description=tool.route_description,
+            route_tags=tuple(tool.route_tags),
+            route_deprecated=tool.route_deprecated,
             dependencies=tuple(tool.dependencies),
             source_imports=tuple(tool.source_imports),
             interface_name=tool.interface_name,
@@ -988,6 +1004,11 @@ class ToolSchema:
             function_body=self.function_body,
             is_async=self.is_async,
             route_path=self.route_path,
+            operation_id=self.operation_id,
+            route_summary=self.route_summary,
+            route_description=self.route_description,
+            route_tags=list(self.route_tags),
+            route_deprecated=self.route_deprecated,
             dependencies=list(self.dependencies),
             source_imports=list(self.source_imports),
             interface_name=self.interface_name,
@@ -1004,6 +1025,11 @@ class ToolSchema:
             "function_body": self.function_body,
             "is_async": self.is_async,
             "route_path": self.route_path,
+            "operation_id": self.operation_id,
+            "route_summary": self.route_summary,
+            "route_description": self.route_description,
+            "route_tags": list(self.route_tags),
+            "route_deprecated": self.route_deprecated,
             "dependencies": list(self.dependencies),
             "source_imports": list(self.source_imports),
             "interface_name": self.interface_name,

@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import re
 from collections.abc import Iterable, Iterator
+from enum import Enum
 from typing import Any, cast
 
 from intpot.core.inspectors._utils import (
@@ -45,6 +46,23 @@ def _get_param_source(obj: Any) -> ParamSource | None:
 def _is_normalized_api_route(route: Any) -> bool:
     """Recognize the FastAPI route shape consumed by this inspector."""
     return all(hasattr(route, attr) for attr in ("endpoint", "dependant", "methods"))
+
+
+def _route_tag_name(tag: Any) -> str:
+    """Normalize FastAPI's string-or-Enum tag contract for standalone source."""
+    value = tag.value if isinstance(tag, Enum) else tag
+    return value if isinstance(value, str) else str(value)
+
+
+def _effective_route_summary(route: Any, interface_name: str) -> str:
+    """Match FastAPI's OpenAPI summary when the route leaves it unset."""
+    summary = getattr(route, "summary", None)
+    route_name = getattr(route, "name", None)
+    if summary:
+        return summary
+    if route_name is not None:
+        return route_name.replace("_", " ").title()
+    return interface_name.replace("_", " ").title()
 
 
 def _iter_api_routes(app: Any) -> Iterator[Any]:
@@ -107,7 +125,8 @@ class APIInspector(BaseInspector):
             # `root` — i.e. the usual handler for `/`.
             endpoint = route.endpoint
             name = endpoint.__name__
-            interface_name = getattr(route, "name", None) or name
+            route_name = getattr(route, "name", None)
+            interface_name = name if route_name is None else route_name
 
             description = endpoint.__doc__ or ""
             description = description.strip()
@@ -203,6 +222,14 @@ class APIInspector(BaseInspector):
                     source_imports=extract_source_imports(endpoint),
                     is_async=asyncio.iscoroutinefunction(endpoint),
                     route_path=route_path,
+                    operation_id=getattr(route, "operation_id", None),
+                    route_summary=_effective_route_summary(route, interface_name),
+                    route_description=getattr(route, "description", None),
+                    route_tags=[
+                        _route_tag_name(tag)
+                        for tag in (getattr(route, "tags", None) or ())
+                    ],
+                    route_deprecated=getattr(route, "deprecated", None),
                     dependencies=dependencies,
                 )
             )

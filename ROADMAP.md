@@ -104,6 +104,9 @@ audit findings must be reproduced before treating their fixes as verified.
 - [x] Preserve valid source callable parameter bindings separately from canonical sanitized
       names so generated CLI, FastAPI, and FastMCP bodies execute after sanitization and
       deterministic collision suffixing.
+- [x] Preserve FastAPI route identity and documentation metadata — explicit operation IDs,
+      route names, summaries, descriptions, tags, and deprecation state — in the canonical
+      schema and both live and generated FastAPI applications.
 - [ ] Centralize the remaining target decisions for parameter names and aliases,
       required/default rules, descriptions, and response policy. Canonical schema values
       remain authoritative, but the focused tool-name slice does not unify those policies.

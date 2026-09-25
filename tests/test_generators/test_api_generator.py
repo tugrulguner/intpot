@@ -26,7 +26,12 @@ def test_generate_api_app():
 
     assert "from fastapi import FastAPI" in code
     assert "Body" in code
-    assert "app.post('/add', name='add')" in code
+    namespace: dict[str, Any] = {}
+    exec(compile(code, "<generated>", "exec"), namespace)
+    route = next(route for route in namespace["app"].routes if route.path == "/add")
+    assert route.name == "add"
+    assert route.summary == "Add two numbers."
+    assert route.description == "Add two numbers."
     assert "def add(" in code
     assert "a: int" in code
     assert "b: int" in code

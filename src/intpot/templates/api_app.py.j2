@@ -42,7 +42,21 @@ app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {% if tool.dependencies -%}
 # NOTE: Original used dependency injection: {{ tool.dependencies | join(", ") }}
 {% endif -%}
-@app.{{ tool.http_method | http_method }}({{ (tool.route_path or '/' + tool.interface_name) | repr }}, name={{ tool.interface_name | repr }})
+@app.{{ tool.http_method | http_method }}(
+    {{ (tool.route_path or '/' + tool.interface_name) | repr }},
+    name={{ tool.interface_name | repr }},
+{%- if tool.operation_id is not none %}
+    operation_id={{ tool.operation_id | repr }},
+{%- endif %}
+    summary={{ (tool.route_summary if tool.route_summary is not none else tool.description) | repr }},
+    description={{ (tool.route_description if tool.route_description is not none else tool.description) | repr }},
+{%- if tool.route_tags %}
+    tags={{ tool.route_tags | list | repr }},
+{%- endif %}
+{%- if tool.route_deprecated is not none %}
+    deprecated={{ tool.route_deprecated | repr }},
+{%- endif %}
+)
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- if tool.parameters %}
 {%- for param in tool.parameters %}
