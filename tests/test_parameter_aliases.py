@@ -4,6 +4,7 @@ from types import ModuleType
 from typing import Annotated, Any
 
 import typer
+from click import unstyle
 from fastapi import FastAPI, Header, Query
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
@@ -240,7 +241,7 @@ def test_fastapi_aliases_become_required_and_optional_cli_options() -> None:
 
         missing = runner.invoke(app, [])
         assert missing.exit_code != 0
-        assert "--customer-id" in missing.output
+        assert "--customer-id" in unstyle(missing.output)
 
         rejected = runner.invoke(app, ["acct-1"])
         assert rejected.exit_code != 0
