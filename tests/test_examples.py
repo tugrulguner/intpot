@@ -58,6 +58,7 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
         "verified generated CLI command",
         "verified generated MCP tool",
         "verified dependency FastAPI route",
+        "verified generated CLI-to-API parameter aliases",
         "verified semantic schema example",
     ]
 

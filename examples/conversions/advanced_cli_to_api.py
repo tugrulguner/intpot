@@ -30,8 +30,8 @@ def _create_impl(
 )
 def create(
     title: str = _intpot_fastapi_Body(..., description='Task title'),
-    priority: int = _intpot_fastapi_Body(default=3, description='Priority level 1-5'),
-    tags: str = _intpot_fastapi_Body(default='', description='Comma-separated tags'),
+    priority: int = _intpot_fastapi_Body(default=3, description='Priority level 1-5', alias='priority'),
+    tags: str = _intpot_fastapi_Body(default='', description='Comma-separated tags', alias='tags'),
 ) -> dict:
     """Create a new task with optional priority and tags."""
 
@@ -59,8 +59,8 @@ def _search_impl(
 )
 def search(
     query: str = _intpot_fastapi_Body(..., description='Search query'),
-    limit: int = _intpot_fastapi_Body(default=10, description='Max results to return'),
-    include_done: bool = _intpot_fastapi_Body(default=False, description='Include completed tasks'),
+    limit: int = _intpot_fastapi_Body(default=10, description='Max results to return', alias='limit'),
+    include_done: bool = _intpot_fastapi_Body(default=False, description='Include completed tasks', alias='include-done'),
 ) -> dict:
     """Search tasks by title or tag."""
 

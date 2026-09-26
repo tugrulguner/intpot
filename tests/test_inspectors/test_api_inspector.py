@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Header, Query
 
 from intpot.core.inspectors.api import APIInspector
 
@@ -41,6 +41,24 @@ def test_inspect_fastapi_endpoints():
     greet_tool = next(t for t in tools if t.name == "greet")
     assert greet_tool.parameters[1].name == "greeting"
     assert greet_tool.parameters[1].default == "Hello"
+
+
+def test_inspect_fastapi_parameter_aliases():
+    app = FastAPI()
+
+    @app.get("/customers")
+    def lookup(
+        account_id: str = Query(..., alias="customer-id"),
+        trace_id: str | None = Header(None, alias="X-Trace-ID"),
+    ) -> None:
+        pass
+
+    [tool] = APIInspector().inspect(app)
+
+    assert tool.parameters[0].interface_name == "customer-id"
+    assert tool.parameters[0].type_annotation == "str"
+    assert tool.parameters[1].interface_name == "X-Trace-ID"
+    assert tool.parameters[1].type_annotation in {"str | None", "Optional[str]"}
 
 
 def test_skips_internal_routes():

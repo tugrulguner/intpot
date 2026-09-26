@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 from pathlib import Path
 from types import ModuleType
 
@@ -84,6 +85,29 @@ def verify_dependency_api() -> None:
     print("verified dependency FastAPI route")
 
 
+def verify_generated_cli_to_api() -> None:
+    basic = _load_module(
+        "intpot_generated_cli_to_api",
+        ROOT / "examples" / "conversions" / "cli_to_api.py",
+    )
+    greeted = TestClient(basic.app).post(
+        "/greet", json={"name": "Ada", "greeting": "Hi"}
+    )
+    assert greeted.status_code == 200, greeted.text
+    assert greeted.json() == {"result": "Hi, Ada!"}
+
+    advanced = _load_module(
+        "intpot_generated_advanced_cli_to_api",
+        ROOT / "examples" / "conversions" / "advanced_cli_to_api.py",
+    )
+    searched = TestClient(advanced.app).post(
+        "/search", json={"query": "alias", "include-done": True}
+    )
+    assert searched.status_code == 200, searched.text
+    assert len(json.loads(searched.json()["result"])) == 2
+    print("verified generated CLI-to-API parameter aliases")
+
+
 def verify_semantic_schema() -> None:
     module = _load_module(
         "intpot_semantic_schema",
@@ -105,6 +129,7 @@ def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
     verify_dependency_api()
+    verify_generated_cli_to_api()
     verify_semantic_schema()
 
 

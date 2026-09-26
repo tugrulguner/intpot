@@ -43,7 +43,7 @@ app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_na
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if param.placement.value == "cli_option" %} = {{ generated_aliases["cli:typer"] }}.Option({{ param.default | source_default }}, help={{ param.description | repr }})
+{%- if param.placement.value == "cli_option" %} = {{ generated_aliases["cli:typer"] }}.Option({% if param.required %}...{% else %}{{ param.default | source_default }}{% endif %}{% for alias in param.aliases %}, {{ alias | repr }}{% endfor %}, help={{ param.description | repr }})
 {%- else %} = {{ generated_aliases["cli:typer"] }}.Argument(..., help={{ param.description | repr }})
 {%- endif %},
 {%- endfor %}

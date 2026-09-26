@@ -47,6 +47,24 @@ def test_inspect_typer_commands():
     assert not greet_tool.parameters[1].required
 
 
+def test_inspect_typer_option_aliases_and_boolean_pairs():
+    app = typer.Typer()
+
+    @app.command()
+    def lookup(
+        account_id: Annotated[str, typer.Option("--customer-id", "-c")],
+        verbose: Annotated[bool, typer.Option("--verbose/--no-verbose", "-v")] = True,
+    ) -> None:
+        pass
+
+    [tool] = CLIInspector().inspect(app)
+
+    assert tool.parameters[0].interface_name == "customer-id"
+    assert tool.parameters[0].aliases == ["--customer-id", "-c"]
+    assert tool.parameters[1].interface_name == "verbose"
+    assert tool.parameters[1].aliases == ["--verbose/--no-verbose", "-v"]
+
+
 def test_inspect_empty_typer():
     app = typer.Typer()
     inspector = CLIInspector()

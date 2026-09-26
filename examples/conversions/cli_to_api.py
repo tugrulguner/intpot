@@ -51,7 +51,7 @@ def _greet_impl(
 )
 def greet(
     name: str = _intpot_fastapi_Body(..., description='Name to greet'),
-    greeting: str = _intpot_fastapi_Body(default='Hello', description='Greeting to use'),
+    greeting: str = _intpot_fastapi_Body(default='Hello', description='Greeting to use', alias='greeting'),
 ) -> dict:
     """Greet someone by name."""
 

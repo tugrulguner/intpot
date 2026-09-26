@@ -53,9 +53,36 @@ def _text_name(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _option_aliases(param: Any) -> list[str]:
+    """Return Click/Typer option declarations in their public order."""
+    if not hasattr(param, "secondary_opts"):
+        return []
+    primary = [
+        option
+        for option in getattr(param, "opts", ())
+        if isinstance(option, str) and option.startswith("-")
+    ]
+    secondary = [
+        option
+        for option in param.secondary_opts
+        if isinstance(option, str) and option.startswith("-")
+    ]
+    if primary and secondary:
+        return [f"{primary[0]}/{secondary[0]}", *primary[1:], *secondary[1:]]
+    return [*primary, *secondary]
+
+
+def _primary_option_name(aliases: list[str]) -> str | None:
+    """Choose the long option spelling used by targets with one public alias."""
+    primary = next((alias for alias in aliases if alias.startswith("--")), None)
+    if primary is None and aliases:
+        primary = aliases[0]
+    return primary.split("/", 1)[0].lstrip("-") if primary else None
+
+
 def _registered_parameter_details(
     annotation: Any, signature_default: Any
-) -> tuple[Any, Any, str]:
+) -> tuple[Any, Any, str, str | None, list[str]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     metadata = signature_default
     if get_origin(annotation) is Annotated:
@@ -73,6 +100,16 @@ def _registered_parameter_details(
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )
     raw_default = getattr(default_source, "default", default_source)
+    declared_aliases = [
+        declaration
+        for declaration in (getattr(metadata, "param_decls", None) or ())
+        if isinstance(declaration, str) and declaration.startswith("-")
+    ]
+    metadata_default = getattr(metadata, "default", inspect.Parameter.empty)
+    if isinstance(metadata_default, str) and metadata_default.startswith("-"):
+        declared_aliases.insert(0, metadata_default)
+        if signature_default is inspect.Parameter.empty:
+            raw_default = inspect.Parameter.empty
     default = (
         _SENTINEL
         if raw_default is inspect.Parameter.empty or raw_default is Ellipsis
@@ -80,7 +117,13 @@ def _registered_parameter_details(
     )
     help_text = getattr(metadata, "help", "")
     description = help_text if isinstance(help_text, str) else ""
-    return annotation, default, description
+    return (
+        annotation,
+        default,
+        description,
+        _primary_option_name(declared_aliases),
+        declared_aliases,
+    )
 
 
 class CLIInspector(BaseInspector):
@@ -150,10 +193,14 @@ class CLIInspector(BaseInspector):
 
             parameters: list[ParameterInfo] = []
             for param in signature.parameters.values():
-                annotation, default, parameter_description = (
-                    _registered_parameter_details(
-                        annotations.get(param.name, param.annotation), param.default
-                    )
+                (
+                    annotation,
+                    default,
+                    parameter_description,
+                    parameter_interface_name,
+                    aliases,
+                ) = _registered_parameter_details(
+                    annotations.get(param.name, param.annotation), param.default
                 )
                 parameters.append(
                     ParameterInfo(
@@ -161,6 +208,8 @@ class CLIInspector(BaseInspector):
                         type_annotation=python_type_name(annotation),
                         default=default,
                         description=parameter_description,
+                        interface_name=parameter_interface_name,
+                        aliases=aliases,
                     )
                 )
 
@@ -258,12 +307,15 @@ class CLIInspector(BaseInspector):
                 if isinstance(original_help, str):
                     desc = original_help
 
+            aliases = _option_aliases(param)
             params.append(
                 ParameterInfo(
                     name=param.name,
                     type_annotation=type_str,
                     default=default,
                     description=desc,
+                    interface_name=_primary_option_name(aliases),
+                    aliases=aliases,
                 )
             )
 

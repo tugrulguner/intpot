@@ -107,9 +107,13 @@ audit findings must be reproduced before treating their fixes as verified.
 - [x] Preserve FastAPI route identity and documentation metadata — explicit operation IDs,
       route names, summaries, descriptions, tags, and deprecation state — in the canonical
       schema and both live and generated FastAPI applications.
-- [ ] Centralize the remaining target decisions for parameter names and aliases,
-      required/default rules, descriptions, and response policy. Canonical schema values
-      remain authoritative, but the focused tool-name slice does not unify those policies.
+- [x] Preserve target-visible parameter aliases separately from canonical and source binding
+      names. FastAPI aliases and exact Typer option declarations, including short and
+      paired boolean flags, survive live and generated interfaces and cross-target
+      conversion.
+- [ ] Centralize the remaining target decisions for required/default rules, descriptions,
+      and response policy. Canonical schema values remain authoritative, but the focused
+      name and alias slices do not unify those policies.
 - [x] Reuse the parameter-placement resolver where live CLI and FastAPI builders choose a
       location, without requiring live serving to construct an `ApplicationSchema`;
       runtime-only opaque defaults remain usable. FastMCP has no competing location choice.
