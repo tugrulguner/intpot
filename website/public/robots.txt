@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://intpot.modepot.io/sitemap-index.xml

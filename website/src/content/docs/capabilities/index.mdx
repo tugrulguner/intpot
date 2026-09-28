@@ -1,0 +1,32 @@
+---
+title: Capabilities and boundaries
+description: Current Intpot runtime, conversion, and support boundaries.
+---
+
+Intpot has two public workflows: define typed functions with `App` and serve/eject them, or inspect an existing framework app and convert it. Both normalize definitions into an `ApplicationSchema` with tool and parameter records.
+
+## Runtime interfaces
+
+- `intpot.App` registers functions using `@app.tool()`.
+- `app.serve(mode="cli" | "api" | "mcp")` creates a live Typer, FastAPI, or FastMCP application.
+- `app.eject(mode="cli" | "api" | "mcp")` emits standalone Python source.
+
+## Conversion
+
+The supported source frameworks are Typer, FastAPI, and FastMCP. All six directed conversions among these frameworks are supported by `intpot to cli|api|mcp`. Generated output is Python that can be inspected, edited, and run without Intpot as a runtime dependency.
+
+Intpot preserves recoverable function bodies and direct imports, annotations, defaults, async functions, and supported framework conventions. FastAPI parameter sources are applied when generating API output. Conversion is not a promise of perfect equivalence for arbitrary framework-specific behavior: inspect and test generated code in the target framework, especially where a source app uses features outside normalized tool metadata.
+
+## Other included features
+
+- `intpot inspect` shows normalized tools before conversion.
+- `intpot init` scaffolds CLI, API, or MCP projects.
+- `intpot add skills` installs project-local guidance for six coding agents.
+
+## Dependencies and support
+
+Intpot requires Python 3.11 or newer. Typer is the base dependency. Install `intpot[api]` for FastAPI/Uvicorn, `intpot[mcp]` for FastMCP, or `intpot[all]` for both. The supported framework minimums are Typer 0.9.0, FastAPI 0.100.0, and FastMCP 2.0.0; compatibility is exercised in the repository CI.
+
+## Project and community
+
+Intpot is an open-source project by [ModePot](https://modepot.com). Browse the [source and issue tracker](https://github.com/tugrulguner/intpot), or join the [ModePot Discord](https://discord.gg/u3AANZr6RG).

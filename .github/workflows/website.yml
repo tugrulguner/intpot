@@ -1,0 +1,43 @@
+name: Website
+on:
+  pull_request:
+    branches: [main]
+    paths: ['website/**']
+  push:
+    branches: [main]
+    paths: ['website/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: website-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: website build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Verify generated site essentials
+        run: |
+          test -s dist/index.html
+          test -s dist/quickstart/index.html
+          test -s dist/capabilities/index.html
+          test -s dist/404.html
+          test -s dist/robots.txt
+          test -s dist/llms.txt
+          test -s dist/sitemap-index.xml
+          grep -q 'https://intpot.modepot.io/' dist/index.html
+          grep -q '<title>Intpot</title>' dist/index.html

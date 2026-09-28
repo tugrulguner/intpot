@@ -1,0 +1,58 @@
+---
+title: Intpot
+description: Define a typed tool once and branch it into CLI, API, and MCP interfaces.
+template: splash
+hero:
+  title: One typed definition. Three interfaces.
+  tagline: Build a Python tool once, then serve it as a CLI, HTTP API, or MCP server. Convert existing apps between Typer, FastAPI, and FastMCP.
+  image:
+    alt: Intpot — Python tools served as CLI, API, or MCP
+    file: ../../assets/intpot_image.webp
+  actions:
+    - text: Get started
+      link: /quickstart/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/tugrulguner/intpot
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Write once" icon="seti:python">
+    Register typed Python functions with `@app.tool()` and keep behavior in one place.
+  </Card>
+  <Card title="Serve three ways" icon="rocket">
+    Run the same declaration as Typer CLI, FastAPI, or FastMCP.
+  </Card>
+  <Card title="Convert existing apps" icon="puzzle">
+    Move between all six Typer, FastAPI, and FastMCP conversion directions.
+  </Card>
+</CardGrid>
+
+## The shape
+
+A declaration builds one normalized application schema. From it, Intpot can build a live interface or generate ordinary Python source for a target framework.
+
+```python
+from intpot import App
+
+app = App("my-app")
+
+@app.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+```
+
+```sh
+intpot serve app.py --cli
+intpot serve app.py --api
+intpot serve app.py --mcp
+```
+
+See the [quick start](/quickstart/) or explore [capabilities and boundaries](/capabilities/).
+
+Built by [ModePot](https://modepot.com).

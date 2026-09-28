@@ -1,0 +1,8 @@
+{
+  "name": "intpot-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev": "astro dev", "build": "astro build", "preview": "astro preview"},
+  "dependencies": {"@astrojs/starlight": "^0.37.6", "astro": "^5.13.5"}
+}

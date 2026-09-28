@@ -1,0 +1,14 @@
+# Intpot
+
+Intpot is a Python framework for defining typed tools once and serving them through CLI, API, and MCP interfaces, or converting existing Typer, FastAPI, and FastMCP apps.
+
+## Pages
+- [Overview](https://intpot.modepot.io/): product introduction and interface model.
+- [Quick start](https://intpot.modepot.io/quickstart/): install and run an Intpot app.
+- [Capabilities and boundaries](https://intpot.modepot.io/capabilities/): current workflows, compatibility, and conversion limits.
+
+## Project resources
+- [GitHub](https://github.com/tugrulguner/intpot)
+- [ModePot](https://modepot.com)
+
+The site documents behavior present in the Intpot source; generated code should be reviewed and tested in its target framework.

@@ -1,0 +1,11 @@
+/* Intpot brand accents, keeping Starlight's accessible layout and contrast. */
+:root {
+  --sl-color-accent-low: #202642;
+  --sl-color-accent: #7787ff;
+  --sl-color-accent-high: #d3d8ff;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e5e8ff;
+  --sl-color-accent: #4453ca;
+  --sl-color-accent-high: #202642;
+}

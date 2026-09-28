@@ -1,0 +1,53 @@
+---
+title: Quick start
+description: Install Intpot and serve typed tools as a CLI, API, or MCP server.
+---
+
+## Install
+
+For all three runtime targets:
+
+```bash
+pip install 'intpot[all]'
+```
+
+## Define once
+
+Create `app.py`:
+
+```python
+from intpot import App
+
+app = App("my-app")
+
+@app.tool()
+def greet(name: str, greeting: str = "Hello") -> str:
+    """Greet someone by name."""
+    return f"{greeting}, {name}!"
+```
+
+The type annotations, defaults, and docstring describe the tool contract. Choose an interface when starting the app:
+
+```bash
+intpot serve app.py --cli
+intpot serve app.py --api
+intpot serve app.py --mcp
+```
+
+For HTTP mode, Intpot uses FastAPI/Uvicorn (default port 8000). MCP mode exposes tools through FastMCP. CLI mode dispatches the registered functions as commands.
+
+## Export standalone code
+
+Use `intpot eject app.py --to api`, `--to cli`, or `--to mcp` to generate ordinary framework code. The generated app is not dependent on the Intpot runtime.
+
+## Convert an existing app
+
+Intpot detects Typer, FastAPI, and FastMCP Python applications and can generate any other target:
+
+```bash
+intpot to api existing.py
+intpot to cli existing.py
+intpot to mcp existing.py
+```
+
+Use `intpot inspect existing.py` to view normalized tool definitions first. See [capabilities and boundaries](/capabilities/) for what conversion preserves.
