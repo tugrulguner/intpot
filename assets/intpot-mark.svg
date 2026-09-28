@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Intpot mark</title>
+  <desc id="desc">One typed source branching into three interfaces inside the ModePot flask</desc>
+  <path d="M44 22h10v20c0 5-2.3 9.6-6.2 12.4C34.1 64.3 26 78.2 26 93c0 17 12.7 25 38 25s38-8 38-25c0-14.8-8.1-28.7-21.8-38.6C76.3 51.6 74 47 74 42V22h10" fill="none" stroke="#F2B84B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 72v17M64 86l-18 16M64 86l18 16M64 86v20" fill="none" stroke="#F2B84B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="70" r="5" fill="#F2B84B"/>
+  <circle cx="45" cy="103" r="5" fill="#F2B84B"/>
+  <circle cx="64" cy="106" r="5" fill="#F2B84B"/>
+  <circle cx="83" cy="103" r="5" fill="#F2B84B"/>
+</svg>
