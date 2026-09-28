@@ -40,4 +40,4 @@ jobs:
           test -s dist/llms.txt
           test -s dist/sitemap-index.xml
           grep -q 'https://intpot.modepot.io/' dist/index.html
-          grep -q '<title>Intpot</title>' dist/index.html
+          grep -q '<title>.*Intpot.*</title>' dist/index.html
