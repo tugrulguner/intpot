@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "scripts": {"dev": "astro dev", "build": "astro build", "preview": "astro preview"},
-  "dependencies": {"@astrojs/starlight": "^0.37.6", "astro": "^5.13.5"}
+  "dependencies": {"@astrojs/starlight": "^0.42.4", "astro": "^7.3.5"}
 }
