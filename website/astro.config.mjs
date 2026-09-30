@@ -14,7 +14,8 @@ export default defineConfig({
     head: [{ tag: 'script', attrs: {}, content: posthogScript }],
     sidebar: [
       { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }] },
-      { label: 'Guides', items: [{ slug: 'capabilities' }] }
+      { label: 'Guides', items: [{ slug: 'capabilities' }] },
+      { label: 'ModePot', link: 'https://modepot.io/' },
     ],
   })],
 });
