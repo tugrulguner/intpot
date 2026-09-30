@@ -1,14 +1,41 @@
 # Intpot
 
-Intpot is a Python framework for defining typed tools once and serving them through CLI, API, and MCP interfaces, or converting existing Typer, FastAPI, and FastMCP apps.
+> Intpot is an open-source typed Python interface framework. Define a tool once, then serve or convert it across CLI, FastAPI, and MCP interfaces.
 
-## Pages
-- [Overview](https://intpot.modepot.io/): product introduction and interface model.
-- [Quick start](https://intpot.modepot.io/quickstart/): install and run an Intpot app.
-- [Capabilities and boundaries](https://intpot.modepot.io/capabilities/): current workflows, compatibility, and conversion limits.
+## Install
 
-## Project resources
-- [GitHub](https://github.com/tugrulguner/intpot)
-- [ModePot](https://modepot.io/)
+Requires Python 3.11 or later.
 
-The site documents behavior present in the Intpot source; generated code should be reviewed and tested in its target framework.
+```sh
+pip install intpot
+```
+
+## Quick start
+
+```python
+from intpot import App
+
+app = App("my-app")
+
+@app.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+```
+
+Serve the same declaration with `intpot serve app.py --cli`, `--api`, or `--mcp`.
+
+## Primary resources
+
+- [Documentation](https://intpot.modepot.io/): project overview and product position.
+- [Quick start](https://intpot.modepot.io/quickstart/): install Intpot and serve one declaration in three ways.
+- [Capabilities and boundaries](https://intpot.modepot.io/capabilities/): supported conversions, runtime behavior, and current limitations.
+- [Source repository](https://github.com/tugrulguner/intpot): code, tests, examples, releases, and contribution guidance.
+- [PyPI package](https://pypi.org/project/intpot/): published Python distributions and release metadata.
+- [ModePot](https://modepot.io/): return to the open-source project family.
+
+## Boundaries and license
+
+- Intpot is alpha software.
+- Unsupported framework features are reported explicitly rather than translated silently.
+- License: MIT.
