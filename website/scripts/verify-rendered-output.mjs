@@ -24,6 +24,7 @@ async function* htmlFiles(directory) {
 
 const failures = [];
 let htmlCount = 0;
+let foundModePotLink = false;
 for await (const path of htmlFiles(distRoot)) {
   htmlCount += 1;
   const html = await readFile(path, 'utf8');
@@ -33,9 +34,15 @@ for await (const path of htmlFiles(distRoot)) {
   if ((html.match(/posthog\.init\(/g) ?? []).length !== 1) {
     failures.push(`${relative(distRoot, path)}: expected exactly one PostHog initialization`);
   }
+  if (html.includes('https://modepot.io/')) foundModePotLink = true;
+  if (html.includes('modepot.com')) failures.push(`${relative(distRoot, path)}: stale ModePot domain`);
 }
 
+const llms = await readFile(join(distRoot, 'llms.txt'), 'utf8');
+if (!llms.includes('https://modepot.io/')) failures.push('llms.txt: missing canonical ModePot URL');
+if (llms.includes('modepot.com')) failures.push('llms.txt: stale ModePot domain');
 if (htmlCount === 0) failures.push('no rendered HTML files found');
+if (!foundModePotLink) failures.push('rendered HTML: missing canonical ModePot URL');
 if (failures.length) {
   console.error(failures.join('\n'));
   process.exitCode = 1;
