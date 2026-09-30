@@ -1,0 +1,1 @@
+Instrument intpot.modepot.io with privacy-conscious shared ModePot PostHog page analytics.
