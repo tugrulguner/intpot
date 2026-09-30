@@ -42,6 +42,10 @@ for await (const path of htmlFiles(distRoot)) {
 const llms = await readFile(join(distRoot, 'llms.txt'), 'utf8');
 if (!llms.includes('https://modepot.io/')) failures.push('llms.txt: missing canonical ModePot URL');
 if (llms.includes('modepot.com')) failures.push('llms.txt: stale ModePot domain');
+const notFound = await readFile(join(distRoot, '404.html'), 'utf8');
+if (!notFound.includes('href="https://modepot.io/"')) {
+  failures.push('404.html: missing canonical ModePot return link');
+}
 if (htmlCount === 0) failures.push('no rendered HTML files found');
 if (failures.length) {
   console.error(failures.join('\n'));
