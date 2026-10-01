@@ -1,8 +1,10 @@
 # intpot
 
 <p align="center">
-  <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="520">
+  <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="600">
 </p>
+
+<p align="center">Part of <a href="https://modepot.io/">ModePot</a>.</p>
 
 <p align="center">
   <strong>Define once. Serve as CLI, API, or MCP. Convert in every direction.</strong>
