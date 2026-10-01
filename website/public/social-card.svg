@@ -1,26 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
   <title id="title">Intpot social preview</title>
-  <desc id="desc">Intpot turns one typed Python definition into CLI, HTTP API, and MCP interfaces.</desc>
-  <defs>
-    <radialGradient id="glow" cx="84%" cy="18%" r="70%"><stop offset="0" stop-color="#d8a842" stop-opacity=".18"/><stop offset="1" stop-color="#070b13" stop-opacity="0"/></radialGradient>
-    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern>
-  </defs>
-  <rect width="1200" height="630" fill="#070b13"/>
-  <rect width="1200" height="630" fill="url(#glow)"/>
-  <rect width="1200" height="630" fill="url(#grid)"/>
-  <line x1="72" y1="92" x2="1128" y2="92" stroke="#343b48"/>
-  <g transform="translate(72 38) scale(.3125)"><path d="M44 22h10v20c0 5-2.3 9.6-6.2 12.4C34.1 64.3 26 78.2 26 93c0 17 12.7 25 38 25s38-8 38-25c0-14.8-8.1-28.7-21.8-38.6C76.3 51.6 74 47 74 42V22h10" fill="none" stroke="#F2B84B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M64 72v17M64 86l-18 16M64 86l18 16M64 86v20" fill="none" stroke="#F2B84B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="70" r="5" fill="#F2B84B"/><circle cx="45" cy="103" r="5" fill="#F2B84B"/><circle cx="64" cy="106" r="5" fill="#F2B84B"/><circle cx="83" cy="103" r="5" fill="#F2B84B"/></g>
-  <text x="128" y="68" fill="#f4f1ea" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="800">int<tspan fill="#e5b54f">pot</tspan></text>
-  <text x="1128" y="66" fill="#d0a24b" text-anchor="end" font-family="Courier New,monospace" font-size="13" font-weight="700" letter-spacing="2">MODEPOT / INTERFACE</text>
-  <text x="72" y="230" fill="#f4f1ea" font-family="Arial,Helvetica,sans-serif" font-size="72" font-weight="800" letter-spacing="-3">One typed definition.</text>
-  <text x="72" y="310" fill="#e5b54f" font-family="Arial,Helvetica,sans-serif" font-size="72" font-weight="800" letter-spacing="-3">Three interfaces.</text>
-  <text x="75" y="383" fill="#bcc4cf" font-family="Arial,Helvetica,sans-serif" font-size="27">Build once, then serve or convert across CLI, HTTP API, and MCP.</text>
-  <g transform="translate(75 458)">
-    <rect width="170" height="62" rx="10" fill="#111824" stroke="#3a4453"/><text x="85" y="39" text-anchor="middle" fill="#f4f1ea" font-family="Courier New,monospace" font-size="20" font-weight="700">CLI</text>
-    <path d="M180 31H220" stroke="#697587"/><path d="m213 24 8 7-8 7" fill="none" stroke="#697587"/>
-    <rect x="230" width="210" height="62" rx="10" fill="#111824" stroke="#3a4453"/><text x="335" y="39" text-anchor="middle" fill="#f4f1ea" font-family="Courier New,monospace" font-size="20" font-weight="700">HTTP API</text>
-    <path d="M450 31H490" stroke="#697587"/><path d="m483 24 8 7-8 7" fill="none" stroke="#697587"/>
-    <rect x="500" width="170" height="62" rx="10" fill="#111824" stroke="#3a4453"/><text x="585" y="39" text-anchor="middle" fill="#f4f1ea" font-family="Courier New,monospace" font-size="20" font-weight="700">MCP</text>
+  <desc id="desc">Minimal Intpot lockup. One typed definition. CLI, API, and MCP.</desc>
+  <rect width="1200" height="630" fill="#090C11"/>
+  <line x1="414" y1="128" x2="414" y2="502" stroke="#2A3039" stroke-width="2"/>
+  <g transform="translate(80 160) scale(2.35)">
+      <path d="M44 22h10v20c0 5-2.3 9.6-6.2 12.4C34.1 64.3 26 78.2 26 93c0 17 12.7 25 38 25s38-8 38-25c0-14.8-8.1-28.7-21.8-38.6C76.3 51.6 74 47 74 42V22h10" fill="none" stroke="#F2B84B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M64 72v17M64 86l-18 16M64 86l18 16M64 86v20" fill="none" stroke="#F2B84B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="64" cy="70" r="5" fill="#F2B84B"/>
+      <circle cx="45" cy="103" r="5" fill="#F2B84B"/>
+      <circle cx="64" cy="106" r="5" fill="#F2B84B"/>
+      <circle cx="83" cy="103" r="5" fill="#F2B84B"/>
   </g>
-  <text x="1128" y="582" text-anchor="end" fill="#e5b54f" font-family="Courier New,monospace" font-size="20" font-weight="700">intpot.modepot.io</text>
+  <text x="478" y="190" fill="#F2B84B" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="4">MODEPOT / OPEN SOURCE</text>
+  <text x="472" y="330" fill="#F4F2EA" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" letter-spacing="-4">intpot</text>
+  <text x="478" y="402" fill="#C4CAD3" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="400">One typed definition.</text>
+  <text x="478" y="443" fill="#C4CAD3" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="400">CLI, API, and MCP.</text>
+  <line x1="478" y1="492" x2="1100" y2="492" stroke="#F2B84B" stroke-width="4"/>
 </svg>

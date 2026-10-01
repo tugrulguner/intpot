@@ -40,8 +40,8 @@ for await (const path of htmlFiles(distRoot)) {
   if (html.includes('modepot.com')) failures.push(`${relative(distRoot, path)}: stale ModePot domain`);
   for (const token of [
     'rel="alternate" type="text/plain" href="/llms.txt"',
-    'property="og:image" content="https://intpot.modepot.io/social-card.png"',
-    'name="twitter:image" content="https://intpot.modepot.io/social-card.png"',
+    'property="og:image" content="https://intpot.modepot.io/social-card-v2.png"',
+    'name="twitter:image" content="https://intpot.modepot.io/social-card-v2.png"',
   ]) {
     if (!html.includes(token)) failures.push(`${outputPath}: missing discovery metadata ${token}`);
   }
@@ -67,9 +67,9 @@ if (llms.includes('modepot.com')) failures.push('llms.txt: stale ModePot domain'
 for (const token of ['## Install', '## Quick start', '## Boundaries and license', 'https://pypi.org/project/intpot/', 'License: MIT']) {
   if (!llms.includes(token)) failures.push(`llms.txt: missing ${token}`);
 }
-const socialCard = await readFile(join(distRoot, 'social-card.png'));
+const socialCard = await readFile(join(distRoot, 'social-card-v2.png'));
 if (socialCard.readUInt32BE(16) !== 1200 || socialCard.readUInt32BE(20) !== 630) {
-  failures.push('social-card.png: expected 1200x630 PNG');
+  failures.push('social-card-v2.png: expected 1200x630 PNG');
 }
 const notFound = await readFile(join(distRoot, '404.html'), 'utf8');
 if (!notFound.includes('href="https://modepot.io/"')) {
