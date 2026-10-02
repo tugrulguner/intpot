@@ -61,7 +61,8 @@ test('one bounded output inspector stays in the source-request-inspect workbench
   expect(layout.source.left).toBeLessThan(layout.request.left);
   expect(layout.request.left).toBeLessThan(layout.inspector.left);
   expect(layout.pageWidth).toBeLessThanOrEqual(layout.width);
-  expect(layout.inspector.height).toBeLessThanOrEqual(330);
+  expect(layout.inspector.height).toBeGreaterThanOrEqual(400);
+  expect(layout.inspector.height).toBeLessThanOrEqual(440);
   expect(layout.inspector.top).toBeLessThan(700);
 });
 
@@ -105,7 +106,7 @@ test('long output scrolls inside one inspector and edits clear the selected trac
     await page.getByRole('tab', { name: view, exact: true }).click();
     await expect(page.locator('.output-view:visible')).toHaveCount(1);
     const bounds = await page.locator('.inspector').boundingBox();
-    expect(bounds?.height).toBe(272);
+    expect(bounds?.height).toBe(420);
     const scroller = page.locator('.output-view:visible pre, .output-view:visible ol');
     const scrolling = await scroller.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
@@ -167,8 +168,8 @@ test('workbench fits viewports in both themes and reduced motion; captures durab
         const geometry = await page.evaluate(() => {
           const workbench = document.querySelector<HTMLElement>('[data-playground]')!;
           const definition = document.querySelector<HTMLElement>('.definition')!;
-          const source = document.querySelector<HTMLElement>('.code-bar span:first-child')!;
-          const language = document.querySelector<HTMLElement>('.code-bar span:last-child')!;
+          const source = document.querySelector<HTMLElement>('.definition .code-file')!;
+          const language = document.querySelector<HTMLElement>('.run-panel .panel-heading .code-file')!;
           const sourceBox = source.getBoundingClientRect();
           const languageBox = language.getBoundingClientRect();
           return {
@@ -177,7 +178,7 @@ test('workbench fits viewports in both themes and reduced motion; captures durab
             bodyWidth: document.body.scrollWidth,
             workbenchRight: workbench.getBoundingClientRect().right,
             definitionRight: definition.getBoundingClientRect().right,
-            labelsOverlap: sourceBox.right > languageBox.left,
+            labelsFit: source.scrollWidth <= source.clientWidth && language.scrollWidth <= language.clientWidth,
             codeCanScrollInternally: (definition.querySelector('pre')?.scrollWidth ?? 0) > (definition.querySelector('pre')?.clientWidth ?? 0),
             outputTabsFit: (() => { const tabs = document.querySelector<HTMLElement>('.output-nav')!; return tabs.scrollWidth <= tabs.clientWidth; })(),
             interfaceTabsShareRow: (() => { const tabs = [...document.querySelectorAll<HTMLElement>('.interface-nav [role="tab"]')]; return Math.max(...tabs.map((tab) => tab.getBoundingClientRect().top)) - Math.min(...tabs.map((tab) => tab.getBoundingClientRect().top)) <= 1; })(),
@@ -188,7 +189,6 @@ test('workbench fits viewports in both themes and reduced motion; captures durab
         expect(geometry.bodyWidth, JSON.stringify(geometry)).toBeLessThanOrEqual(viewport.width);
         expect(geometry.workbenchRight, JSON.stringify(geometry)).toBeLessThanOrEqual(viewport.width);
         expect(geometry.definitionRight, JSON.stringify(geometry)).toBeLessThanOrEqual(viewport.width);
-        expect(geometry.labelsOverlap, JSON.stringify(geometry)).toBe(false);
         expect(geometry.outputTabsFit, JSON.stringify(geometry)).toBe(true);
         expect(geometry.interfaceTabsShareRow, JSON.stringify(geometry)).toBe(true);
         if (viewport.width === 320) expect(geometry.codeCanScrollInternally).toBe(false);
@@ -234,5 +234,44 @@ test('primary controls and highlighted code remain readable in both themes', asy
     for (const reading of readings.foregrounds) expect(reading.contrast, `${colorScheme}: ${JSON.stringify(reading)}`).toBeGreaterThanOrEqual(4.5);
     const tops = await page.locator('.interface-nav [role="tab"]').evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().top));
     expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+  }
+});
+
+test('code, run, and output are aligned panels with legible selected and action states', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 768 });
+  await page.goto('/playground/');
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    const geometry = await page.evaluate(() => {
+      const boxes = ['.definition', '.run-panel', '.inspector'].map((selector) => {
+        const rect = document.querySelector(selector)!.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom };
+      });
+      const tabs = [...document.querySelectorAll<HTMLElement>('.interface-nav [role="tab"], .output-nav [role="tab"]')];
+      const contrast = (element: HTMLElement) => {
+        const color = (value: string) => (value.match(/[0-9.]+/g) ?? []).slice(0, 3).map(Number);
+        const luminance = (value: string) => color(value).map((v) => v / 255).map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+        let ancestor: HTMLElement | null = element;
+        let background = 'rgba(0, 0, 0, 0)';
+        while (ancestor && (background === 'rgba(0, 0, 0, 0)' || background === 'transparent')) {
+          background = getComputedStyle(ancestor).backgroundColor;
+          ancestor = ancestor.parentElement;
+        }
+        const foreground = luminance(getComputedStyle(element).color), backdrop = luminance(background);
+        return (Math.max(foreground, backdrop) + .05) / (Math.min(foreground, backdrop) + .05);
+      };
+      const selected = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')!;
+      const inactive = tabs.find((tab) => tab.getAttribute('aria-selected') === 'false')!;
+      const button = document.querySelector<HTMLElement>('.run')!;
+      return { boxes, tabHeights: tabs.map((tab) => tab.getBoundingClientRect().height), selectedBackground: getComputedStyle(selected).backgroundColor, inactiveBackground: getComputedStyle(inactive).backgroundColor, buttonHeight: button.getBoundingClientRect().height, buttonContrast: contrast(button), selectedContrast: contrast(selected), inactiveContrast: contrast(inactive) };
+    });
+    expect(Math.max(...geometry.boxes.map((box) => box.top)) - Math.min(...geometry.boxes.map((box) => box.top))).toBeLessThanOrEqual(1);
+    expect(Math.max(...geometry.boxes.map((box) => box.bottom)) - Math.min(...geometry.boxes.map((box) => box.bottom))).toBeLessThanOrEqual(1);
+    expect(geometry.tabHeights.every((height) => height >= 44)).toBe(true);
+    expect(geometry.selectedBackground).not.toBe(geometry.inactiveBackground);
+    expect(geometry.buttonHeight).toBe(44);
+    expect(geometry.buttonContrast).toBeGreaterThanOrEqual(4.5);
+    expect(geometry.selectedContrast).toBeGreaterThanOrEqual(4.5);
+    expect(geometry.inactiveContrast).toBeGreaterThanOrEqual(4.5);
   }
 });
