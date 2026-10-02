@@ -38,5 +38,6 @@ jobs:
           cache: npm
           cache-dependency-path: website/package-lock.json
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npx wrangler deploy

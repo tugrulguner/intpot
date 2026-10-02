@@ -21,8 +21,6 @@ hero:
       variant: minimal
 ---
 
-import GreetingPlayground from '../../components/GreetingPlayground.astro';
-
 ## One definition, three ways to run
 
 Register typed Python functions with `@app.tool()`. Intpot keeps behavior in one place and serves it through a Typer CLI, FastAPI, or FastMCP interface. Existing apps can also be converted across all six Typer, FastAPI, and FastMCP directions.
@@ -44,12 +42,10 @@ intpot serve app.py --api
 intpot serve app.py --mcp
 ```
 
-## Try it in your browser
+## Explore the interface playground
 
-Edit a bounded CLI command, HTTP request body, or MCP tool-call draft, then explicitly preview it locally. Each panel validates its own request and computes a fresh result through one shared browser-local function. This is an interface contract explorer—not Python adapter execution; no server, backend, MCP client, or model is contacted.
+See how one typed definition maps to CLI, HTTP, and MCP entry points. The focused playground lets you edit one bounded request at a time and inspect its locally computed result.
 
-<GreetingPlayground />
-
-[Read the quick start](/quickstart/) · [Explore capabilities and boundaries](/capabilities/)
+[Open the interface playground →](/playground/) · [Read the quick start](/quickstart/) · [Explore capabilities and boundaries](/capabilities/)
 
 Built by [ModePot](https://modepot.io/).

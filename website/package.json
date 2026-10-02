@@ -3,6 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {"dev": "astro dev", "build": "node --test && astro build && node scripts/verify-rendered-output.mjs", "test": "node --test", "test:parity": "node scripts/verify-playground-parity.mjs", "preview": "astro preview"},
-  "dependencies": {"@astrojs/starlight": "^0.37.6", "astro": "^5.13.5"}
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node --test && astro build && node scripts/verify-rendered-output.mjs && playwright test",
+    "test": "node --test",
+    "test:parity": "node scripts/verify-playground-parity.mjs",
+    "preview": "astro preview",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.37.6",
+    "astro": "^5.13.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
 }

@@ -35,15 +35,15 @@ for await (const path of htmlFiles(distRoot)) {
     failures.push(`${relative(distRoot, path)}: expected exactly one PostHog initialization`);
   }
   if (outputPath === 'playground/index.html') {
-    for (const token of ['One typed function, three interfaces', 'Reset results', 'Preview request', 'browser-local previews', 'data-interface="CLI"', 'data-interface="HTTP"', 'data-interface="MCP"', 'request-CLI', 'request-HTTP', 'request-MCP']) {
+    for (const token of ['One definition. Three ways in.', 'Run local preview', 'id="reset-request"', 'Browser-local preview', 'data-kind="CLI"', 'data-kind="HTTP"', 'data-kind="MCP"', 'id="request"', 'examples/semantic_schema.py', 'FastAPI', 'FastMCP']) {
       if (!html.includes(token)) failures.push(`${outputPath}: missing dedicated playground feature ${token}`);
     }
   }
   if (outputPath === 'index.html') {
-    for (const token of ['Browser-local interface previews', 'Try the playground', 'One typed function, three interfaces', 'Reset results', 'Preview request', 'POST', '/greet', 'data-interface="CLI"', 'data-interface="HTTP"', 'data-interface="MCP"', 'request-CLI', 'request-HTTP', 'request-MCP']) {
-      if (!html.includes(token)) failures.push(`${outputPath}: missing playground feature ${token}`);
+    for (const token of ['Explore the interface playground', 'Open the interface playground →', 'href="/playground/"']) {
+      if (!html.includes(token)) failures.push(`${outputPath}: missing playground route link ${token}`);
     }
-    if (html.includes('recorded-local-http-execution') || html.includes('data-preview-json')) failures.push(`${outputPath}: recorded preview remains`);
+    if (html.includes('data-playground')) failures.push(`${outputPath}: homepage duplicates the playground instead of linking to it`);
   }
   if (outputPath !== '404.html' && !html.includes('https://modepot.io/')) {
     failures.push(`${relative(distRoot, path)}: missing canonical ModePot return link`);
