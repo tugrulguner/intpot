@@ -1,0 +1,77 @@
+---
+---
+
+<section class="playground" aria-labelledby="greeting-playground-title">
+  <p class="eyebrow">Browser-local playground · no Python server or AI service</p>
+  <h2 id="greeting-playground-title">One typed function, three interfaces</h2>
+  <p>Try the actual <code>greet(name: str, excited: bool = False) -&gt; str</code> behavior. Interface examples illustrate Intpot conventions; they do not run its Python adapters.</p>
+  <label for="greeting-playground-name">Name
+    <input id="greeting-playground-name" maxlength="40" value="Ada" autocomplete="off" />
+  </label>
+  <label class="toggle" for="greeting-playground-excited">
+    <input id="greeting-playground-excited" type="checkbox" />
+    Sound excited
+  </label>
+  <p id="greeting-playground-error" role="alert"></p>
+  <div class="outputs" aria-live="polite">
+    <article><h3>Function</h3><pre id="greeting-playground-definition"></pre></article>
+    <article><h3>CLI</h3><pre id="greeting-playground-cli"></pre></article>
+    <article><h3>HTTP</h3><pre id="greeting-playground-http"></pre></article>
+    <article><h3>MCP</h3><pre id="greeting-playground-mcp"></pre></article>
+    <article class="response"><h3>Function result</h3><pre id="greeting-playground-result" aria-label="Function result"></pre></article>
+  </div>
+  <button type="button" id="greeting-playground-reset">Reset</button>
+</section>
+<script>
+  import { buildRepresentations } from '../lib/greeting-playground.mjs';
+
+  const nameInput = document.querySelector<HTMLInputElement>('#greeting-playground-name');
+  const excitedInput = document.querySelector<HTMLInputElement>('#greeting-playground-excited');
+  const error = document.querySelector<HTMLElement>('#greeting-playground-error');
+  const renderText = (id: string, value: string) => {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value;
+  };
+  const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  function render() {
+    if (!nameInput || !excitedInput || !error) return;
+    const name = nameInput.value;
+    if (!name.trim() || name.length > 40) {
+      error.textContent = 'Enter a name containing 1–40 characters (not whitespace only).';
+      for (const key of ['definition', 'cli', 'http', 'mcp', 'result']) renderText(`greeting-playground-${key}`, '—');
+      return;
+    }
+    error.textContent = '';
+    const excited = excitedInput.checked;
+    const representations = buildRepresentations(name, excited);
+    for (const key of ['definition', 'cli', 'http', 'mcp', 'result'] as const) {
+      renderText(`greeting-playground-${key}`, representations[key]);
+    }
+  }
+  nameInput?.addEventListener('input', render);
+  excitedInput?.addEventListener('change', render);
+  document.querySelector<HTMLButtonElement>('#greeting-playground-reset')?.addEventListener('click', () => {
+    if (nameInput) nameInput.value = 'Ada';
+    if (excitedInput) excitedInput.checked = false;
+    render();
+    nameInput?.focus();
+  });
+  render();
+</script>
+<style>
+  .playground { padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: 1rem; background: var(--sl-color-bg); }
+  .eyebrow { color: var(--sl-color-accent-high); font-weight: 650; }
+  label { display: grid; gap: .4rem; max-width: 24rem; font-weight: 600; }
+  .toggle { display: flex; align-items: center; margin-top: .8rem; }
+  input:not([type="checkbox"]), button { padding: .6rem .75rem; border-radius: .4rem; }
+  .outputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .75rem; margin-block: 1rem; }
+  article { min-width: 0; padding: .8rem; border: 1px solid var(--sl-color-gray-5); border-radius: .65rem; }
+  article h3 { margin-top: 0; }
+  pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .response { border-color: var(--sl-color-accent); }
+  #greeting-playground-error { color: var(--sl-color-red); }
+  @media (prefers-reduced-motion: no-preference) {
+    .outputs article { animation: arrive .18s ease-out; }
+    @keyframes arrive { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  }
+</style>

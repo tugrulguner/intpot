@@ -43,7 +43,7 @@ export default defineConfig({
       { tag: 'script', attrs: { type: 'application/ld+json' }, content: JSON.stringify(structuredData) },
     ],
     sidebar: [
-      { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }] },
+      { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }, { slug: 'playground' }] },
       { label: 'Guides', items: [{ slug: 'capabilities' }] },
       { label: 'ModePot', link: 'https://modepot.io/' },
     ],

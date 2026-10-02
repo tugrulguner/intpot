@@ -19,7 +19,7 @@ hero:
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
-import DemoPreview from '../../components/DemoPreview.astro';
+import GreetingPlayground from '../../components/GreetingPlayground.astro';
 
 <CardGrid stagger>
   <Card title="Write once" icon="seti:python">
@@ -39,9 +39,9 @@ A declaration builds one normalized application schema. From it, Intpot can buil
 
 ## Try it in your browser
 
-This bounded browser-local example recomputes a greeting and illustrates its CLI, HTTP, and MCP representations. It does not run Intpot's Python adapters, execute arbitrary code, or contact a server.
+This bounded browser-local example recomputes the shipped `greet(name: str, excited: bool = False) -> str` function with your name and excitement setting. It shows illustrative interface representations, does not execute Intpot's Python adapters or arbitrary code, and never contacts a server. [Open the full-screen playground](/playground/).
 
-<DemoPreview />
+<GreetingPlayground />
 
 ```python
 from intpot import App
