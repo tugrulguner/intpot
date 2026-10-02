@@ -2,25 +2,37 @@
 ---
 
 <section class="playground" aria-labelledby="greeting-playground-title">
-  <p class="eyebrow">Browser-local playground · no Python server or AI service</p>
-  <h2 id="greeting-playground-title">One typed function, three interfaces</h2>
-  <p>Try the actual <code>greet(name: str, excited: bool = False) -&gt; str</code> behavior. Interface examples illustrate Intpot conventions; they do not run its Python adapters.</p>
-  <label for="greeting-playground-name">Name
-    <input id="greeting-playground-name" maxlength="40" value="Ada" autocomplete="off" />
-  </label>
-  <label class="toggle" for="greeting-playground-excited">
-    <input id="greeting-playground-excited" type="checkbox" />
-    Sound excited
-  </label>
-  <p id="greeting-playground-error" role="alert"></p>
-  <div class="outputs" aria-live="polite">
-    <article><h3>Function</h3><pre id="greeting-playground-definition"></pre></article>
-    <article><h3>CLI</h3><pre id="greeting-playground-cli"></pre></article>
-    <article><h3>HTTP</h3><pre id="greeting-playground-http"></pre></article>
-    <article><h3>MCP</h3><pre id="greeting-playground-mcp"></pre></article>
-    <article class="response"><h3>Function result</h3><pre id="greeting-playground-result" aria-label="Function result"></pre></article>
+  <header class="playground-intro">
+    <p class="eyebrow">Browser-only · no server or AI</p>
+    <h2 id="greeting-playground-title">Edit the greeting</h2>
+  </header>
+  <div class="workbench">
+    <form class="controls" onsubmit="return false">
+      <label for="greeting-playground-name">Name
+        <input id="greeting-playground-name" maxlength="40" value="Ada" autocomplete="off" />
+      </label>
+      <label class="toggle" for="greeting-playground-excited">
+        <input id="greeting-playground-excited" type="checkbox" />
+        Sound excited
+      </label>
+      <button type="button" id="greeting-playground-reset">Reset</button>
+      <p id="greeting-playground-error" role="alert"></p>
+    </form>
+    <section class="result" aria-label="Computed function output" aria-live="polite">
+      <p class="result-label">Function result</p>
+      <pre id="greeting-playground-result"></pre>
+    </section>
   </div>
-  <button type="button" id="greeting-playground-reset">Reset</button>
+  <p class="explanation">Change an input to recompute the result. CLI, HTTP, and MCP examples below are illustrative.</p>
+  <details class="interfaces">
+    <summary>See the function and interface representations</summary>
+    <div class="outputs">
+      <article><h3>Function</h3><pre id="greeting-playground-definition"></pre></article>
+      <article><h3>CLI</h3><pre id="greeting-playground-cli"></pre></article>
+      <article><h3>HTTP</h3><pre id="greeting-playground-http"></pre></article>
+      <article><h3>MCP</h3><pre id="greeting-playground-mcp"></pre></article>
+    </div>
+  </details>
 </section>
 <script>
   import { buildRepresentations } from '../lib/greeting-playground.mjs';
@@ -32,7 +44,6 @@
     const node = document.getElementById(id);
     if (node) node.textContent = value;
   };
-  const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
   function render() {
     if (!nameInput || !excitedInput || !error) return;
     const name = nameInput.value;
@@ -59,19 +70,38 @@
   render();
 </script>
 <style>
-  .playground { padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: 1rem; background: var(--sl-color-bg); }
-  .eyebrow { color: var(--sl-color-accent-high); font-weight: 650; }
-  label { display: grid; gap: .4rem; max-width: 24rem; font-weight: 600; }
-  .toggle { display: flex; align-items: center; margin-top: .8rem; }
-  input:not([type="checkbox"]), button { padding: .6rem .75rem; border-radius: .4rem; }
-  .outputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .75rem; margin-block: 1rem; }
-  article { min-width: 0; padding: .8rem; border: 1px solid var(--sl-color-gray-5); border-radius: .65rem; }
-  article h3 { margin-top: 0; }
+  .playground { --ink: var(--sl-color-text); --line: var(--sl-color-gray-5); color: var(--ink); }
+  .playground-intro { max-width: 48rem; }
+  .playground-intro h2 { margin: .25rem 0 .5rem; font-size: clamp(1.45rem, 2.5vw, 2rem); letter-spacing: -.025em; }
+  .playground-intro > p:last-child { margin: 0; line-height: 1.6; }
+  .eyebrow, .result-label { margin: 0; color: var(--sl-color-accent); font-size: .82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .workbench { display: grid; grid-template-columns: minmax(14rem, .85fr) minmax(0, 1.15fr); gap: 1.25rem; align-items: stretch; margin-block: 1.5rem 1rem; }
+  .controls, .result { min-width: 0; padding: 1.1rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--sl-color-bg); }
+  .controls { display: flex; flex-direction: column; align-items: flex-start; gap: .8rem; }
+  .controls label { display: grid; gap: .4rem; width: 100%; font-weight: 600; }
+  .controls .toggle { display: flex; align-items: center; min-height: 2.5rem; width: auto; }
+  input:not([type="checkbox"]) { width: 100%; min-height: 2.75rem; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: .4rem; color: var(--sl-color-text); background: var(--sl-color-bg); font: inherit; }
+  .toggle input { width: 1.15rem; height: 1.15rem; accent-color: var(--sl-color-accent); }
+  button { min-height: 2.75rem; padding: .55rem 1rem; border: 1px solid var(--sl-color-accent); border-radius: .4rem; color: var(--sl-color-text); background: transparent; font: inherit; font-weight: 650; cursor: pointer; }
+  button:hover { background: var(--sl-color-accent-low); }
+  .result { display: flex; flex-direction: column; justify-content: center; gap: .7rem; border-color: var(--sl-color-accent); background: var(--sl-color-accent-low); }
+  .result-label { color: var(--sl-color-accent-high); }
+  .result pre { margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font-family: inherit; font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
+  #greeting-playground-error { margin: 0; color: var(--sl-color-red); }
+  .explanation { max-width: 48rem; margin: .5rem 0 1rem; line-height: 1.55; }
+  .interfaces { border-top: 1px solid var(--line); padding-top: .8rem; }
+  .interfaces summary { min-height: 2.75rem; display: flex; align-items: center; width: fit-content; cursor: pointer; font-weight: 650; }
+  .outputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-block: .8rem 1rem; }
+  article { min-width: 0; padding: .8rem; border: 1px solid var(--line); border-radius: .5rem; }
+  article h3 { margin: 0 0 .5rem; font-size: .9rem; }
   pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .response { border-color: var(--sl-color-accent); }
-  #greeting-playground-error { color: var(--sl-color-red); }
+  @media (max-width: 38rem) {
+    .workbench { grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-block: 1rem; }
+    .controls, .result { padding: .9rem; }
+    .outputs { grid-template-columns: minmax(0, 1fr); }
+  }
   @media (prefers-reduced-motion: no-preference) {
-    .outputs article { animation: arrive .18s ease-out; }
-    @keyframes arrive { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .result { animation: arrive .18s ease-out; }
+    @keyframes arrive { from { opacity: .6; transform: translateY(3px); } to { opacity: 1; transform: none; } }
   }
 </style>

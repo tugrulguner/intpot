@@ -35,12 +35,12 @@ for await (const path of htmlFiles(distRoot)) {
     failures.push(`${relative(distRoot, path)}: expected exactly one PostHog initialization`);
   }
   if (outputPath === 'playground/index.html') {
-    for (const token of ['Greeting playground', 'Sound excited', 'greet(name: str, excited: bool = False)']) {
+    for (const token of ['Edit the greeting', 'Sound excited', 'greet(name: str, excited: bool = False)', 'greeting-playground-result', 'illustrative']) {
       if (!html.includes(token)) failures.push(`${outputPath}: missing dedicated playground feature ${token}`);
     }
   }
   if (outputPath === 'index.html') {
-    for (const token of ['Browser-local playground', 'id="greeting-playground-name"', 'id="greeting-playground-excited"', 'def greet(name: str, excited: bool = False) -> str:', 'POST', '/greet', 'greeting-playground-definition', 'greeting-playground-cli', 'greeting-playground-http', 'greeting-playground-mcp', 'greeting-playground-result', 'greeting-playground-reset']) {
+    for (const token of ['Browser-only', 'Try the playground', 'id="greeting-playground-name"', 'id="greeting-playground-excited"', 'def greet(name: str, excited: bool = False) -> str:', 'POST', '/greet', 'greeting-playground-definition', 'greeting-playground-cli', 'greeting-playground-http', 'greeting-playground-mcp', 'greeting-playground-result', 'greeting-playground-reset']) {
       if (!html.includes(token)) failures.push(`${outputPath}: missing playground feature ${token}`);
     }
     if (html.includes('recorded-local-http-execution') || html.includes('data-preview-json')) failures.push(`${outputPath}: recorded preview remains`);

@@ -1,0 +1,1 @@
+The Intpot homepage and browser-local greeting playground share a gold-and-charcoal visual identity with a clearer, more compact hierarchy.

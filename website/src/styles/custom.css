@@ -1,12 +1,52 @@
-
-/* Intpot brand accents, keeping Starlight's accessible layout and contrast. */
+/* Intpot: warm metal accents, quiet charcoal surfaces, Starlight's accessible shell. */
 :root {
-  --sl-color-accent-low: #202642;
-  --sl-color-accent: #7787ff;
-  --sl-color-accent-high: #d3d8ff;
+  --sl-color-accent-low: #302a19;
+  --sl-color-accent: #d7ad57;
+  --sl-color-accent-high: #f2d78f;
 }
 :root[data-theme='light'] {
-  --sl-color-accent-low: #e5e8ff;
-  --sl-color-accent: #4453ca;
-  --sl-color-accent-high: #202642;
+  --sl-color-accent-low: #f4ead3;
+  --sl-color-accent: #795711;
+  --sl-color-accent-high: #34270f;
+  --sl-color-bg: #faf9f6;
+  --sl-color-bg-nav: #faf9f6;
+  --sl-color-bg-sidebar: #f5f3ed;
+  --sl-color-text: #282821;
+}
+:root[data-theme='dark'] {
+  --sl-color-bg: #171816;
+  --sl-color-bg-nav: #171816;
+  --sl-color-bg-sidebar: #1d1e1a;
+  --sl-color-text: #e6e3db;
+}
+
+/* Keep the product landing page editorial and the playground workbench wide. */
+.hero {
+  padding-block: clamp(2.5rem, 7vw, 5rem);
+}
+.hero h1 {
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+}
+.hero .tagline {
+  max-width: 36rem;
+  line-height: 1.65;
+}
+.hero .stack {
+  gap: 1.2rem;
+}
+
+:root ::selection {
+  color: #171816;
+  background: #e9c66f;
+}
+:focus-visible {
+  outline: 3px solid var(--sl-color-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 50rem) {
+  .hero { padding-block: 0; }
+  .hero > img { max-width: 8rem; }
+  .hero .stack { gap: .7rem; }
+  .hero .tagline { line-height: 1.45; }
 }

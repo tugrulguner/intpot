@@ -4,7 +4,7 @@ description: Define typed Python tools once, then serve or convert them across C
 template: splash
 hero:
   title: One typed definition. Three interfaces.
-  tagline: Build a Python tool once, then serve it as a CLI, HTTP API, or MCP server. Convert existing apps between Typer, FastAPI, and FastMCP.
+  tagline: Define typed tools once for CLI, HTTP, or MCP. Convert apps between Typer, FastAPI, and FastMCP.
   image:
     alt: Intpot — Python tools served as CLI, API, or MCP
     file: ../../assets/intpot_image.webp
@@ -12,36 +12,20 @@ hero:
     - text: Get started
       link: /quickstart/
       icon: right-arrow
+    - text: Try the playground
+      link: /playground/
+      icon: right-arrow
     - text: View on GitHub
       link: https://github.com/tugrulguner/intpot
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
 import GreetingPlayground from '../../components/GreetingPlayground.astro';
 
-<CardGrid stagger>
-  <Card title="Write once" icon="seti:python">
-    Register typed Python functions with `@app.tool()` and keep behavior in one place.
-  </Card>
-  <Card title="Serve three ways" icon="rocket">
-    Run the same declaration as Typer CLI, FastAPI, or FastMCP.
-  </Card>
-  <Card title="Convert existing apps" icon="puzzle">
-    Move between all six Typer, FastAPI, and FastMCP conversion directions.
-  </Card>
-</CardGrid>
+## One definition, three ways to run
 
-## The shape
-
-A declaration builds one normalized application schema. From it, Intpot can build a live interface or generate ordinary Python source for a target framework.
-
-## Try it in your browser
-
-This bounded browser-local example recomputes the shipped `greet(name: str, excited: bool = False) -> str` function with your name and excitement setting. It shows illustrative interface representations, does not execute Intpot's Python adapters or arbitrary code, and never contacts a server. [Open the full-screen playground](/playground/).
-
-<GreetingPlayground />
+Register typed Python functions with `@app.tool()`. Intpot keeps behavior in one place and serves it through a Typer CLI, FastAPI, or FastMCP interface. Existing apps can also be converted across all six Typer, FastAPI, and FastMCP directions.
 
 ```python
 from intpot import App
@@ -60,6 +44,12 @@ intpot serve app.py --api
 intpot serve app.py --mcp
 ```
 
-See the [quick start](/quickstart/) or explore [capabilities and boundaries](/capabilities/).
+## Try it in your browser
+
+Change a name or toggle excitement to recompute the shipped greeting example. This browser-local demonstration uses no server or model; its CLI, HTTP, and MCP examples are illustrative interface representations, not running Python adapters.
+
+<GreetingPlayground />
+
+[Read the quick start](/quickstart/) · [Explore capabilities and boundaries](/capabilities/)
 
 Built by [ModePot](https://modepot.io/).
