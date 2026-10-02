@@ -4,6 +4,30 @@ import { expect, test } from '@playwright/test';
 const evidence = process.env.PLAYGROUND_EVIDENCE_DIR ?? new URL('../../evidence/playground-refinement/intpot/', import.meta.url).pathname;
 mkdirSync(evidence, { recursive: true });
 
+test('output tabs share a 44px baseline and the active panel fits the inspector at every viewport', async ({ page }) => {
+  for (const width of [1280, 768, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/playground/');
+    await page.getByRole('button', { name: /Run local preview/ }).click();
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    const geometry = await page.evaluate(() => {
+      const inspector = document.querySelector('.inspector')!.getBoundingClientRect();
+      const panel = document.querySelector('#output-panel')!.getBoundingClientRect();
+      const tabs = [...document.querySelectorAll('.output-nav button')].map((tab) => {
+        const box = tab.getBoundingClientRect();
+        return { top: box.top, height: box.height };
+      });
+      return { tabs, panelBottom: panel.bottom, inspectorBottom: inspector.bottom };
+    });
+    expect(Math.max(...geometry.tabs.map((tab) => tab.top)) - Math.min(...geometry.tabs.map((tab) => tab.top))).toBeLessThanOrEqual(1);
+    for (const tab of geometry.tabs) expect(tab.height).toBe(44);
+    expect(geometry.panelBottom).toBeLessThanOrEqual(geometry.inspectorBottom);
+  }
+});
+
 test('one bounded output inspector stays in the source-request-inspect workbench after every output view is selected', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/playground/');
@@ -67,6 +91,39 @@ test('all three interface tabs share a 44px baseline and retain reachable active
   await expect(page.getByRole('tab', { name: /MCP/ })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('long output scrolls inside one inspector and edits clear the selected trace without switching tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/playground/');
+  const input = page.getByLabel('Editable interface request');
+  await page.getByRole('tab', { name: /MCP/ }).click();
+  // Forty characters is the preview's bound; newlines exercise long rendered output without widening it.
+  const name = '\n'.repeat(39) + 'x';
+  await input.fill(JSON.stringify({ name: 'greet', arguments: { name, excited: true } }));
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.locator('#computed')).toHaveText(`Hello, ${name}!`);
+  for (const view of ['Result', 'Typed arguments', 'Interface response', 'Request trace']) {
+    await page.getByRole('tab', { name: view, exact: true }).click();
+    await expect(page.locator('.output-view:visible')).toHaveCount(1);
+    const bounds = await page.locator('.inspector').boundingBox();
+    expect(bounds?.height).toBe(272);
+    const scroller = page.locator('.output-view:visible pre, .output-view:visible ol');
+    const scrolling = await scroller.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      return { scrollTop: element.scrollTop, overflow: getComputedStyle(element).overflowY };
+    });
+    expect(scrolling.overflow).toBe('auto');
+    if (view === 'Result' || view === 'Interface response') expect(scrolling.scrollTop).toBeGreaterThan(0);
+  }
+  await input.fill(JSON.stringify({ name: 'greet', arguments: { name: 'Edited' } }));
+  await expect(page.getByRole('tab', { name: 'Request trace', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#trace')).toHaveText('Request edited; run again to compute a fresh result.');
+  await expect(page.locator('#arguments')).toHaveText('Not run');
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.locator('#trace')).toContainText('name="Edited"');
+  await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await expect(page.locator('#trace')).toHaveText('Choose a request and run its browser-local preview.');
+});
+
 test('bounded requests compute correct results, reject invalid requests safely, and reset', async ({ page }) => {
   await page.goto('/playground/');
   const input = page.getByLabel('Editable interface request');
@@ -74,7 +131,7 @@ test('bounded requests compute correct results, reject invalid requests safely, 
   await input.fill("greet '<img src=x onerror=alert(1)>' --excited");
   await page.getByRole('button', { name: /Run local preview/ }).click();
   await expect(page.locator('#computed')).toHaveText("Hello, <img src=x onerror=alert(1)>!");
-  await expect(page.locator('.result img')).toHaveCount(0);
+  await expect(page.locator('.inspector img')).toHaveCount(0);
   await page.getByRole('tab', { name: /HTTP/ }).click();
   await input.fill('{"method":"POST","path":"/greet","body":{"name":"World","excited":true}}');
   await page.getByRole('button', { name: /Run local preview/ }).click();
