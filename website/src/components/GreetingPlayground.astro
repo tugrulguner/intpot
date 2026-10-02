@@ -1,107 +1,85 @@
 ---
+import { functionDefinition } from '../lib/greeting-playground.mjs';
 ---
-
 <section class="playground" aria-labelledby="greeting-playground-title">
-  <header class="playground-intro">
-    <p class="eyebrow">Browser-only · no server or AI</p>
-    <h2 id="greeting-playground-title">Edit the greeting</h2>
+  <header class="intro">
+    <p class="eyebrow">Browser-local interface previews · no Python runtime</p>
+    <h2 id="greeting-playground-title">One typed function, three interfaces</h2>
+    <p>Edit a CLI command, HTTP request, or MCP tool call below. Preview how each maps to the same typed arguments and result.</p>
   </header>
-  <div class="workbench">
-    <form class="controls" onsubmit="return false">
-      <label for="greeting-playground-name">Name
-        <input id="greeting-playground-name" maxlength="40" value="Ada" autocomplete="off" />
-      </label>
-      <label class="toggle" for="greeting-playground-excited">
-        <input id="greeting-playground-excited" type="checkbox" />
-        Sound excited
-      </label>
-      <button type="button" id="greeting-playground-reset">Reset</button>
-      <p id="greeting-playground-error" role="alert"></p>
-    </form>
-    <section class="result" aria-label="Computed function output" aria-live="polite">
-      <p class="result-label">Function result</p>
-      <pre id="greeting-playground-result"></pre>
-    </section>
+  <div class="setup">
+  <div class="definition"><span>Shared typed function · shipped Intpot example</span><pre>{functionDefinition}</pre></div>
+  <div class="shared">
+    <label>Name for draft requests <input id="shared-name" maxlength="40" value="Ada" /></label>
+    <label class="toggle"><input id="shared-excited" type="checkbox" /> Excited</label>
+    <button type="button" id="fill-drafts">Fill all request drafts</button>
+    <button type="button" id="reset-all">Reset results</button>
   </div>
-  <p class="explanation">Change an input to recompute the result. CLI, HTTP, and MCP examples below are illustrative.</p>
-  <details class="interfaces">
-    <summary>See the function and interface representations</summary>
-    <div class="outputs">
-      <article><h3>Function</h3><pre id="greeting-playground-definition"></pre></article>
-      <article><h3>CLI</h3><pre id="greeting-playground-cli"></pre></article>
-      <article><h3>HTTP</h3><pre id="greeting-playground-http"></pre></article>
-      <article><h3>MCP</h3><pre id="greeting-playground-mcp"></pre></article>
-    </div>
-  </details>
+  </div>
+  <div class="panels">
+    {['CLI', 'HTTP', 'MCP'].map((kind) => <article class="panel" data-interface={kind}>
+      <h3>{kind === 'HTTP' ? 'HTTP API' : kind}</h3>
+      <p class="note">{kind === 'CLI' ? 'Bounded command preview · quoted positional name' : kind === 'HTTP' ? 'Request preview · POST /greet' : 'Request preview · MCP tool call'}</p>
+      <p class="adapter">Python adapter: <code>{kind === 'CLI' ? 'Typer' : kind === 'HTTP' ? 'FastAPI' : 'FastMCP'}</code></p>
+      <label for={`request-${kind}`}>Editable request</label>
+      <textarea id={`request-${kind}`} maxlength="512" rows={kind === 'CLI' ? 2 : 6} spellcheck="false"></textarea>
+      <button type="button" class="run">Preview request</button>
+      <p class="error" role="alert"></p>
+      <div class="outcome" aria-live="polite"><strong>Computed result</strong><pre class="result">Not run</pre><strong>Response shape</strong><pre class="response">—</pre><strong>Trace</strong><ol class="trace"><li>Waiting for an explicit local run</li></ol></div>
+    </article>)}
+  </div>
+  <p class="honest">These are browser-local previews of request parsing and function behavior. They do not launch Intpot, Python adapters, HTTP requests, MCP clients, a backend, or a model.</p>
+  <p class="links"><a href="https://github.com/tugrulguner/intpot/blob/main/examples/semantic_schema.py">View the Python example</a> · <a href="/quickstart/">Run real Intpot locally</a> · <a href="/capabilities/">Capabilities</a></p>
 </section>
 <script>
-  import { buildRepresentations } from '../lib/greeting-playground.mjs';
-
-  const nameInput = document.querySelector<HTMLInputElement>('#greeting-playground-name');
-  const excitedInput = document.querySelector<HTMLInputElement>('#greeting-playground-excited');
-  const error = document.querySelector<HTMLElement>('#greeting-playground-error');
-  const renderText = (id: string, value: string) => {
-    const node = document.getElementById(id);
-    if (node) node.textContent = value;
-  };
-  function render() {
-    if (!nameInput || !excitedInput || !error) return;
-    const name = nameInput.value;
-    if (!name.trim() || name.length > 40) {
-      error.textContent = 'Enter a name containing 1–40 characters (not whitespace only).';
-      for (const key of ['definition', 'cli', 'http', 'mcp', 'result']) renderText(`greeting-playground-${key}`, '—');
-      return;
-    }
-    error.textContent = '';
-    const excited = excitedInput.checked;
-    const representations = buildRepresentations(name, excited);
-    for (const key of ['definition', 'cli', 'http', 'mcp', 'result'] as const) {
-      renderText(`greeting-playground-${key}`, representations[key]);
-    }
+  import { defaultRequests, runRequest } from '../lib/greeting-playground.mjs';
+  const panels = [...document.querySelectorAll<HTMLElement>('.panel')];
+  const drafts = defaultRequests();
+  for (const panel of panels) {
+    const kind = panel.dataset.interface!;
+    const input = panel.querySelector<HTMLTextAreaElement>('textarea')!;
+    input.value = drafts[kind as keyof typeof drafts];
+    const error = panel.querySelector<HTMLElement>('.error')!;
+    const clear = () => { error.textContent = ''; panel.querySelector('.result')!.textContent = 'Not run'; panel.querySelector('.response')!.textContent = '—'; panel.querySelector('.trace')!.innerHTML = '<li>Request edited; run again to compute a fresh result</li>'; };
+    input.addEventListener('input', clear);
+    panel.querySelector<HTMLButtonElement>('.run')!.addEventListener('click', () => {
+      clear();
+      try {
+        const computed = runRequest(kind, input.value);
+        panel.querySelector('.result')!.textContent = computed.result;
+        panel.querySelector('.response')!.textContent = typeof computed.response === 'string' ? computed.response : JSON.stringify(computed.response, null, 2);
+        const trace = panel.querySelector<HTMLOListElement>('.trace')!;
+        trace.replaceChildren(...computed.trace.map((line) => { const li = document.createElement('li'); li.textContent = line; return li; }));
+      } catch (cause) { error.textContent = cause instanceof Error ? cause.message : 'Invalid request.'; }
+    });
   }
-  nameInput?.addEventListener('input', render);
-  excitedInput?.addEventListener('change', render);
-  document.querySelector<HTMLButtonElement>('#greeting-playground-reset')?.addEventListener('click', () => {
-    if (nameInput) nameInput.value = 'Ada';
-    if (excitedInput) excitedInput.checked = false;
-    render();
-    nameInput?.focus();
+  document.querySelector<HTMLButtonElement>('#fill-drafts')!.addEventListener('click', () => {
+    const name = (document.querySelector<HTMLInputElement>('#shared-name')!).value;
+    const excited = document.querySelector<HTMLInputElement>('#shared-excited')!.checked;
+    const values = defaultRequests(name, excited);
+    for (const panel of panels) { (panel.querySelector('textarea') as HTMLTextAreaElement).value = values[panel.dataset.interface as keyof typeof values]; panel.querySelector('textarea')!.dispatchEvent(new Event('input')); }
   });
-  render();
+  document.querySelector<HTMLButtonElement>('#reset-all')!.addEventListener('click', () => {
+    for (const panel of panels) { panel.querySelector('.error')!.textContent = ''; panel.querySelector('.result')!.textContent = 'Not run'; panel.querySelector('.response')!.textContent = '—'; panel.querySelector('.trace')!.innerHTML = '<li>Waiting for an explicit local run</li>'; }
+  });
 </script>
 <style>
-  .playground { --ink: var(--sl-color-text); --line: var(--sl-color-gray-5); color: var(--ink); }
-  .playground-intro { max-width: 48rem; }
-  .playground-intro h2 { margin: .25rem 0 .5rem; font-size: clamp(1.45rem, 2.5vw, 2rem); letter-spacing: -.025em; }
-  .playground-intro > p:last-child { margin: 0; line-height: 1.6; }
-  .eyebrow, .result-label { margin: 0; color: var(--sl-color-accent); font-size: .82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-  .workbench { display: grid; grid-template-columns: minmax(14rem, .85fr) minmax(0, 1.15fr); gap: 1.25rem; align-items: stretch; margin-block: 1.5rem 1rem; }
-  .controls, .result { min-width: 0; padding: 1.1rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--sl-color-bg); }
-  .controls { display: flex; flex-direction: column; align-items: flex-start; gap: .8rem; }
-  .controls label { display: grid; gap: .4rem; width: 100%; font-weight: 600; }
-  .controls .toggle { display: flex; align-items: center; min-height: 2.5rem; width: auto; }
-  input:not([type="checkbox"]) { width: 100%; min-height: 2.75rem; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: .4rem; color: var(--sl-color-text); background: var(--sl-color-bg); font: inherit; }
-  .toggle input { width: 1.15rem; height: 1.15rem; accent-color: var(--sl-color-accent); }
-  button { min-height: 2.75rem; padding: .55rem 1rem; border: 1px solid var(--sl-color-accent); border-radius: .4rem; color: var(--sl-color-text); background: transparent; font: inherit; font-weight: 650; cursor: pointer; }
-  button:hover { background: var(--sl-color-accent-low); }
-  .result { display: flex; flex-direction: column; justify-content: center; gap: .7rem; border-color: var(--sl-color-accent); background: var(--sl-color-accent-low); }
-  .result-label { color: var(--sl-color-accent-high); }
-  .result pre { margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font-family: inherit; font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
-  #greeting-playground-error { margin: 0; color: var(--sl-color-red); }
-  .explanation { max-width: 48rem; margin: .5rem 0 1rem; line-height: 1.55; }
-  .interfaces { border-top: 1px solid var(--line); padding-top: .8rem; }
-  .interfaces summary { min-height: 2.75rem; display: flex; align-items: center; width: fit-content; cursor: pointer; font-weight: 650; }
-  .outputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-block: .8rem 1rem; }
-  article { min-width: 0; padding: .8rem; border: 1px solid var(--line); border-radius: .5rem; }
-  article h3 { margin: 0 0 .5rem; font-size: .9rem; }
-  pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-  @media (max-width: 38rem) {
-    .workbench { grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-block: 1rem; }
-    .controls, .result { padding: .9rem; }
-    .outputs { grid-template-columns: minmax(0, 1fr); }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .result { animation: arrive .18s ease-out; }
-    @keyframes arrive { from { opacity: .6; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-  }
+.playground{color:var(--sl-color-text);max-width:76rem}.intro{max-width:54rem}.intro h2{font-size:clamp(1.5rem,3vw,2.2rem);margin:.25rem 0}.intro p{line-height:1.55}.eyebrow{color:var(--sl-color-accent);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em}.definition,.panel,.shared{border:1px solid var(--sl-color-gray-5);border-radius:.7rem;padding:1rem;background:var(--sl-color-bg)}.definition{margin:1rem 0}.definition span,.outcome strong{font-size:.8rem;font-weight:700;color:var(--sl-color-accent)}pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto}.definition pre{margin:.5rem 0 0}.shared{display:flex;align-items:end;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem}.shared label{display:grid;gap:.3rem;font-weight:600}.shared input:not([type=checkbox]){width:min(20rem,70vw)}.toggle{display:flex!important;align-items:center;min-height:2.5rem}.panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}.panel{min-width:0}.panel h3{margin:0}.note{font-size:.84rem;min-height:2.5em;color:var(--sl-color-gray-2)}.panel label{font-weight:650}.panel textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;margin:.4rem 0 .6rem;padding:.65rem;border:1px solid var(--sl-color-gray-5);border-radius:.4rem;background:var(--sl-color-bg);color:var(--sl-color-text);font: .86rem/1.45 ui-monospace,monospace}.panel button,.shared button{min-height:2.6rem;border:1px solid var(--sl-color-accent);border-radius:.4rem;background:transparent;color:inherit;padding:.5rem .75rem;font:inherit;font-weight:650;cursor:pointer}.panel button:hover,.shared button:hover{background:var(--sl-color-accent-low)}.outcome{border-top:1px solid var(--sl-color-gray-5);margin-top:.8rem;padding-top:.75rem}.outcome pre{margin:.25rem 0 .65rem;font-size:.85rem;min-height:1.3em}.trace{padding-left:1.3rem;font-size:.82rem}.error{min-height:1.2em;color:var(--sl-color-red);font-size:.85rem}.honest{border-left:3px solid var(--sl-color-accent);padding:.5rem .75rem;line-height:1.5}.links{font-size:.9rem}@media(max-width:58rem){.panels{grid-template-columns:1fr}.note{min-height:0}.shared{align-items:stretch}.shared label{flex:1 1 12rem}}
+</style>
+<style>
+  .setup { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: .8rem; margin-block: 1rem; }
+  .setup > .definition, .setup > .shared { margin: 0; min-width: 0; }
+  .setup > .shared { flex-direction: row; align-items: center; align-content: center; justify-content: flex-start; }
+  .setup .shared > * { margin: 0; }
+  .setup .shared label { flex: 1 1 100%; }
+  .setup .shared .toggle { flex: 1 1 100%; }
+  .setup .shared input:not([type='checkbox']) { max-width: 100%; }
+  .adapter { font-size: .8rem; margin-block: .3rem; }
+  .panels > .panel { margin: 0; }
+  @media (max-width: 40rem) { .setup { grid-template-columns: minmax(0, 1fr); } }
+  .shared input:not([type='checkbox']) { min-height: 2.75rem; box-sizing: border-box; padding: .5rem .65rem; border: 1px solid var(--sl-color-gray-5); border-radius: .4rem; background: var(--sl-color-bg); color: var(--sl-color-text); font: inherit; }
+  .shared input[type='checkbox'] { accent-color: var(--sl-color-accent); }
+  .definition pre { padding: .65rem; font-size: .82rem; line-height: 1.45; }
+  .intro p { margin-block: .5rem; }
+  .shared button, .panel button { min-height: 2.75rem; }
 </style>

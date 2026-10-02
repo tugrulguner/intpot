@@ -1,40 +1,51 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { defaultRequests, parseRequest, runRequest, shellQuote } from '../src/lib/greeting-playground.mjs';
 
-import { buildRepresentations, greet, shellQuote } from '../src/lib/greeting-playground.mjs';
-
-test('greet matches the shipped example defaults and excited output', () => {
-  assert.equal(greet('Ada'), 'Hello, Ada');
-  assert.equal(greet('Ada', false), 'Hello, Ada');
-  assert.equal(greet('Ada', true), 'Hello, Ada!');
+test('all three bounded request contracts call the same typed function', () => {
+  const drafts = defaultRequests('Ada', true);
+  for (const kind of ['CLI', 'HTTP', 'MCP']) {
+    const output = runRequest(kind, drafts[kind]);
+    assert.deepEqual(output.args, { name: 'Ada', excited: true });
+    assert.equal(output.result, 'Hello, Ada!');
+    assert.deepEqual(output.trace, [`${kind} request parsed`, 'Typed arguments: name="Ada", excited=true', 'Same function: greet(name, excited)']);
+  }
+  assert.deepEqual(runRequest('HTTP', drafts.HTTP).response, { status: 200, body: 'Hello, Ada!' });
+  assert.deepEqual(runRequest('MCP', drafts.MCP).response.structuredContent, { result: 'Hello, Ada!' });
 });
 
-test('interfaces carry both typed parameters and the string-returning greeting', () => {
-  const views = buildRepresentations('Ada', true);
-  assert.match(views.definition, /def greet\(name: str, excited: bool = False\) -> str:/);
-  assert.match(views.cli, /intpot serve examples\/semantic_schema\.py --cli/);
-  assert.match(views.cli, /greet --name 'Ada' --excited/);
-  assert.deepEqual(JSON.parse(views.http), {
-    method: 'POST', path: '/greet', body: { name: 'Ada', excited: true },
-  });
-  assert.deepEqual(JSON.parse(views.mcp), {
-    name: 'greet', arguments: { name: 'Ada', excited: true },
-  });
-  assert.equal(views.result, greet('Ada', true));
+test('accepts canonical default and rejects invalid route, tool, fields and types', () => {
+  assert.equal(runRequest('HTTP', JSON.stringify({ method: 'POST', path: '/greet', body: { name: 'Lin' } })).result, 'Hello, Lin');
+  assert.throws(() => parseRequest('HTTP', JSON.stringify({ method: 'GET', path: '/greet', body: { name: 'Lin' } })), /POST \/greet/);
+  assert.throws(() => parseRequest('HTTP', JSON.stringify({ method: 'POST', path: '/other', body: { name: 'Lin' } })), /POST \/greet/);
+  assert.throws(() => parseRequest('MCP', JSON.stringify({ name: 'delete', arguments: { name: 'Lin' } })), /greet MCP tool/);
+  assert.throws(() => parseRequest('MCP', JSON.stringify({ name: 'greet', arguments: { name: 'Lin', extra: 1 } })), /Only name and excited/);
+  assert.throws(() => parseRequest('HTTP', JSON.stringify({ method: 'POST', path: '/greet', body: { name: 4 } })), /name must be/);
+  assert.throws(() => parseRequest('HTTP', JSON.stringify({ method: 'POST', path: '/greet', body: { name: 'Lin', excited: 'yes' } })), /excited must be a boolean/);
+  assert.throws(() => parseRequest('MCP', '{'), /valid JSON/);
+  assert.throws(() => parseRequest('HTTP', 'x'.repeat(513)), /512 characters/);
 });
 
-test('default excitement is represented consistently across interfaces', () => {
-  const views = buildRepresentations('Ada', false);
-  assert.doesNotMatch(views.cli, /--excited/);
-  assert.deepEqual(JSON.parse(views.http).body, { name: 'Ada', excited: false });
-  assert.deepEqual(JSON.parse(views.mcp).arguments, { name: 'Ada', excited: false });
-  assert.equal(views.result, 'Hello, Ada');
+test('CLI grammar rejects other commands and shell quoting preserves literal input', () => {
+  assert.throws(() => parseRequest('CLI', "rm --name 'Ada'"), /greet command/);
+  assert.throws(() => parseRequest('CLI', "greet Ada --output x"), /Unsupported CLI argument/);
+  assert.equal(shellQuote("O'Brien $HOME `whoami`"), "'O'\\''Brien $HOME `whoami`'");
+  const raw = `greet ${shellQuote("O'Brien $HOME `whoami`")} --excited`;
+  assert.deepEqual(parseRequest('CLI', raw), { name: "O'Brien $HOME `whoami`", excited: true });
+  assert.equal(runRequest('CLI', raw).result, "Hello, O'Brien $HOME `whoami`!");
 });
 
-test('CLI names use POSIX single-quote escaping, not shell interpolation', () => {
-  const name = "O'Brien $HOME `whoami`";
-  assert.equal(shellQuote(name), "'O'\\''Brien $HOME `whoami`'");
-  const command = buildRepresentations(name, true).cli.split('\n').at(-1);
-  assert.equal(command, "greet --name 'O'\\''Brien $HOME `whoami`' --excited");
-  assert.equal(greet(name, true), "Hello, O'Brien $HOME `whoami`!");
+test('CLI quoting follows shell lexical escaping without executing expansions', () => {
+  assert.equal(parseRequest('CLI', String.raw`greet Ada\ Lovelace`).name, 'Ada Lovelace');
+  assert.equal(parseRequest('CLI', String.raw`greet "Ada\q"`).name, String.raw`Ada\q`);
+  assert.equal(parseRequest('CLI', String.raw`greet "Ada\"Lovelace"`).name, 'Ada"Lovelace');
+  assert.throws(() => parseRequest('CLI', "greet '' --excited"), /non-empty/);
+  assert.throws(() => parseRequest('CLI', "greet Ada\\"), /Trailing shell escape/);
+});
+
+test('page keeps all interfaces visible and exposes explicit run/reset controls', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const page = await readFile(new URL('../src/components/GreetingPlayground.astro', import.meta.url), 'utf8');
+  for (const marker of ['CLI', 'HTTP API', 'MCP', 'Preview request', 'Reset results', 'browser-local previews', 'View the Python example']) assert.ok(page.includes(marker), marker);
+  assert.ok(!page.includes('<details'));
 });
