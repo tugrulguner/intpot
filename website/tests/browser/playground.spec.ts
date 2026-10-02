@@ -237,6 +237,32 @@ test('primary controls and highlighted code remain readable in both themes', asy
   }
 });
 
+test('explicit site themes keep aligned headers and a continuous code surface opposite system preference', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
+    await page.goto('/playground/');
+    await page.locator('starlight-theme-select select').first().selectOption(theme);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    const geometry = await page.evaluate(() => ({
+      theme: document.documentElement.dataset.theme,
+      headers: [...document.querySelectorAll('.panel-heading')].map((element) => {
+        const box = element.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom };
+      }),
+      codeSurface: getComputedStyle(document.querySelector('.definition')!).backgroundColor,
+      codeBackground: getComputedStyle(document.querySelector('.definition pre')!).backgroundColor,
+    }));
+    expect(geometry.theme).toBe(theme);
+    expect(Math.max(...geometry.headers.map((header) => header.top)) - Math.min(...geometry.headers.map((header) => header.top))).toBeLessThanOrEqual(1);
+    expect(Math.max(...geometry.headers.map((header) => header.bottom)) - Math.min(...geometry.headers.map((header) => header.bottom))).toBeLessThanOrEqual(1);
+    expect(geometry.codeSurface).toBe(geometry.codeBackground);
+  }
+});
+
 test('code, run, and output are aligned panels with legible selected and action states', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 768 });
   await page.goto('/playground/');
