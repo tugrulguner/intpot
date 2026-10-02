@@ -1,0 +1,1 @@
+The browser playground keeps result, typed arguments, interface response, and request trace in one bounded, keyboard-navigable output inspector beside the request and source.

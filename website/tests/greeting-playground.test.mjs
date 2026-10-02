@@ -47,10 +47,11 @@ test('workbench exposes all interfaces, shared definition, focused editable requ
   const { readFile } = await import('node:fs/promises');
   const page = await readFile(new URL('../src/components/GreetingPlayground.astro', import.meta.url), 'utf8');
   for (const marker of ['functionDefinition', 'data-kind="CLI"', 'data-kind="HTTP"', 'data-kind="MCP"', 'role="tablist"', 'id="request"', 'Run local preview', 'id="reset-request"', 'browser-local preview', 'FastAPI', 'FastMCP', '/quickstart/', 'semantic_schema.py']) assert.ok(page.includes(marker), marker);
-  assert.equal((page.match(/<details class="result-details/g) ?? []).length, 2);
-  assert.match(page, /<details class="result-details"[^>]*><summary>Typed arguments/);
-  assert.match(page, /<details class="result-details trace-details"[^>]*><summary>Request trace/);
+  assert.equal((page.match(/class="output-view"/g) ?? []).length, 4);
+  assert.match(page, /aria-label="Output views"/);
+  assert.match(page, /id="output-panel" role="tabpanel"/);
   assert.match(page, /id="computed"/);
+  assert.match(page, /\.inspector\{[^}]*height:/);
   assert.ok(!page.includes('<details class="definition'));
   assert.ok(!page.includes('fetch('));
 });
