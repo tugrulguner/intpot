@@ -54,12 +54,6 @@ demo verifies both rejection paths while retaining the complete supported conver
 
 ## Regenerating
 
-To refresh the recorded website outputs from the live adapters (including source hash and Intpot version):
-
-```bash
-uv run python scripts/record_demo_preview.py --output website/src/data/demo-preview.json
-```
-
 To regenerate all conversions, verify the expected dependency rejections, and execute the
 checked-in generated CLI/MCP artifacts plus the dependency FastAPI route:
 

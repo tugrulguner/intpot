@@ -1,67 +1,41 @@
----
-interface Props {
-  preview: {
-    source: string;
-    source_sha256: string;
-    intpot_version: string;
-    execution: string;
-    interfaces: string[];
-    examples: Array<{
-      id: string;
-      title: string;
-      input: Record<string, unknown>;
-      interfaces: Record<string, unknown>;
-    }>;
-  };
-}
-const { preview } = Astro.props;
-const previewJson = JSON.stringify(preview);
----
-
-<section class="demo-preview" aria-labelledby="demo-preview-title">
-  <div class="demo-preview__heading">
-    <div>
-      <p class="demo-preview__eyebrow">Verified run · Intpot {preview.intpot_version}</p>
-      <h3 id="demo-preview-title">One tool, three real interfaces</h3>
-      <p>Select an input to compare outputs captured from the live adapters.</p>
-    </div>
-    <label for="demo-example">Example
-      <select id="demo-example">
-        {preview.examples.map((example) => <option value={example.id}>{example.title}</option>)}
-      </select>
-    </label>
-  </div>
-  <div class="demo-preview__grid" data-demo-output>
-    {preview.interfaces.map((name) => <article class="demo-preview__result">
-      <h4>{name}</h4>
-      <pre><code data-interface={name.split(' ')[0].toLowerCase()}>{String(preview.examples[0]?.interfaces[name.split(' ')[0].toLowerCase()] ?? '')}</code></pre>
-    </article>)}
-  </div>
-  <details class="demo-preview__provenance">
-    <summary>Run provenance</summary>
-    <dl>
-      <dt>Execution</dt><dd>{preview.execution}</dd>
-      <dt>Source</dt><dd><code>{preview.source}</code></dd>
-      <dt>SHA-256</dt><dd><code>{preview.source_sha256}</code></dd>
-      <dt>Interfaces</dt><dd>{preview.interfaces.join(' · ')}</dd>
-    </dl>
-  </details>
+<section class="playground" aria-labelledby="playground-title">
+  <p class="eyebrow">Browser-local playground · no Python server or AI service</p>
+  <h2 id="playground-title">One typed function, three interfaces</h2>
+  <p>Change the name to recompute a greeting and see how the same definition is represented. These are illustrative interface representations—not running Intpot's Python adapters.</p>
+  <label for="playground-name">Name <input id="playground-name" maxlength="40" value="Ada" autocomplete="off" /></label>
+  <p id="playground-error" role="alert"></p>
+  <div class="outputs" aria-live="polite">
+    <article><h3>Definition</h3><pre id="definition"></pre></article><article><h3>CLI command</h3><pre id="cli"></pre></article>
+    <article><h3>HTTP request</h3><pre id="http"></pre></article><article><h3>MCP call</h3><pre id="mcp"></pre></article>
+    <article class="response"><h3>Computed function result</h3><pre id="result"></pre></article>
+  </div><button type="button" id="reset-playground">Reset</button>
 </section>
-
 <script>
-  const selector = document.querySelector<HTMLSelectElement>('#demo-example');
-  const previewData = JSON.parse(document.querySelector('[data-preview-json]')?.textContent ?? 'null');
-  function selectExample() {
-    if (!selector || !previewData) return;
-    const example = previewData.examples.find((item: { id: string }) => item.id === selector.value);
-    if (!example) return;
-    document.querySelectorAll<HTMLElement>('[data-interface]').forEach((output) => {
-      const key = output.dataset.interface ?? '';
-      const value = example.interfaces[key];
-      output.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-    });
+  const input = document.querySelector<HTMLInputElement>('#playground-name');
+  const error = document.querySelector<HTMLElement>('#playground-error');
+  const set = (id: string, value: string) => { const node = document.getElementById(id); if (node) node.textContent = value; };
+  function render() {
+    if (!input || !error) return;
+    const name = input.value.trim();
+    if (!name || name.length > 40) { error.textContent = 'Enter a name containing 1–40 characters.'; ['definition', 'cli', 'http', 'mcp', 'result'].forEach((id) => set(id, '—')); return; }
+    error.textContent = '';
+    set('definition', 'def greet(name: str) -> str: ...');
+    set('cli', `intpot greet --name ${JSON.stringify(name)}`);
+    set('http', JSON.stringify({ method: 'POST', path: '/tools/greet', body: { name } }, null, 2));
+    set('mcp', JSON.stringify({ name: 'greet', arguments: { name } }, null, 2));
+    set('result', JSON.stringify({ result: `Hello, ${name}!` }, null, 2));
   }
-  selector?.addEventListener('change', selectExample);
+  input?.addEventListener('input', render);
+  document.querySelector<HTMLButtonElement>('#reset-playground')?.addEventListener('click', () => { if (input) input.value = 'Ada'; render(); input?.focus(); }); render();
 </script>
-
-<script type="application/json" data-preview-json set:html={previewJson}></script>
+<style>
+  .playground { padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: 1rem; background: var(--sl-color-bg); }
+  .eyebrow { color: var(--sl-color-accent-high); font-weight: 650; }
+  label { display: grid; gap: .4rem; max-width: 24rem; font-weight: 600; }
+  input, button { padding: .6rem .75rem; border-radius: .4rem; }
+  .outputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .75rem; margin-block: 1rem; }
+  article { min-width: 0; padding: .8rem; border: 1px solid var(--sl-color-gray-5); border-radius: .65rem; } article h3 { margin-top: 0; }
+  pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .response { border-color: var(--sl-color-accent); } #playground-error { color: var(--sl-color-red); }
+  @media (prefers-reduced-motion: no-preference) { .outputs article { animation: arrive .18s ease-out; } @keyframes arrive { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } } }
+</style>
