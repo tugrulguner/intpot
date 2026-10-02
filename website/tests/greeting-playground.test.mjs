@@ -43,9 +43,10 @@ test('CLI quoting follows shell lexical escaping without executing expansions', 
   assert.throws(() => parseRequest('CLI', "greet Ada\\"), /Trailing shell escape/);
 });
 
-test('page keeps all interfaces visible and exposes explicit run/reset controls', async () => {
+test('workbench exposes all interfaces, shared definition, focused editable request, and truthful boundary', async () => {
   const { readFile } = await import('node:fs/promises');
   const page = await readFile(new URL('../src/components/GreetingPlayground.astro', import.meta.url), 'utf8');
-  for (const marker of ['CLI', 'HTTP API', 'MCP', 'Preview request', 'Reset results', 'browser-local previews', 'View the Python example']) assert.ok(page.includes(marker), marker);
+  for (const marker of ['functionDefinition', 'data-kind="CLI"', 'data-kind="HTTP"', 'data-kind="MCP"', 'role="tablist"', 'id="request"', 'Run local preview', 'id="reset-request"', 'browser-local preview', 'FastAPI', 'FastMCP', '/quickstart/', 'semantic_schema.py']) assert.ok(page.includes(marker), marker);
   assert.ok(!page.includes('<details'));
+  assert.ok(!page.includes('fetch('));
 });
