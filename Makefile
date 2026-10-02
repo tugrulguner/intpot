@@ -8,15 +8,15 @@ test:
 	uv run pytest tests/ -v
 
 lint:
-	uv run ruff check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
-	uv run ruff format --check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+	uv run ruff check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py scripts/record_demo_preview.py
+	uv run ruff format --check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py scripts/record_demo_preview.py
 
 format:
-	uv run ruff check --fix src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
-	uv run ruff format src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+	uv run ruff check --fix src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py scripts/record_demo_preview.py
+	uv run ruff format src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py scripts/record_demo_preview.py
 
 typecheck:
-	uv run pyright src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+	uv run pyright src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py scripts/record_demo_preview.py
 
 check: lint typecheck test
 

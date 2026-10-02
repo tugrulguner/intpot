@@ -1,0 +1,67 @@
+---
+interface Props {
+  preview: {
+    source: string;
+    source_sha256: string;
+    intpot_version: string;
+    execution: string;
+    interfaces: string[];
+    examples: Array<{
+      id: string;
+      title: string;
+      input: Record<string, unknown>;
+      interfaces: Record<string, unknown>;
+    }>;
+  };
+}
+const { preview } = Astro.props;
+const previewJson = JSON.stringify(preview);
+---
+
+<section class="demo-preview" aria-labelledby="demo-preview-title">
+  <div class="demo-preview__heading">
+    <div>
+      <p class="demo-preview__eyebrow">Verified run · Intpot {preview.intpot_version}</p>
+      <h3 id="demo-preview-title">One tool, three real interfaces</h3>
+      <p>Select an input to compare outputs captured from the live adapters.</p>
+    </div>
+    <label for="demo-example">Example
+      <select id="demo-example">
+        {preview.examples.map((example) => <option value={example.id}>{example.title}</option>)}
+      </select>
+    </label>
+  </div>
+  <div class="demo-preview__grid" data-demo-output>
+    {preview.interfaces.map((name) => <article class="demo-preview__result">
+      <h4>{name}</h4>
+      <pre><code data-interface={name.split(' ')[0].toLowerCase()}>{String(preview.examples[0]?.interfaces[name.split(' ')[0].toLowerCase()] ?? '')}</code></pre>
+    </article>)}
+  </div>
+  <details class="demo-preview__provenance">
+    <summary>Run provenance</summary>
+    <dl>
+      <dt>Execution</dt><dd>{preview.execution}</dd>
+      <dt>Source</dt><dd><code>{preview.source}</code></dd>
+      <dt>SHA-256</dt><dd><code>{preview.source_sha256}</code></dd>
+      <dt>Interfaces</dt><dd>{preview.interfaces.join(' · ')}</dd>
+    </dl>
+  </details>
+</section>
+
+<script>
+  const selector = document.querySelector<HTMLSelectElement>('#demo-example');
+  const previewData = JSON.parse(document.querySelector('[data-preview-json]')?.textContent ?? 'null');
+  function selectExample() {
+    if (!selector || !previewData) return;
+    const example = previewData.examples.find((item: { id: string }) => item.id === selector.value);
+    if (!example) return;
+    document.querySelectorAll<HTMLElement>('[data-interface]').forEach((output) => {
+      const key = output.dataset.interface ?? '';
+      const value = example.interfaces[key];
+      output.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    });
+  }
+  selector?.addEventListener('change', selectExample);
+</script>
+
+<script type="application/json" data-preview-json set:html={previewJson}></script>

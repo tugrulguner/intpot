@@ -1,0 +1,39 @@
+{
+  "source": "examples/semantic_schema.py",
+  "source_sha256": "bc3ab7142fe6a1f88dce68ada162e790726bdf3a86cdcc678a4d7da656e2bb3a",
+  "intpot_version": "0.9.0",
+  "execution": "live Intpot serve adapters exercised in-process",
+  "interfaces": [
+    "CLI (Typer)",
+    "API (FastAPI TestClient)",
+    "MCP (FastMCP call_tool)"
+  ],
+  "examples": [
+    {
+      "id": "greet",
+      "title": "Greet with emphasis",
+      "input": {
+        "name": "Ada",
+        "excited": true
+      },
+      "interfaces": {
+        "cli": "Hello, Ada!\n",
+        "api": "Hello, Ada!",
+        "mcp": "Hello, Ada!"
+      }
+    },
+    {
+      "id": "greet-plain",
+      "title": "Greet plainly",
+      "input": {
+        "name": "Ada",
+        "excited": false
+      },
+      "interfaces": {
+        "cli": "Hello, Ada\n",
+        "api": "Hello, Ada",
+        "mcp": "Hello, Ada"
+      }
+    }
+  ]
+}

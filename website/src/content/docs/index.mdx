@@ -19,6 +19,8 @@ hero:
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
+import DemoPreview from '../../components/DemoPreview.astro';
+import preview from '../../data/demo-preview.json';
 
 <CardGrid stagger>
   <Card title="Write once" icon="seti:python">
@@ -35,6 +37,12 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 ## The shape
 
 A declaration builds one normalized application schema. From it, Intpot can build a live interface or generate ordinary Python source for a target framework.
+
+## Try a recorded run
+
+These selectable outputs were captured by running the example through Intpot's live Typer, FastAPI, and FastMCP adapters. They are recorded results—not simulated browser execution. Recreate them with `uv run python scripts/record_demo_preview.py --output website/src/data/demo-preview.json`.
+
+<DemoPreview preview={preview} />
 
 ```python
 from intpot import App
