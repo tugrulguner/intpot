@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-const evidence = '/Users/tugrulguner/Projects/modepot-family/evidence/playground-refinement/intpot/';
+const evidence = process.env.PLAYGROUND_EVIDENCE_DIR ?? new URL('../../evidence/playground-refinement/intpot/', import.meta.url).pathname;
 mkdirSync(evidence, { recursive: true });
 
 test('one compact workbench keeps source, request and result in the same two-column composition', async ({ page }) => {
