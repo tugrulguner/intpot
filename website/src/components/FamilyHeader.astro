@@ -21,8 +21,10 @@ const shouldRenderSearch = config.pagefind || config.components.Search !== '@ast
   .header { display:flex; gap:var(--sl-nav-gap); justify-content:space-between; align-items:center; height:100%; }
   .title-wrapper { padding:.25rem; margin:-.25rem; min-width:0; gap:.375rem; }
   .intpot-mark { display:block; flex:none; width:20px; height:20px; }
-  .title-wrapper :global(a) { min-height:44px; display:inline-flex; align-items:center; }
-  .header :global(button) { min-width:44px; min-height:44px; }
+  .title-wrapper :global(a) { box-sizing:border-box; min-width:44px; min-height:44px; display:inline-flex; align-items:center; }
+  .header :global(button) { box-sizing:border-box; min-width:44px; min-height:44px; }
+  .social-icons :global(a) { box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; }
+  .right-group :global(starlight-theme-select select) { box-sizing:border-box; min-height:44px; }
   .right-group,.social-icons { gap:1rem; align-items:center; }
   .social-icons::after { content:''; height:2rem; border-inline-end:1px solid var(--sl-color-gray-5); }
   @media (max-width:50rem) {

@@ -66,6 +66,53 @@ test('compact header keeps Intpot identity and every control visible and hittabl
   }
 });
 
+test('every visible header control meets 44px target size and search boundary contrast at all family widths', async ({ page }) => {
+  for (const route of ['/', '/quickstart/', '/playground/']) {
+    for (const width of [1280, 768, 320]) {
+      await page.setViewportSize({ width, height: 768 });
+      await page.goto(route);
+      const audit = await page.evaluate(() => {
+        const visible = (element: HTMLElement) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+        const candidates = [...document.querySelectorAll<HTMLElement>('.header a, .header button, .header select, .header input, starlight-menu-button button')].filter(visible);
+        const search = document.querySelector<HTMLElement>('.header starlight-search button, .header button[data-open-modal]');
+        const rgb = (value: string) => (value.match(/[0-9.]+/g) ?? []).slice(0, 3).map(Number);
+        const lum = (value: string) => rgb(value).map((v) => v / 255).map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+        let parent: HTMLElement | null = search;
+        let background = 'rgb(255, 255, 255)';
+        while (parent) { const value = getComputedStyle(parent).backgroundColor; if (value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') { background = value; break; } parent = parent.parentElement; }
+        const border = search ? getComputedStyle(search).borderTopColor : '';
+        const ratio = search && border ? (Math.max(lum(border), lum(background)) + .05) / (Math.min(lum(border), lum(background)) + .05) : 0;
+        return { controls: candidates.map((el) => ({ name: el.getAttribute('aria-label') || el.textContent?.trim() || el.tagName, width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height })), searchFound: Boolean(search), ratio };
+      });
+      expect(audit.controls.length, `${route} ${width}`).toBeGreaterThan(0);
+      for (const control of audit.controls) {
+        expect(control.width, `${route} ${width}: ${JSON.stringify(control)}`).toBeGreaterThanOrEqual(44);
+        expect(control.height, `${route} ${width}: ${JSON.stringify(control)}`).toBeGreaterThanOrEqual(44);
+      }
+      expect(audit.searchFound, `${route} ${width}: search button`).toBe(true);
+      expect(audit.ratio, `${route} ${width}: search border contrast`).toBeGreaterThanOrEqual(3);
+      await page.locator('starlight-theme-select select').first().selectOption('dark');
+      const darkRatio = await page.evaluate(() => {
+        const search = document.querySelector<HTMLElement>('.header starlight-search button, .header button[data-open-modal]')!;
+        const rgb = (value: string) => (value.match(/[0-9.]+/g) ?? []).slice(0, 3).map(Number);
+        const lum = (value: string) => rgb(value).map((v) => v / 255).map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+        const border = getComputedStyle(search).borderTopColor;
+        const background = getComputedStyle(search).backgroundColor;
+        return (Math.max(lum(border), lum(background)) + .05) / (Math.min(lum(border), lum(background)) + .05);
+      });
+      expect(darkRatio, `${route} ${width}: dark search border contrast`).toBeGreaterThanOrEqual(3);
+      if (width === 1280) {
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Tab');
+        const searchButton = page.getByRole('button', { name: 'Search' });
+        await expect(searchButton).toBeFocused();
+        await expect(searchButton).toHaveCSS('outline-style', 'solid');
+      }
+    }
+  }
+});
+
 test('family typography and shapes render consistently across homepage, docs, and playground', async ({ page }) => {
   for (const route of ['/', '/quickstart/', '/playground/']) {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -139,6 +186,8 @@ test('home, docs, and playground honor manual opposite-OS themes and Auto at fam
       }
       await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'no-preference' });
       await page.locator('starlight-theme-select select').first().selectOption('auto');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await page.reload();
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
       await page.screenshot({ path: `${evidence}${route === '/' ? 'home' : route.slice(1, -1)}-${viewport.width}-auto.png`, fullPage: true });
       await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });

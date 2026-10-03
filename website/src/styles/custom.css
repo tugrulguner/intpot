@@ -62,6 +62,7 @@ body { margin: 0; }
 ::selection { color: var(--mp-accent-ink); background: var(--mp-accent); }
 header.header { height: var(--mp-header-height); box-sizing: border-box; padding-inline: max(16px, calc((100vw - var(--mp-content-max)) / 2)); background: var(--mp-raised); transition:none; }
 header.header *, starlight-menu-button button { transition:none; }
+header.header button[aria-label="Search"] { box-sizing: border-box; min-width: 44px; min-height: 44px; border: 1px solid var(--mp-control-boundary); background: var(--mp-surface); }
 starlight-menu-button button { border-radius:var(--mp-radius); background:var(--mp-raised); color:var(--mp-ink); box-shadow:none; }
 .header a { font-family: var(--mp-font); }
 .modepot-return { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: var(--mp-radius); color: var(--mp-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
