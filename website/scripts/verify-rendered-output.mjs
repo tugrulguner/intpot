@@ -28,6 +28,7 @@ for await (const path of htmlFiles(distRoot)) {
   htmlCount += 1;
   const html = await readFile(path, 'utf8');
   const outputPath = relative(distRoot, path);
+  if (outputPath === 'downloads/index.html') continue;
   for (const setting of requiredPosthogConfig) {
     if (!html.includes(setting)) failures.push(`${relative(distRoot, path)}: missing ${setting}`);
   }
@@ -75,8 +76,35 @@ for await (const path of htmlFiles(distRoot)) {
 const llms = await readFile(join(distRoot, 'llms.txt'), 'utf8');
 if (!llms.includes('https://modepot.io/')) failures.push('llms.txt: missing canonical ModePot URL');
 if (llms.includes('modepot.com')) failures.push('llms.txt: stale ModePot domain');
-for (const token of ['## Install', '## Quick start', '## Boundaries and license', 'https://pypi.org/project/intpot/', 'License: MIT']) {
+for (const token of ['## Install', '## Quick start', '## Boundaries and license', 'https://pypi.org/project/intpot/', 'License: MIT', '/build-an-app/', '/conversion-boundaries/', '/schema-reference/', '/architecture-internals/', '/downloads/']) {
   if (!llms.includes(token)) failures.push(`llms.txt: missing ${token}`);
+}
+const markdownSources = ['build-an-app', 'conversion-boundaries', 'schema-reference', 'architecture-internals'];
+for (const name of markdownSources) {
+  const source = await readFile(new URL(`../src/content/docs/${name}.md`, import.meta.url), 'utf8');
+  const download = await readFile(join(distRoot, 'downloads', `${name}.md`), 'utf8');
+  if (source !== download) failures.push(`downloads/${name}.md: differs from canonical Markdown source`);
+  const page = await readFile(join(distRoot, `${name}`, 'index.html'), 'utf8');
+  const title = source.match(/^title: (.+)$/m)?.[1];
+  if (!title || !page.includes(title)) failures.push(`${name}: canonical heading/title missing from rendered page`);
+  if ((page.match(/<h1\b/g) ?? []).length !== 1) failures.push(`${name}: expected exactly one rendered H1`);
+  if (!page.includes(`href="/downloads/${name}.md"`)) failures.push(`${name}: missing Markdown download link`);
+  for (const [, href, fragment] of page.matchAll(/href="(\/[^"#?]+)(?:#([^"?]+))?"/g)) {
+    const route = href.slice(1);
+    const targetPath = href.endsWith('/') || !route.split('/').at(-1).includes('.')
+      ? join(distRoot, route, 'index.html')
+      : join(distRoot, route);
+    try {
+      const target = await readFile(targetPath, 'utf8');
+      if (fragment && targetPath.endsWith('.html') && !target.includes(`id="${fragment}"`)) failures.push(`${name}: broken fragment ${href}#${fragment}`);
+    } catch {
+      failures.push(`${name}: local route missing ${href}`);
+    }
+  }
+}
+const downloadIndex = await readFile(join(distRoot, 'downloads', 'index.html'), 'utf8');
+for (const name of markdownSources) {
+  if (!downloadIndex.includes(`${name}.md`)) failures.push(`downloads index: missing ${name}.md`);
 }
 const socialCard = await readFile(join(distRoot, 'social-card-v2.png'));
 if (socialCard.readUInt32BE(16) !== 1200 || socialCard.readUInt32BE(20) !== 630) {

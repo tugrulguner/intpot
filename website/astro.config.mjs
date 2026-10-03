@@ -44,7 +44,8 @@ export default defineConfig({
     ],
     sidebar: [
       { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }, { slug: 'playground' }] },
-      { label: 'Guides', items: [{ slug: 'capabilities' }] },
+      { label: 'Guides', items: [{ slug: 'build-an-app' }, { slug: 'conversion-boundaries' }, { slug: 'capabilities' }] },
+      { label: 'Reference', items: [{ slug: 'schema-reference' }, { slug: 'architecture-internals' }] },
       { label: 'ModePot', link: 'https://modepot.io/' },
     ],
   })],

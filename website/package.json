@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "node --test && astro build && node scripts/verify-rendered-output.mjs && playwright test",
+    "build": "node --test && astro build && node scripts/emit-markdown-downloads.mjs && node scripts/verify-rendered-output.mjs && playwright test",
     "test": "node --test",
     "test:parity": "node scripts/verify-playground-parity.mjs",
     "preview": "astro preview",
