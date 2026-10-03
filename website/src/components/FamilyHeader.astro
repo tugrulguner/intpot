@@ -8,7 +8,7 @@ import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
 const shouldRenderSearch = config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
 ---
 <div class="header">
-  <div class="title-wrapper sl-flex"><SiteTitle /></div>
+  <div class="title-wrapper sl-flex"><img class="intpot-mark" src="/intpot-mark.svg" alt="" width="20" height="20" /><SiteTitle /></div>
   <div class="sl-flex print:hidden">{shouldRenderSearch && <Search />}</div>
   <div class="sl-flex right-group print:hidden">
     <a class="modepot-return" href="https://modepot.io/">ModePot</a>
@@ -19,10 +19,28 @@ const shouldRenderSearch = config.pagefind || config.components.Search !== '@ast
 </div>
 <style>
   .header { display:flex; gap:var(--sl-nav-gap); justify-content:space-between; align-items:center; height:100%; }
-  .title-wrapper { overflow:clip; padding:.25rem; margin:-.25rem; min-width:0; }
+  .title-wrapper { padding:.25rem; margin:-.25rem; min-width:0; gap:.375rem; }
+  .intpot-mark { display:block; flex:none; width:20px; height:20px; }
+  .title-wrapper :global(a) { min-height:44px; display:inline-flex; align-items:center; }
+  .header :global(button) { min-width:44px; min-height:44px; }
   .right-group,.social-icons { gap:1rem; align-items:center; }
   .social-icons::after { content:''; height:2rem; border-inline-end:1px solid var(--sl-color-gray-5); }
-  @media (max-width:50rem) { .right-group { gap:.35rem; } .social-icons { display:none; } }
+  @media (max-width:50rem) {
+    .header { gap:.25rem; }
+    .title-wrapper { flex:0 0 auto; }
+    .right-group { gap:.25rem; }
+    .modepot-return { padding-inline:6px; }
+    .social-icons { display:none; }
+  }
+  @media (max-width:25rem) {
+    .header { gap:0; }
+    .title-wrapper { gap:.125rem; }
+    .intpot-mark { width:16px; height:16px; }
+    .title-wrapper :global(a) { font-size:13px; }
+    .right-group { gap:0; }
+    .modepot-return { padding-inline:2px; font-size:12px; }
+    .right-group :global(starlight-theme-select label) { --sl-select-width:3.8em; }
+  }
   @media (min-width:50rem) {
     :global(:root[data-has-sidebar]) { --__sidebar-pad:calc(2 * var(--sl-nav-pad-x)); }
     :global(:root:not([data-has-toc])) { --__toc-width:0rem; }

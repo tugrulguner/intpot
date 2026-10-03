@@ -17,6 +17,8 @@
   --mp-focus: #795711;
   --mp-radius: 6px;
   --mp-header-height: 64px;
+  --mp-menu-button-size: 44px;
+  --sl-menu-button-size: var(--mp-menu-button-size);
   --mp-content-max: 1200px;
   --sl-font: var(--mp-font);
   --sl-font-mono: var(--mp-font-code);
@@ -58,7 +60,9 @@ html, body { font-family: var(--mp-font); font-size: 16px; line-height: 1.6; bac
 body { margin: 0; }
 :focus-visible { outline: 2px solid var(--mp-focus); outline-offset: 2px; }
 ::selection { color: var(--mp-accent-ink); background: var(--mp-accent); }
-.header { height: var(--mp-header-height); box-sizing: border-box; padding-inline: max(16px, calc((100vw - var(--mp-content-max)) / 2)); }
+header.header { height: var(--mp-header-height); box-sizing: border-box; padding-inline: max(16px, calc((100vw - var(--mp-content-max)) / 2)); background: var(--mp-raised); transition:none; }
+header.header *, starlight-menu-button button { transition:none; }
+starlight-menu-button button { border-radius:var(--mp-radius); background:var(--mp-raised); color:var(--mp-ink); box-shadow:none; }
 .header a { font-family: var(--mp-font); }
 .modepot-return { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: var(--mp-radius); color: var(--mp-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
 .modepot-return:hover { background: var(--mp-raised); }
@@ -74,7 +78,7 @@ body { margin: 0; }
 .sl-markdown-content a, .hero a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .sl-markdown-content button, .sl-markdown-content input, .sl-markdown-content select { font-family: var(--mp-font); }
 @media (max-width: 50rem) {
-  .header { padding-inline: 16px; }
+  header.header { padding-inline-start: 12px; padding-inline-end: calc(8px + var(--sl-menu-button-size) + var(--sl-nav-gap)); }
   .hero { padding-block: 0; }
   .hero > img { max-width: 8rem; }
   .hero .stack { gap: .7rem; }
