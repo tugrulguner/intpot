@@ -263,7 +263,27 @@ test('explicit site themes keep aligned headers and a continuous code surface op
   }
 });
 
-test('code, run, and output are aligned panels with legible selected and action states', async ({ page }) => {
+test('documentation guides navigate, expose stable anchors, and serve canonical Markdown downloads on desktop and mobile', async ({ page }) => {
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Build and run an app' }).click();
+    await expect(page).toHaveURL(/\/build-an-app\/$/);
+    await expect(page.getByRole('heading', { name: 'Build and run an Intpot app', level: 1 })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Download this guide as Markdown' })).toHaveAttribute('href', '/downloads/build-an-app.md');
+    const download = await page.request.get('/downloads/build-an-app.md');
+    expect(download.status()).toBe(200);
+    expect(await download.text()).toContain('intpot serve app.py --api');
+    await page.getByRole('main').locator('a[href="/schema-reference/"]').first().click();
+    await expect(page).toHaveURL(/\/schema-reference\/$/);
+    await expect(page.getByRole('heading', { name: 'Schema and parameter reference', level: 1 })).toBeVisible();
+    await expect(page.locator('a[href="/architecture-internals/"]').first()).toHaveAttribute('href', '/architecture-internals/');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+    expect(overflow).toBe(true);
+  }
+});
+
+ test('code, run, and output are aligned panels with legible selected and action states', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 768 });
   await page.goto('/playground/');
   for (const colorScheme of ['light', 'dark'] as const) {

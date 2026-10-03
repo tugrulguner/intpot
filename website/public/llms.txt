@@ -30,6 +30,12 @@ Serve the same declaration with `intpot serve app.py --cli`, `--api`, or `--mcp`
 - [Documentation](https://intpot.modepot.io/): project overview and product position.
 - [Quick start](https://intpot.modepot.io/quickstart/): install Intpot and serve one declaration in three ways.
 - [Capabilities and boundaries](https://intpot.modepot.io/capabilities/): supported conversions, runtime behavior, and current limitations.
+- [Build and run](https://intpot.modepot.io/build-an-app/): complete local CLI and HTTP path, generated-app verification, and troubleshooting.
+- [Conversion boundaries](https://intpot.modepot.io/conversion-boundaries/): source mappings, import behavior, preserved semantics, and explicit refusals.
+- [Schema reference](https://intpot.modepot.io/schema-reference/): `App`, schema records, parameters, CLI operations, and dependency extras.
+- [Architecture internals](https://intpot.modepot.io/architecture-internals/): detector, inspectors, immutable schema, projection, and generators.
+- [Download Markdown sources](https://intpot.modepot.io/downloads/): canonical guide files for offline and agent use.
+- [Cookbook](https://github.com/tugrulguner/intpot/blob/main/docs/cookbook.md): recipes maintained with the source.
 - [Source repository](https://github.com/tugrulguner/intpot): code, tests, examples, releases, and contribution guidance.
 - [PyPI package](https://pypi.org/project/intpot/): published Python distributions and release metadata.
 - [ModePot](https://modepot.io/): return to the open-source project family.
