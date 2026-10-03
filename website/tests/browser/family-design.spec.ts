@@ -124,9 +124,9 @@ test('family typography and shapes render consistently across homepage, docs, an
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     });
     const result = await page.evaluate(() => {
-      const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.hero h1' : 'main h1')!;
+      const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.framework-hero h1' : 'main h1')!;
       const familyLink = [...document.querySelectorAll<HTMLAnchorElement>('.family-resources a')].find((link) => link.textContent?.trim() === 'ModePot');
-      const actions = [...document.querySelectorAll<HTMLElement>('.hero .sl-link-button, .actions button')];
+      const actions = [...document.querySelectorAll<HTMLElement>('.framework-actions .framework-action, .actions button')];
       const headingStyle = getComputedStyle(heading);
       return { font: getComputedStyle(document.body).fontFamily, headingSize: Number.parseFloat(headingStyle.fontSize), headingCase: headingStyle.textTransform, familyHref: familyLink?.getAttribute('href'), headerFamilyLinks: document.querySelectorAll('.family-resources a[href="https://modepot.io/"]').length, actionRadii: actions.map((action) => Number.parseFloat(getComputedStyle(action).borderTopLeftRadius)) };
     });
@@ -156,7 +156,7 @@ test('home, docs, and playground honor manual opposite-OS themes and Auto at fam
           await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         });
         const reading = await page.evaluate(() => {
-          const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.hero h1' : 'main h1')!;
+          const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.framework-hero h1' : 'main h1')!;
           const family = document.querySelector<HTMLElement>('.family-resources a[href="https://modepot.io/"], .family-menu-panel a[href="https://modepot.io/"]')!;
           const opaqueBackground = (element: HTMLElement) => {
             let current: HTMLElement | null = element;
@@ -167,7 +167,7 @@ test('home, docs, and playground honor manual opposite-OS themes and Auto at fam
             }
             return 'rgb(255, 255, 255)';
           };
-          const candidates = [heading, family, ...document.querySelectorAll<HTMLElement>('.hero .sl-link-button.primary, .run, .reset, .interface-nav button, .output-nav button, starlight-menu-button button')];
+          const candidates = [heading, family, ...document.querySelectorAll<HTMLElement>('.framework-actions .framework-action.primary, .run, .reset, .interface-nav button, .output-nav button, starlight-menu-button button')];
           const checks = candidates.map((element) => {
             const style = getComputedStyle(element);
             let background = style.backgroundColor;

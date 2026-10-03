@@ -2,26 +2,43 @@
 title: Python CLI, API, and MCP Interface Framework
 description: Define typed Python tools once, then serve or convert them across CLI, FastAPI, and MCP interfaces.
 template: splash
-hero:
-  title: One typed definition. Three interfaces.
-  tagline: Define typed tools once for CLI, HTTP, or MCP. Convert apps between Typer, FastAPI, and FastMCP.
-  image:
-    alt: Intpot — Python tools served as CLI, API, or MCP
-    file: ../../assets/intpot_image.webp
-  actions:
-    - text: Get started
-      link: /quickstart/
-      icon: right-arrow
-    - text: Try the playground
-      link: /playground/
-      icon: right-arrow
-    - text: View on GitHub
-      link: https://github.com/tugrulguner/intpot
-      icon: external
-      variant: minimal
 ---
 
-<a class="creator-attribution" href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>
+import { Image } from 'astro:assets';
+import intpotImage from '../../assets/intpot_image.webp';
+
+<section class="framework-hero" aria-labelledby="framework-title">
+  <div class="framework-copy">
+    <p class="framework-eyebrow">TYPED PYTHON INTERFACES</p>
+    <h1 id="framework-title">One typed definition. Three interfaces.</h1>
+    <p class="framework-tagline">Define typed tools once for CLI, HTTP, or MCP. Convert apps between Typer, FastAPI, and FastMCP.</p>
+    <nav class="framework-actions" aria-label="Primary actions">
+      <a class="framework-action primary" href="/quickstart/">Quick start</a>
+      <a class="framework-action secondary" href="/playground/">Playground</a>
+      <a class="framework-action tertiary" href="https://github.com/tugrulguner/intpot" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+    <a class="creator-attribution" href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>
+  </div>
+  <figure class="framework-art">
+    <Image src={intpotImage} alt="Intpot turns typed Python tools into CLI, HTTP API, or MCP interfaces." width={1200} height={900} />
+  </figure>
+</section>
+
+<section class="installation-strip" aria-label="Installation">
+  <div><p class="section-eyebrow">GET STARTED</p><h2>Install Intpot</h2></div>
+  <code>pip install 'intpot[all]'</code>
+  <a href="/quickstart/">Quick start guide <span aria-hidden="true">→</span></a>
+</section>
+
+<section class="project-demo" aria-label="Project demonstration">
+  <div>
+    <p class="section-eyebrow">EXPLORE THE MECHANISM</p>
+    <h2>One definition, three ways in.</h2>
+    <p>Inspect how one typed greeting maps to CLI, HTTP, and MCP request shapes, then edit a bounded request and view its local result.</p>
+  </div>
+  <a href="/playground/">Open the playground <span aria-hidden="true">→</span></a>
+  <p class="demo-boundary"><strong>Browser-local preview.</strong> A bounded JavaScript preview—not Python execution, a live Intpot server, or a model call.</p>
+</section>
 
 ## One definition, three ways to run
 
