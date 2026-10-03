@@ -25,6 +25,7 @@ test('compact header keeps Intpot identity and every control visible and hittabl
           title,
           titleVisible: Boolean(titleBounds && bounds && titleBounds.left >= bounds.left && titleBounds.right <= bounds.right && titleBounds.width > 35),
           canonicalMark: brand?.querySelector<HTMLImageElement>('.intpot-mark')?.getAttribute('src'),
+          themeIconsVisible: [...document.querySelectorAll<SVGElement>('starlight-theme-select svg')].some((icon) => icon.getClientRects().length > 0 && getComputedStyle(icon).visibility !== 'hidden' && getComputedStyle(icon).display !== 'none'),
           headerBackground: getComputedStyle(document.querySelector('header.header')!).backgroundColor,
           raisedBackground: getComputedStyle(document.documentElement).getPropertyValue('--mp-raised').trim(),
           controls: controls.map((element) => {
@@ -39,6 +40,7 @@ test('compact header keeps Intpot identity and every control visible and hittabl
       expect(audit.title).toBe('Intpot');
       expect(audit.titleVisible, `${route} ${width}: ${JSON.stringify(audit)}`).toBe(true);
       expect(audit.canonicalMark).toBe('/intpot-mark.svg');
+      expect(audit.themeIconsVisible).toBe(false);
       expect(audit.headerBackground).toBe(audit.raisedBackground === '#eceef1' ? 'rgb(236, 238, 241)' : 'rgb(41, 45, 51)');
       for (const control of audit.controls) {
         expect(control.width, `${route} ${width}: ${JSON.stringify(control)}`).toBeGreaterThan(0);
@@ -123,10 +125,10 @@ test('family typography and shapes render consistently across homepage, docs, an
     });
     const result = await page.evaluate(() => {
       const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.hero h1' : 'main h1')!;
-      const familyLink = [...document.querySelectorAll<HTMLAnchorElement>('header a')].find((link) => link.textContent?.trim() === 'ModePot');
+      const familyLink = [...document.querySelectorAll<HTMLAnchorElement>('.family-resources a')].find((link) => link.textContent?.trim() === 'ModePot');
       const actions = [...document.querySelectorAll<HTMLElement>('.hero .sl-link-button, .actions button')];
       const headingStyle = getComputedStyle(heading);
-      return { font: getComputedStyle(document.body).fontFamily, headingSize: Number.parseFloat(headingStyle.fontSize), headingCase: headingStyle.textTransform, familyHref: familyLink?.getAttribute('href'), headerFamilyLinks: [...document.querySelectorAll('header a')].filter((link) => link.textContent?.trim() === 'ModePot').length, actionRadii: actions.map((action) => Number.parseFloat(getComputedStyle(action).borderTopLeftRadius)) };
+      return { font: getComputedStyle(document.body).fontFamily, headingSize: Number.parseFloat(headingStyle.fontSize), headingCase: headingStyle.textTransform, familyHref: familyLink?.getAttribute('href'), headerFamilyLinks: document.querySelectorAll('.family-resources a[href="https://modepot.io/"]').length, actionRadii: actions.map((action) => Number.parseFloat(getComputedStyle(action).borderTopLeftRadius)) };
     });
     expect(result.font).toContain('Avenir Next');
     expect(result.headingSize).toBeLessThanOrEqual(56);
@@ -155,7 +157,7 @@ test('home, docs, and playground honor manual opposite-OS themes and Auto at fam
         });
         const reading = await page.evaluate(() => {
           const heading = document.querySelector<HTMLElement>(location.pathname === '/playground/' ? '[data-playground] h1' : location.pathname === '/' ? '.hero h1' : 'main h1')!;
-          const family = document.querySelector<HTMLElement>('.modepot-return')!;
+          const family = document.querySelector<HTMLElement>('.family-resources a[href="https://modepot.io/"], .family-menu-panel a[href="https://modepot.io/"]')!;
           const opaqueBackground = (element: HTMLElement) => {
             let current: HTMLElement | null = element;
             while (current) {

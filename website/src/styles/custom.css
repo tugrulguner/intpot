@@ -57,6 +57,7 @@
   --sl-color-text: var(--mp-ink);
 }
 html, body { font-family: var(--mp-font); font-size: 16px; line-height: 1.6; background: var(--mp-canvas); color: var(--mp-ink); }
+a.creator-attribution { display:inline-flex; align-items:center; min-height:44px; padding:0 .5rem; margin:0 0 1.5rem; border-radius:var(--mp-radius); font-size:14px; color:var(--mp-ink); font-weight:600; text-underline-offset:.2em; }
 body { margin: 0; }
 :focus-visible { outline: 2px solid var(--mp-focus); outline-offset: 2px; }
 ::selection { color: var(--mp-accent-ink); background: var(--mp-accent); }
@@ -65,8 +66,8 @@ header.header *, starlight-menu-button button { transition:none; }
 header.header button[aria-label="Search"] { box-sizing: border-box; min-width: 44px; min-height: 44px; border: 1px solid var(--mp-control-boundary); background: var(--mp-surface); }
 starlight-menu-button button { border-radius:var(--mp-radius); background:var(--mp-raised); color:var(--mp-ink); box-shadow:none; }
 .header a { font-family: var(--mp-font); }
-.modepot-return { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: var(--mp-radius); color: var(--mp-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
-.modepot-return:hover { background: var(--mp-raised); }
+.modepot-compact { align-items: center; min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: var(--mp-radius); color: var(--mp-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
+.modepot-compact:hover { background: var(--mp-raised); }
 .hero { padding-block: clamp(2.5rem, 7vw, 5rem); }
 .hero h1 { max-width: 56rem; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; text-transform: none; }
 .hero .tagline { max-width: 36rem; line-height: 1.6; }

@@ -3,22 +3,77 @@ import config from 'virtual:starlight/user-config';
 import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
 import Search from 'virtual:starlight/components/Search';
 import SiteTitle from 'virtual:starlight/components/SiteTitle';
-import SocialIcons from 'virtual:starlight/components/SocialIcons';
 import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
 const shouldRenderSearch = config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+const resources = [
+  { label: 'ModePot', href: 'https://modepot.io/' },
+  { label: 'GitHub', href: 'https://github.com/tugrulguner/intpot' },
+  { label: 'Community', href: 'https://discord.gg/u3AANZr6RG' },
+  { label: 'About Tugrul', href: 'https://tugrul.modepot.io/' },
+];
 ---
 <div class="header">
   <div class="title-wrapper sl-flex"><img class="intpot-mark" src="/intpot-mark.svg" alt="" width="20" height="20" /><SiteTitle /></div>
   <div class="sl-flex print:hidden">{shouldRenderSearch && <Search />}</div>
   <div class="sl-flex right-group print:hidden">
-    <a class="modepot-return" href="https://modepot.io/">ModePot</a>
-    <div class="sl-flex social-icons"><SocialIcons /></div>
+    <nav class="family-resources" aria-label="Family resources">
+      {resources.map((resource) => <a href={resource.href}>{resource.label}</a>)}
+    </nav>
+    <a class="modepot-compact" href="https://modepot.io/">ModePot</a>
+    <button class="family-menu-toggle" type="button" aria-expanded="false" aria-controls="family-menu-panel">Menu</button>
     <ThemeSelect />
     <LanguageSelect />
   </div>
+  <div id="family-menu-panel" class="family-menu-panel" role="region" aria-label="Menu" hidden>
+    <nav aria-label="Family resources">
+      {resources.slice(1).map((resource) => <a href={resource.href}>{resource.label}</a>)}
+    </nav>
+    <nav aria-label="Intpot documentation">
+      <a href="/">Overview</a>
+      <a href="/quickstart/">Quickstart</a>
+      <a href="/playground/">Playground</a>
+      <a href="/build-an-app/">Build an app</a>
+      <a href="/conversion-boundaries/">Conversion boundaries</a>
+      <a href="/capabilities/">Capabilities</a>
+      <a href="/schema-reference/">Schema reference</a>
+      <a href="/architecture-internals/">Architecture internals</a>
+    </nav>
+  </div>
 </div>
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.family-menu-toggle');
+  const panel = document.querySelector<HTMLElement>('#family-menu-panel');
+  const closeMenu = () => {
+    if (!toggle || !panel || panel.hidden) return;
+    panel.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.focus();
+  };
+  toggle?.addEventListener('click', () => {
+    if (!panel) return;
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    toggle.setAttribute('aria-expanded', String(opening));
+    if (opening) panel.querySelector('a')?.focus();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMenu();
+  });
+</script>
 <style>
   .header { display:flex; gap:var(--sl-nav-gap); justify-content:space-between; align-items:center; height:100%; }
+  :global(header.header) { position:relative; }
+  .family-resources { display:flex; align-items:center; gap:.25rem; }
+  .family-resources a, .modepot-compact, .family-menu-toggle, .family-menu-panel a { box-sizing:border-box; display:inline-flex; min-width:44px; min-height:44px; padding:0 .5rem; align-items:center; justify-content:center; border-radius:6px; color:var(--sl-color-text); text-decoration:none; }
+  .modepot-compact { display:none; }
+  .family-resources a:hover, .family-menu-panel a:hover { background:var(--sl-color-gray-6); }
+  .family-resources a:focus-visible, .modepot-compact:focus-visible, .family-menu-toggle:focus-visible, .family-menu-panel a:focus-visible { outline:2px solid var(--sl-color-accent); outline-offset:2px; }
+  .family-menu-toggle { display:none; border:1px solid var(--sl-color-gray-5); background:var(--sl-color-bg); font:inherit; cursor:pointer; }
+  .family-menu-panel { position:absolute; z-index:20; inset-inline:1rem; top:calc(100% + .25rem); display:grid; gap:.25rem; padding:.75rem; border:1px solid var(--sl-color-gray-5); border-radius:6px; background:var(--sl-color-bg); box-shadow:0 8px 24px rgb(0 0 0 / 15%); }
+  .family-menu-panel nav { display:grid; gap:.25rem; }
+  .family-menu-panel nav + nav { padding-top:.5rem; border-top:1px solid var(--sl-color-gray-5); }
+  .family-menu-panel[hidden] { display:none; }
+  .family-menu-panel a { justify-content:flex-start; }
   .title-wrapper { padding:.25rem; margin:-.25rem; min-width:0; gap:.375rem; }
   .intpot-mark { display:block; flex:none; width:20px; height:20px; }
   .title-wrapper :global(a) { box-sizing:border-box; min-width:44px; min-height:44px; display:inline-flex; align-items:center; }
@@ -31,17 +86,24 @@ const shouldRenderSearch = config.pagefind || config.components.Search !== '@ast
     .header { gap:.25rem; }
     .title-wrapper { flex:0 0 auto; }
     .right-group { gap:.25rem; }
-    .modepot-return { padding-inline:6px; }
-    .social-icons { display:none; }
+    .family-resources { display:none; }
+    .modepot-compact { display:inline-flex; }
+    .family-menu-toggle { display:inline-flex; }
+    :global(.sl-menu-button) { display:none !important; }
+    :global(header.header starlight-theme-select) { flex:0 0 44px; width:44px; }
+    :global(header.header starlight-theme-select label) { width:44px; --sl-select-width:44px; --sl-inline-padding:0px; --sl-label-icon-size:0px; --sl-caret-size:0px; }
+    :global(header.header starlight-theme-select svg) { display:none !important; }
+    :global(header.header starlight-theme-select select) { position:relative; z-index:1; box-sizing:border-box; width:44px !important; min-width:44px; min-height:44px; margin-inline:0 !important; padding-inline:0 !important; text-align:center; }
   }
   @media (max-width:25rem) {
     .header { gap:0; }
     .title-wrapper { gap:.125rem; }
     .intpot-mark { width:16px; height:16px; }
     .title-wrapper :global(a) { font-size:13px; }
+    .modepot-compact { padding-inline:2px; font-size:12px; }
     .right-group { gap:0; }
-    .modepot-return { padding-inline:2px; font-size:12px; }
-    .right-group :global(starlight-theme-select label) { --sl-select-width:3.8em; }
+
+    :global(.sl-menu-button) { display:none !important; }
   }
   @media (min-width:50rem) {
     :global(:root[data-has-sidebar]) { --__sidebar-pad:calc(2 * var(--sl-nav-pad-x)); }
