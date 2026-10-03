@@ -23,6 +23,7 @@ test('homepage composition renders in both themes at required widths', async ({ 
       await expect(page.locator('.framework-art img')).toBeVisible();
       await expect.poll(() => page.locator('.framework-art img').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBeTruthy();
       await expect(page.locator('.installation-strip')).toBeVisible();
+      await expect(page.locator('.installation-strip code')).toHaveText('pip install "intpot[all]"');
       await expect(page.locator('.project-demo')).toBeVisible();
       await expect(page.getByRole('link', { name: 'Created by Tugrul Guner' }).first()).toBeVisible();
       await expect(page.locator('.framework-actions a')).toHaveText(['Quick start', 'Playground', 'GitHub ↗']);
