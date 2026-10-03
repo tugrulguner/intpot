@@ -1,0 +1,27 @@
+{
+  "font": "'Avenir Next', Avenir, 'Segoe UI', sans-serif",
+  "fontCode": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  "light": {
+    "canvas": "#f8f7f4",
+    "surface": "#ffffff",
+    "raised": "#eceef1",
+    "ink": "#181a1d",
+    "muted": "#616b78",
+    "border": "#c6cbd2",
+    "controlBoundary": "#616b78",
+    "error": "#a4262b",
+    "accent": "#795711"
+  },
+  "dark": {
+    "canvas": "#16181b",
+    "surface": "#202226",
+    "raised": "#292d33",
+    "ink": "#edeff2",
+    "muted": "#aeb4bc",
+    "border": "#555d68",
+    "controlBoundary": "#aeb4bc",
+    "error": "#ff9b9b",
+    "accent": "#dfbd72"
+  },
+  "shape": { "radiusPx": 6, "headerHeightPx": 64, "contentMaxPx": 1200, "hitTargetMinPx": 44 }
+}

@@ -30,6 +30,7 @@ export default defineConfig({
     favicon: '/intpot-mark.svg',
     social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/tugrulguner/intpot' }],
     customCss: ['./src/styles/custom.css'],
+    components: { Header: './src/components/FamilyHeader.astro' },
     head: [
       { tag: 'script', attrs: {}, content: posthogScript },
       { tag: 'link', attrs: { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'Intpot summary for AI agents' } },
@@ -45,7 +46,6 @@ export default defineConfig({
     sidebar: [
       { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }, { slug: 'playground' }] },
       { label: 'Guides', items: [{ slug: 'capabilities' }] },
-      { label: 'ModePot', link: 'https://modepot.io/' },
     ],
   })],
 });

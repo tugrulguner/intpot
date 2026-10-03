@@ -1,52 +1,85 @@
-/* Intpot: warm metal accents, quiet charcoal surfaces, Starlight's accessible shell. */
+/* ModePot shared product-site presentation contract; product accent is Intpot gold. */
 :root {
-  --sl-color-accent-low: #302a19;
-  --sl-color-accent: #d7ad57;
-  --sl-color-accent-high: #f2d78f;
-}
-:root[data-theme='light'] {
-  --sl-color-accent-low: #f4ead3;
-  --sl-color-accent: #795711;
+  color-scheme: light;
+  --mp-font: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+  --mp-font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --mp-canvas: #f8f7f4;
+  --mp-surface: #ffffff;
+  --mp-raised: #eceef1;
+  --mp-ink: #181a1d;
+  --mp-muted: #616b78;
+  --mp-border: #c6cbd2;
+  --mp-control-boundary: #616b78;
+  --mp-error: #a4262b;
+  --mp-accent: #795711;
+  --mp-accent-ink: #ffffff;
+  --mp-selected: #f3ead6;
+  --mp-focus: #795711;
+  --mp-radius: 6px;
+  --mp-header-height: 64px;
+  --mp-content-max: 1200px;
+  --sl-font: var(--mp-font);
+  --sl-font-mono: var(--mp-font-code);
+  --sl-color-accent-low: #f3ead6;
+  --sl-color-accent: var(--mp-accent);
   --sl-color-accent-high: #34270f;
-  --sl-color-bg: #faf9f6;
-  --sl-color-bg-nav: #faf9f6;
-  --sl-color-bg-sidebar: #f5f3ed;
-  --sl-color-text: #282821;
+  --sl-color-bg: var(--mp-canvas);
+  --sl-color-bg-nav: var(--mp-surface);
+  --sl-color-bg-sidebar: var(--mp-raised);
+  --sl-color-text: var(--mp-ink);
+  --sl-nav-height: var(--mp-header-height);
+  font-family: var(--mp-font);
+  color: var(--mp-ink);
+  background: var(--mp-canvas);
 }
 :root[data-theme='dark'] {
-  --sl-color-bg: #171816;
-  --sl-color-bg-nav: #171816;
-  --sl-color-bg-sidebar: #1d1e1a;
-  --sl-color-text: #e6e3db;
+  color-scheme: dark;
+  --mp-canvas: #16181b;
+  --mp-surface: #202226;
+  --mp-raised: #292d33;
+  --mp-ink: #edeff2;
+  --mp-muted: #aeb4bc;
+  --mp-border: #555d68;
+  --mp-control-boundary: #aeb4bc;
+  --mp-error: #ff9b9b;
+  --mp-accent: #dfbd72;
+  --mp-accent-ink: #181a1d;
+  --mp-selected: #393326;
+  --mp-focus: #dfbd72;
+  --sl-color-accent-low: #393326;
+  --sl-color-accent: var(--mp-accent);
+  --sl-color-accent-high: #f2d78f;
+  --sl-color-bg: var(--mp-canvas);
+  --sl-color-bg-nav: var(--mp-surface);
+  --sl-color-bg-sidebar: var(--mp-raised);
+  --sl-color-text: var(--mp-ink);
 }
-
-/* Keep the product landing page editorial and the playground workbench wide. */
-.hero {
-  padding-block: clamp(2.5rem, 7vw, 5rem);
-}
-.hero h1 {
-  letter-spacing: -0.035em;
-  line-height: 1.06;
-}
-.hero .tagline {
-  max-width: 36rem;
-  line-height: 1.65;
-}
-.hero .stack {
-  gap: 1.2rem;
-}
-
-:root ::selection {
-  color: #171816;
-  background: #e9c66f;
-}
-:focus-visible {
-  outline: 3px solid var(--sl-color-accent);
-  outline-offset: 3px;
-}
+html, body { font-family: var(--mp-font); font-size: 16px; line-height: 1.6; background: var(--mp-canvas); color: var(--mp-ink); }
+body { margin: 0; }
+:focus-visible { outline: 2px solid var(--mp-focus); outline-offset: 2px; }
+::selection { color: var(--mp-accent-ink); background: var(--mp-accent); }
+.header { height: var(--mp-header-height); box-sizing: border-box; padding-inline: max(16px, calc((100vw - var(--mp-content-max)) / 2)); }
+.header a { font-family: var(--mp-font); }
+.modepot-return { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: var(--mp-radius); color: var(--mp-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
+.modepot-return:hover { background: var(--mp-raised); }
+.hero { padding-block: clamp(2.5rem, 7vw, 5rem); }
+.hero h1 { max-width: 56rem; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; text-transform: none; }
+.hero .tagline { max-width: 36rem; line-height: 1.6; }
+.hero .stack { gap: 1rem; }
+.hero .sl-link-button { min-height: 44px; box-sizing: border-box; border-radius: var(--mp-radius); font-family: var(--mp-font); font-size: 14px; line-height: 1.4; }
+.hero .sl-link-button.primary { color: var(--mp-accent-ink); background: var(--mp-accent); border: 1px solid var(--mp-accent); }
+.hero .sl-link-button:not(.primary) { border-color: var(--mp-control-boundary); }
+.sl-markdown-content { font-family: var(--mp-font); font-size: 16px; line-height: 1.6; }
+.sl-markdown-content h1, main > h1 { text-transform: none; letter-spacing: -0.03em; }
+.sl-markdown-content a, .hero a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.sl-markdown-content button, .sl-markdown-content input, .sl-markdown-content select { font-family: var(--mp-font); }
 @media (max-width: 50rem) {
+  .header { padding-inline: 16px; }
   .hero { padding-block: 0; }
   .hero > img { max-width: 8rem; }
   .hero .stack { gap: .7rem; }
-  .hero .tagline { line-height: 1.45; }
+  .hero .tagline { line-height: 1.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

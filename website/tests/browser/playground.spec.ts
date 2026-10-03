@@ -227,7 +227,7 @@ test('primary controls and highlighted code remain readable in both themes', asy
       };
     });
     expect(readings.palette).toEqual(colorScheme === 'light'
-      ? { background: '#f8f7f4', surface: '#fff', ink: '#181a1d', muted: '#626970', gold: '#795711' }
+      ? { background: '#f8f7f4', surface: '#ffffff', ink: '#181a1d', muted: '#616b78', gold: '#795711' }
       : { background: '#16181b', surface: '#202226', ink: '#edeff2', muted: '#aeb4bc', gold: '#dfbd72' });
     expect(readings.actualBackground).not.toBe('rgba(0, 0, 0, 0)');
     expect(readings.actualInputBackground).not.toBe('rgba(0, 0, 0, 0)');
