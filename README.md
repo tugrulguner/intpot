@@ -4,14 +4,14 @@
   <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="600">
 </p>
 
-<p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://intpot.modepot.io/">Project website</a></p>
+<p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://intpot.modepot.io/">Project website</a> &nbsp; <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a></p>
 
 <p align="center">
-  <strong>Define once. Serve as CLI, API, or MCP. Convert in every direction.</strong>
+  <strong>One typed definition. Three interfaces.</strong>
 </p>
 
 <p align="center">
-  A Python framework for building and translating typed tools across Typer, FastAPI, and FastMCP.
+  Define typed tools once for CLI, HTTP, or MCP. Convert apps between Typer, FastAPI, and FastMCP.
 </p>
 
 <p align="center">
@@ -24,7 +24,10 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
+  <a href="https://intpot.modepot.io/quickstart/">Quick start</a> ·
+  <a href="https://intpot.modepot.io/playground/">Playground</a> ·
+  <a href="https://intpot.modepot.io/schema-reference/">Deep docs</a> ·
+  <a href="#quick-start">README quick start</a> ·
   <a href="#convert-an-existing-app">Convert an app</a> ·
   <a href="#what-conversion-preserves">Conversion scope</a> ·
   <a href="#architecture">Architecture</a> ·
