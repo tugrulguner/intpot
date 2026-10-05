@@ -28,7 +28,7 @@ for await (const path of htmlFiles(distRoot)) {
   htmlCount += 1;
   const html = await readFile(path, 'utf8');
   const outputPath = relative(distRoot, path);
-  if (outputPath === 'downloads/index.html' || outputPath === '404.html') continue;
+  if (outputPath === 'downloads/index.html') continue;
   for (const setting of requiredPosthogConfig) {
     if (!html.includes(setting)) failures.push(`${relative(distRoot, path)}: missing ${setting}`);
   }
