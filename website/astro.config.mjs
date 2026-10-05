@@ -47,7 +47,7 @@ export default defineConfig({
     sidebar: [
       { label: 'Start here', items: [{ slug: 'index', label: 'Overview' }, { slug: 'quickstart' }, { slug: 'playground' }] },
       { label: 'Guides', items: [{ slug: 'build-an-app' }, { slug: 'conversion-boundaries' }, { slug: 'capabilities' }] },
-      { label: 'Reference', items: [{ slug: 'schema-reference' }, { slug: 'architecture-internals' }] },
+      { label: 'Reference', items: [{ slug: 'schema-reference' }, { slug: 'architecture-internals' }, { slug: 'project/readme', label: 'Project README' }, { slug: 'project/roadmap', label: 'Project roadmap' }] },
     ],
   })],
 });

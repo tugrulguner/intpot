@@ -73,6 +73,19 @@ for await (const path of htmlFiles(distRoot)) {
   }
 }
 
+const projectDocs = [
+  ['project/readme', 'README.md', 'Project README'],
+  ['project/roadmap', 'ROADMAP.md', 'Project roadmap'],
+];
+for (const [route, sourceName, pageTitle] of projectDocs) {
+  const source = await readFile(new URL(`../src/content/docs/${route}.md`, import.meta.url), 'utf8');
+  const rendered = await readFile(join(distRoot, route, 'index.html'), 'utf8');
+  if (!source.includes(`title: ${pageTitle}`)) failures.push(`${route}: missing generated page title`);
+  if (!source.includes('repository snapshot (not published-release metadata')) failures.push(`${route}: missing explicit snapshot provenance`);
+  if (!source.includes('blob/') || !source.includes(sourceName)) failures.push(`${route}: missing source revision link`);
+  if (!rendered.includes(pageTitle) || !rendered.includes('not published-release metadata')) failures.push(`${route}: generated content/provenance not rendered`);
+}
+
 const llms = await readFile(join(distRoot, 'llms.txt'), 'utf8');
 if (!llms.includes('https://modepot.io/')) failures.push('llms.txt: missing canonical ModePot URL');
 if (llms.includes('modepot.com')) failures.push('llms.txt: stale ModePot domain');

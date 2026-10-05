@@ -5,7 +5,10 @@ on:
     branches: [main]
     paths:
       - "website/**"
+      - "README.md"
+      - "ROADMAP.md"
       - ".github/workflows/deploy-website.yml"
+      - ".github/workflows/website.yml"
   workflow_dispatch:
 
 permissions:
