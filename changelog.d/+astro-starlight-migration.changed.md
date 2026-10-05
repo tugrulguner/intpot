@@ -1,0 +1,1 @@
+The website now explicitly loads documentation through Astro's glob content loader after the Astro upgrade.
