@@ -26,7 +26,14 @@ test('homepage composition renders in both themes at required widths', async ({ 
       await expect(page.locator('.installation-strip code')).toHaveText('pip install "intpot[all]"');
       await expect(page.locator('.project-demo')).toBeVisible();
       await expect(page.getByRole('link', { name: 'Created by Tugrul Guner' }).first()).toBeVisible();
-      await expect(page.locator('.framework-actions a')).toHaveText(['Quick start', 'Playground', 'GitHub ↗']);
+      await expect(page.locator('.framework-actions a')).toHaveText(['Quick start', 'Playground', 'Roadmap', 'GitHub ↗']);
+      const roadmap = page.getByRole('link', { name: 'Roadmap' }).first();
+      await expect(roadmap).toHaveAttribute('href', '/project/roadmap/');
+      await roadmap.click();
+      await expect(page).toHaveURL(/\/project\/roadmap\/$/);
+      await expect(page.getByRole('heading', { name: 'Project roadmap', exact: true })).toBeVisible();
+      await page.goBack();
+      await expect(page.locator('.framework-hero')).toBeVisible();
       const geometry = await page.evaluate(() => {
         const art = document.querySelector('.framework-art img').getBoundingClientRect();
         const text = document.querySelector('.framework-copy').getBoundingClientRect();
