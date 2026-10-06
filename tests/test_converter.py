@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import py_compile
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -220,6 +222,118 @@ def test_write_to_file(tmp_path):
     assert "import typer" in content
     assert "def greet(" in content
     assert result == out.resolve()
+
+
+def test_write_to_file_honors_encoding(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        """Greet someone with a café, naïve façade."""
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    intpot.load(mcp).write(out, "cli", encoding="latin-1")
+
+    # The encoding only matters if Python can still load what was written: a
+    # declaration the loader accepts, then the real compile the file would
+    # have to survive on disk.
+    assert out.read_text(encoding="latin-1").splitlines()[0] == (
+        "# -*- coding: iso8859-1 -*-"
+    )
+    assert "café" in out.read_text(encoding="latin-1")
+    py_compile.compile(str(out), cfile=str(tmp_path / "cli_app.pyc"), doraise=True)
+
+
+def test_write_rejects_an_encoding_python_cannot_load(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    with pytest.raises(ValueError, match="Unsupported source encoding"):
+        intpot.load(mcp).write(out, "cli", encoding="utf-16")
+
+    # Rejected before anything touches the filesystem: UTF-16 source loads as
+    # null bytes, not as the file the caller asked for.
+    assert not out.parent.exists()
+
+
+def test_write_rejects_a_source_its_encoding_cannot_represent(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        """Greet someone — with a wave."""
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    with pytest.raises(ValueError, match="not representable"):
+        intpot.load(mcp).write(out, "cli", encoding="ascii")
+
+    # Not an empty file either: cp1252 is the supported encoding that holds
+    # the em dash, and the same source has to survive the round trip.
+    assert not out.exists()
+    intpot.load(mcp).write(out, "cli", encoding="cp1252")
+    py_compile.compile(str(out), cfile=str(tmp_path / "cli_app.pyc"), doraise=True)
+
+
+def test_write_to_file_can_refuse_overwrite(tmp_path):
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    out = tmp_path / "cli_app.py"
+    out.write_text("keep this file", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        intpot.load(mcp).write(out, "cli", overwrite=False)
+
+    assert out.read_text(encoding="utf-8") == "keep this file"
+
+
+def test_write_refuses_a_destination_created_while_it_generates(tmp_path, monkeypatch):
+    """The exclusive create is the guarantee; an exists() check cannot be.
+
+    A second writer that lands the file after generation but before the write
+    is the whole window a check-then-write leaves open, and it is reproduced
+    here by generating through a hook instead of racing a thread.
+    """
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+    out = tmp_path / "cli_app.py"
+    app = intpot.load(mcp)
+    generate = app.to_cli
+
+    def generate_into_a_race():
+        code = generate()
+        out.write_text("another writer got here first", encoding="utf-8")
+        return code
+
+    monkeypatch.setattr(app, "to_cli", generate_into_a_race)
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        app.write(out, "cli", overwrite=False)
+
+    assert out.read_text(encoding="utf-8") == "another writer got here first"
 
 
 def test_write_invalid_target():
