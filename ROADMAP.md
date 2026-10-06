@@ -33,15 +33,21 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-Build confidence in the current supported subset as the foundation for wider coverage:
+Make conversion fidelity inspectable before expanding application coverage. The next
+maintainer milestone is a conversion assessment that reports known semantic loss, followed
+by conservative same-module helper and constant recovery. Preserve the existing canonical
+schema and focused shared resolvers rather than begin a broad contract-engine rewrite.
+
+Build confidence in the current supported subset:
 
 - supported conversions preserve behavior;
 - unsupported or lossy cases explain what cannot be preserved;
 - live and generated interfaces agree on their shared interface semantics;
 - documentation and shipped agent skills describe executable behavior.
 
-The phases below express priority, not promised release dates. Correctness and contract
-consolidation come before deeper transformations or performance infrastructure.
+The phases below express maintainer priority, not promised release dates. Contributor
+issues remain an independent backlog; they do not gate this sequence. Each phase delivers
+small useful slices with executable acceptance gates.
 
 ## v0.9 — Current foundation
 
@@ -52,7 +58,8 @@ consolidation come before deeper transformations or performance infrastructure.
 - **Immutable conversion schema:** `ApplicationSchema`, `ToolSchema`, and `ParameterSchema`
   support inspection and generation; `ToolInfo` compatibility views remain available.
 - **Target projections:** conversion exposes intermediate target projections before
-  rendering. Some effective parameter defaults are still decided by templates.
+  rendering. Required/default identity is already shared in the models; target framework
+  construction and some fallback policies remain in builders and templates.
 - **Shared interface identity:** framework-visible tool names, source Python parameter
   bindings, target-visible parameter aliases, and FastAPI route metadata remain distinct
   in the canonical schema and are consumed consistently by live and generated interfaces.
@@ -67,12 +74,55 @@ consolidation come before deeper transformations or performance infrastructure.
 - **Verification:** generated-artifact execution tests, conversion snapshot drift tests,
   and a Python 3.11–3.14 compatibility matrix.
 
-Live serving currently uses registered callables and compatibility metadata; it does not
-consume the immutable schema in the same way as generation. Completing shared interface
-semantics is planned below. Live execution and standalone export also have deliberately
-different capabilities: a callable may depend on runtime values that cannot be exported.
+Live serving uses registered callables and compatibility metadata, including shared
+placement and naming resolvers; generation consumes the immutable schema. These are
+deliberately different execution paths. Live serving can use runtime-only opaque defaults
+and callable state that standalone export cannot preserve. Do not require serialization
+or generated-code execution as a prerequisite for live serving.
 
-## Phase 1 — Correctness and honest documentation
+## Phase 1 — Conversion assessment and known-loss detection
+
+- [ ] Define an inspectable assessment alongside `ApplicationSchema`, not a second
+      generalized intermediate representation. Diagnostics identify source/tool/parameter,
+      target, stable code, severity, consequence, and suggested action; include source
+      locations when available.
+- [ ] Distinguish preserved behavior, explicit adaptations, unsupported constructs, and
+      required manual implementation without implying proof of arbitrary Python equivalence.
+- [ ] Detect Typer/Click parameter callbacks before conversion silently drops validation or
+      transformation. A source callback rejecting an input must not become an unqualified
+      successful target call. Begin with actionable refusal, not arbitrary callback mapping.
+- [ ] Diagnose unrecoverable bodies and generated TODO stubs; specify intentional scaffold
+      opt-in separately from faithful conversion.
+- [ ] Diagnose unresolved same-module references in retained bodies, annotations, and
+      defaults before adding dependency recovery. Keep dynamic/ambiguous cases explicit.
+- [ ] Present existing dependency/default refusals consistently without weakening them.
+- [ ] Specify Python and CLI access deliberately: keep existing code-string return types,
+      keep diagnostics off source-code stdout, and settle readiness/refusal policy before
+      introducing broad behavior changes. Start with independently useful guarded slices.
+
+Acceptance: original source validation and generated-consumer behavior are compared for
+valid and rejected inputs. Known unsupported behavior produces a specific diagnostic or
+refusal, not apparently complete output. Inspection remains available where generation is
+refused; supported conversion, directory planning, and existing compatibility APIs remain
+covered. Static assessment is not a sandbox and does not execute generated code.
+
+## Phase 2 — Bounded same-module dependency recovery
+
+- [ ] Recover statically resolvable plain helpers and literal constants first, including
+      transitive same-module references; do not copy the entire source module.
+- [ ] Preserve necessary definition/evaluation ordering, recursion, annotation/default
+      dependencies, and generated-binding collision safety.
+- [ ] Explain dynamic globals, closure state, ambiguous bindings, and external configuration
+      through the assessment rather than silently dropping them.
+- [ ] Add classes, models, decorators, and base classes only as separately specified,
+      executable capability slices after the helper/constant foundation is reliable.
+
+Acceptance: realistic source functions using helpers/constants execute through generated
+CLI, HTTP, and MCP boundaries. Unsupported closure cases remain explicit; recovery does
+not duplicate application registration or unrelated module-level side effects, introduce
+an intpot runtime bridge, or imply external dependency provisioning.
+
+## Supporting backlog — Correctness and honest documentation
 
 - [x] Preserve control flow in API/MCP-to-CLI conversion, including early returns, loop
       returns, and unreachable side effects. Implementation returns are retained and the
@@ -96,7 +146,7 @@ Acceptance: the original failure cases have generated-consumer regressions, docu
 examples execute, and the supported Python/framework matrix remains green. Source-level
 audit findings must be reproduced before treating their fixes as verified.
 
-## Phase 2 — Complete the shared interface contract
+## Phase 3 — Evidence-driven shared policy consolidation
 
 - [x] Centralize target parameter placement for CLI, FastAPI, and FastMCP in an immutable
       schema projection. CLI and FastAPI renderers consume the choice; FastMCP records its
@@ -114,33 +164,29 @@ audit findings must be reproduced before treating their fixes as verified.
       names. FastAPI aliases and exact Typer option declarations, including short and
       paired boolean flags, survive live and generated interfaces and cross-target
       conversion.
-- [ ] Centralize the remaining target decisions for required/default rules, descriptions,
-      and response policy. Canonical schema values remain authoritative, but the focused
-      name and alias slices do not unify those policies.
+- [ ] Extend paired live/ejected tests for required/default/null behavior, descriptions,
+      omitted versus explicit-empty route metadata, and reachable response outcomes.
+      Required/default identity is already canonical; test effective framework behavior.
+- [ ] Extract small shared policy resolvers only where tests demonstrate duplication or
+      drift. Keep CLI text, HTTP responses, and MCP content target-native; do not add a
+      universal response engine or replace builders/templates merely for symmetry.
 - [x] Reuse the parameter-placement resolver where live CLI and FastAPI builders choose a
       location, without requiring live serving to construct an `ApplicationSchema`;
       runtime-only opaque defaults remain usable. FastMCP has no competing location choice.
 - [x] Transform this focused projection with `dataclasses.replace` and share unchanged
       parameters and tools. Mutable `ToolInfo` remains a compatibility boundary.
-- [ ] Extend the same shared immutable boundary to the remaining interface and response
-      decisions without changing established response policy in the placement slice.
+- [ ] Preserve live opaque defaults and runtime callable state without forcing schema
+      serialization or generated-code execution into live serving.
 - [ ] Isolate existing default-value freezing, serialization, identity, and source-rendering
       behavior behind a small private module. Preserve supported values and regression
       coverage; do not replace these contracts with generic `repr()` or JSON conversion.
-- [ ] Expose structured conversion diagnostics: preserved, adapted, unsupported, and
-      requiring manual implementation. Diagnose unresolved symbols and missing bodies
-      instead of letting generated source appear complete without qualification.
 
-Acceptance: shared behavior is defined once, projections explain the emitted interface,
-and compatibility APIs retain their documented behavior. No generated-code execution is
-introduced as a prerequisite for live serving.
+Acceptance: consolidation closes demonstrated policy drift without changing established
+response behavior or compatibility APIs. Source-versus-converted fidelity and
+live-versus-ejected parity remain separate executable test families.
 
-## Phase 3 — Practical conversion coverage
+## Phase 4 — Richer types and practical conversion coverage
 
-- [ ] Carry a bounded dependency closure within one source module: referenced helper
-      functions, constants, classes, models, defaults, annotations, decorators, and base
-      classes. Start with explicitly supported cases; diagnose dynamic or ambiguous cases
-      rather than promise arbitrary Python recovery.
 - [ ] Preserve parameter descriptions and supported `Annotated` metadata across targets
       ([#1](https://github.com/tugrulguner/intpot/issues/1),
       [#3](https://github.com/tugrulguner/intpot/issues/3),
@@ -160,7 +206,26 @@ introduced as a prerequisite for live serving.
 Acceptance: each new capability includes a supported-case example, an unsupported-case
 policy, and execution through the generated target—not merely a matching source string.
 
-## Phase 4 — Profile, then optimize
+## Verification that grows with each capability
+
+- [ ] Maintain a compact source-versus-target conformance corpus with supported,
+      adapted, inspect-only, refused, and unresolved cases. Include rejected inputs and
+      validation behavior, not only successful calls or generated-text snapshots.
+- [ ] Extend declared-floor FastAPI/FastMCP and supported structural-generation lanes to
+      import and invoke generated artifacts. Inspector-only success is not full runtime
+      compatibility; keep existing Typer CLI compatibility checks.
+- [ ] Install wheel and sdist outside the source tree and exercise public commands and
+      generated consumers; archive presence alone is insufficient.
+- [ ] Grow runnable example execution alongside capability guarantees. Existing conversion
+      snapshot checks and representative consumer smoke tests are useful but not an
+      exhaustive six-direction fidelity corpus.
+
+Acceptance: each capability compares observable source and target behavior with explicitly
+allowed adaptations, exercises real framework boundaries and refusal paths, and passes
+full quality checks plus affected compatibility/distribution gates. No unmeasured fidelity
+or performance claims are added.
+
+## Phase 5 — Profile, then optimize
 
 - [ ] Establish reproducible benchmarks separating cold startup, inspection, projection,
       and rendering for small and larger applications. Record Python and dependency versions.
