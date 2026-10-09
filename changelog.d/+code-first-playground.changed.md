@@ -1,1 +1,0 @@
-The Intpot playground pairs its typed Python definition with focused CLI, HTTP, and MCP request previews in a readable gold-and-charcoal workbench.
