@@ -1,1 +1,0 @@
-Intpot’s site now keeps ModePot, GitHub, Community, and creator links visible in consistent desktop and compact navigation.

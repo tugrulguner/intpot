@@ -49,7 +49,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.9 — Current foundation
+## v0.10 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.
@@ -88,11 +88,12 @@ or generated-code execution as a prerequisite for live serving.
       locations when available.
 - [ ] Distinguish preserved behavior, explicit adaptations, unsupported constructs, and
       required manual implementation without implying proof of arbitrary Python equivalence.
-- [ ] Detect Typer/Click parameter callbacks before conversion silently drops validation or
+- [x] Detect Typer/Click parameter callbacks before conversion silently drops validation or
       transformation. A source callback rejecting an input must not become an unqualified
       successful target call. Begin with actionable refusal, not arbitrary callback mapping.
-- [ ] Diagnose unrecoverable bodies and generated TODO stubs; specify intentional scaffold
-      opt-in separately from faithful conversion.
+- [x] Diagnose unrecoverable bodies and generated TODO stubs; specify intentional scaffold
+      opt-in separately from faithful conversion. `IntpotApp.assess()` reports body recovery,
+      public conversion refuses missing source by default, and explicit scaffolds fail at runtime.
 - [ ] Diagnose unresolved same-module references in retained bodies, annotations, and
       defaults before adding dependency recovery. Keep dynamic/ambiguous cases explicit.
 - [ ] Present existing dependency/default refusals consistently without weakening them.

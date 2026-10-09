@@ -10,6 +10,46 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.10.0] - 2026-10-09
+
+### Added
+
+- Conversions now report and refuse tools whose function bodies cannot be recovered, with an explicit opt-in for `NotImplementedError` scaffolds.
+- The Intpot homepage includes a bounded browser-local greeting playground showing one function's CLI, HTTP, and MCP representations without running Python adapters.
+- The Intpot website provides product-owned documentation for the typed-tool workflow, supported interfaces, and conversion boundaries.
+- The browser playground now has a dedicated `/playground/` page and illustrates the shipped greeting function, including its optional `excited` flag and string return value.
+
+### Changed
+
+- Add a compact Intpot family mark for small-size brand and package contexts.
+- Add task-oriented build and conversion guides, schema and architecture references, and canonical Markdown downloads for deeper human and agent documentation.
+- Expose the source-generated project roadmap as a secondary action in the homepage hero.
+- Improved the documentation site's search, social-preview, structured-data, and AI-agent discovery metadata.
+- Instrument intpot.modepot.io with privacy-conscious shared ModePot PostHog page analytics.
+- Intpot's homepage now presents the canonical typed-tools promise, installation command, and browser-local playground boundary in a consistent landing-page flow.
+- Intpot’s homepage, documentation, and playground now share the ModePot family’s typography, neutral light/dark surfaces, header, and control styling.
+- Intpot’s site now keeps ModePot, GitHub, Community, and creator links visible in consistent desktop and compact navigation.
+- Prioritize inspectable conversion diagnostics and bounded same-module dependency recovery in the roadmap, with behavioral conformance and compatibility acceptance gates.
+- Replaced the crowded Intpot hero and social artwork with a minimal lockup built from the existing compact mark.
+- Standardized the README hero to 600px and added a visible link to the ModePot family.
+- The Intpot homepage and browser-local greeting playground share a gold-and-charcoal visual identity with a clearer, more compact hierarchy.
+- The Intpot playground now aligns its Code, Run, and Output panels and makes interface choices, output views, and the Run action easier to distinguish.
+- The Intpot playground pairs its typed Python definition with focused CLI, HTTP, and MCP request previews in a readable gold-and-charcoal workbench.
+- The README now links directly to Intpot's live quick start, playground, and reference docs.
+- The README prominently links to the project website beside the ModePot family link.
+- The browser playground keeps result, typed arguments, interface response, and request trace in one bounded, keyboard-navigable output inspector beside the request and source.
+- The website now explicitly loads documentation through Astro's glob content loader after the Astro upgrade.
+- The website now publishes revision-linked README and roadmap pages generated from repository sources.
+
+### Fixed
+
+- Correct ModePot links in the website and public agent metadata.
+- Expose editable CLI, HTTP API, and MCP request previews with independent validation, results, and typed-argument traces in the browser-local Intpot explorer.
+- Header controls, including social links and search, now meet the minimum target size and have a visible search boundary.
+- Refuse CLI-to-API/MCP conversion of parameter callbacks instead of silently dropping validation or transformation, while keeping callback metadata inspectable.
+- The Intpot playground now keeps requests and their results together and uses readable, theme-aware colors.
+
+
 ## [0.9.0] - 2026-09-28
 
 ### Added
