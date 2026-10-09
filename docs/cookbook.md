@@ -229,7 +229,7 @@ The function bodies are generally preserved well though, especially for simple f
 - **Preview before writing:** Skip `--output` to print to stdout first. Check the result before committing to a file.
 - **Use inspect:** `intpot inspect source.py` shows what intpot extracted (functions, params, types) without generating anything. Useful for debugging unexpected output.
 - **Start simple:** Convert one file at a time before doing directory-wide conversions.
-- **Check TODOs:** If intpot can't carry over the function body (usually due to unparseable code), it generates a `# TODO: implement` placeholder. Grep for these after conversion.
+- **Check body recovery:** If Intpot cannot recover implementation source, public conversion refuses with `MissingFunctionBodyError`. `load(source).assess()` and `inspect --json` report affected tools. Explicit `--allow-scaffold` emits labeled `NotImplementedError` implementations that must be completed, not working programs.
 - **Python API for scripting:** If you need to convert programmatically or in bulk:
 
 ```python
@@ -246,5 +246,5 @@ app.write("out.py", "cli") # write to file
 - `Annotated[str, Body(...)]` style FastAPI parameters aren't fully supported yet
 - Nested Typer sub-apps and Click groups are not handled
 - FastAPI dependency injection cannot be converted to CLI or MCP yet; intpot refuses the conversion instead of stripping it
-- Generated code has `# TODO: implement` when the function body can't be carried over
+- Public conversion refuses unrecovered bodies; explicit scaffold opt-in emits `NotImplementedError`. Low-level generators retain legacy scaffold behavior.
 - `format` as a parameter name gets sanitized (it's a Python builtin) — watch for `format_` in output

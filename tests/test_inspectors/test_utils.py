@@ -97,7 +97,7 @@ def test_statement_sharing_a_line_with_the_docstring(tmp_source):
     assert extract_function_body(_load(path, "d")) == "return x"
 
 
-def test_docstring_only_function_has_no_body(tmp_source):
+def test_docstring_only_function_is_a_recovered_noop(tmp_source):
     path = tmp_source(
         '''
         def stub(x: int) -> int:
@@ -105,7 +105,7 @@ def test_docstring_only_function_has_no_body(tmp_source):
         '''
     )
 
-    assert extract_function_body(_load(path, "stub")) is None
+    assert extract_function_body(_load(path, "stub")) == "pass"
 
 
 def test_a_one_line_tool_still_runs_after_conversion(tmp_source):
@@ -133,6 +133,63 @@ def test_a_one_line_tool_still_runs_after_conversion(tmp_source):
 
     assert result.exit_code == 0, result.output
     assert "8" in result.output
+
+
+def test_conversion_refuses_missing_body_without_writing_output(tmp_source, tmp_path):
+    """A successful stub command is misleading; fail before emitting a file."""
+    path = tmp_source(
+        'from fastmcp import FastMCP\nmcp = FastMCP("probe")\n'
+        "exec(\"@mcp.tool()\\ndef unfinished() -> str:\\n    return 'no body'\\n\")\n"
+    )
+    output = tmp_path / "generated.py"
+    from typer.testing import CliRunner
+
+    from intpot.cli import app
+
+    result = CliRunner().invoke(app, ["to", "cli", str(path), "--output", str(output)])
+
+    assert result.exit_code != 0
+    assert "unfinished" in result.output
+    assert not output.exists()
+
+    preview = CliRunner().invoke(
+        app, ["to", "cli", str(path), "--dry-run", "--allow-scaffold"]
+    )
+    assert preview.exit_code == 0, preview.output
+    assert "NotImplementedError" in preview.output
+    assert "Scaffold" in preview.output
+
+
+def test_dynamic_missing_body_is_assessed_and_schema_remains_inspectable(tmp_source):
+    path = tmp_source(
+        'from fastmcp import FastMCP\nmcp = FastMCP("probe")\n'
+        "exec(\"@mcp.tool()\\ndef unfinished() -> str:\\n    return 'body'\\n\")\n"
+    )
+    from intpot import load
+
+    converted = load(path)
+    assert converted.schema.tools[0].name == "unfinished"
+    assessment = converted.assess()
+    assert assessment["body_recovery_complete"] is False
+    assert assessment["missing_function_body"] == ["unfinished"]
+    assert assessment["diagnostics"][0]["code"] == "missing_function_body"
+    assert assessment["diagnostics"][0]["tool"] == "unfinished"
+
+
+def test_direct_conversion_can_emit_runtime_failing_scaffold(tmp_source):
+    path = tmp_source(
+        'from fastmcp import FastMCP\nmcp = FastMCP("probe")\n'
+        "exec(\"@mcp.tool()\\ndef unfinished() -> str:\\n    return 'body'\\n\")\n"
+    )
+    from intpot import load
+
+    generated = load(path).to_cli(allow_scaffold=True)
+    assert "NotImplementedError" in generated
+    namespace: dict[str, Any] = {}
+    exec(compile(generated, "<generated>", "exec", dont_inherit=True), namespace)
+    result = CliRunner().invoke(namespace["app"], [])
+    assert isinstance(result.exception, NotImplementedError)
+    assert "Scaffold: implement tool unfinished" in str(result.exception)
 
 
 def test_the_generated_body_contains_no_nested_definition(tmp_source):

@@ -93,6 +93,7 @@ Prefer `--json` when you need to reason about the result programmatically.
 |--------|-----------|-------------|
 | `--output`, `-o` | `to *`, `eject` | Output path (prints to stdout if omitted) |
 | `--dry-run` | `to *` | Preview generated code without writing files |
+| `--allow-scaffold` | `to *` | Opt in to `NotImplementedError` stubs when source recovery fails |
 | `--verbose`, `-v` | `to *`, `inspect` | Show detection details on stderr |
 | `--json` | `inspect` | Emit JSON instead of a table |
 | `--host` / `--port` | `serve --api` | Defaults `127.0.0.1` / `8000` |
@@ -111,7 +112,7 @@ Prefer `--json` when you need to reason about the result programmatically.
   shape `eject --to api` generates.
 - **Converted code carries the original body over** where the frameworks agree, and
   rewrites it where they don't. A tool whose body can't be recovered gets a
-  `# TODO: implement` stub.
+  refusal by default; `--allow-scaffold` opts into a labeled failing implementation.
 
 ## Verify generated code
 
@@ -129,7 +130,10 @@ some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and r
 multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and route/router/app-level
 dependencies remain visible to `intpot inspect`, but API-to-CLI/MCP conversion refuses
 them instead of emitting broken code; full mapping remains tracked in issue #20. A missing
-recoverable body becomes a `# TODO: implement` stub.
+recoverable body makes conversion refuse before output writes. `--allow-scaffold`
+explicitly requests labeled `NotImplementedError` implementations, not working programs.
+`inspect --json` adds an `assessment` with per-tool body-recovery diagnostics when missing.
+This is not general fidelity assessment and never bypasses callback/dependency guards.
 
 Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
 parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP

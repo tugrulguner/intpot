@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,27 @@ from intpot.core.projections import (
 
 class UnsupportedFastAPIDependencyError(Exception):
     """Raised when FastAPI dependency injection cannot be converted safely."""
+
+
+def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
+    """Assess body recovery only; this is not a promise of full fidelity."""
+    missing = [tool.name for tool in schema.tools if tool.function_body is None]
+    return {
+        "body_recovery_complete": not missing,
+        "missing_function_body": missing,
+        "diagnostics": [
+            {
+                "code": "missing_function_body",
+                "tool": name,
+                "message": "Function source could not be recovered; output requires implementation.",
+            }
+            for name in missing
+        ],
+    }
+
+
+class MissingFunctionBodyError(ValueError):
+    """Raised when conversion cannot recover a tool implementation."""
 
 
 def _guard_fastapi_dependencies(tools: list[ToolInfo]) -> None:
@@ -123,6 +145,8 @@ def _prepare_tools_for_target(
 def project_schema(
     schema: ApplicationSchema,
     target: SourceType,
+    *,
+    allow_scaffold: bool = False,
 ) -> ApplicationSchema:
     """Project a canonical schema into target-specific immutable semantics."""
     from intpot.core.transforms import transform_schema
@@ -133,6 +157,31 @@ def project_schema(
     ):
         _guard_fastapi_dependencies(schema.to_tools())
     guard_cli_parameter_callbacks(schema.tools, target)
+    missing = [tool.name for tool in schema.tools if tool.function_body is None]
+    if missing and not allow_scaffold:
+        raise MissingFunctionBodyError(
+            "Cannot convert tools whose function bodies could not be recovered: "
+            + ", ".join(missing)
+            + ". Pass allow_scaffold=True (CLI: --allow-scaffold) to emit NotImplementedError scaffolds."
+        )
+    if missing:
+        schema = replace(
+            schema,
+            tools=tuple(
+                replace(
+                    tool,
+                    function_body=(
+                        "from builtins import NotImplementedError as _intpot_missing_body\n"
+                        "raise _intpot_missing_body("
+                        + repr(f"Scaffold: implement tool {tool.name}")
+                        + ")"
+                    ),
+                )
+                if tool.function_body is None
+                else tool
+                for tool in schema.tools
+            ),
+        )
     transformed = transform_schema(schema, target)
     return project_tool_names(
         project_parameter_aliases(
@@ -143,11 +192,15 @@ def project_schema(
 
 
 def tools_for_target(
-    source_type: SourceType, app_instance: Any, target: SourceType
+    source_type: SourceType,
+    app_instance: Any,
+    target: SourceType,
+    *,
+    allow_scaffold: bool = False,
 ) -> list[ToolInfo]:
     """Inspect an app and prepare tools for a target framework."""
     schema = compile_app(source_type, app_instance)
-    return project_schema(schema, target).to_tools()
+    return project_schema(schema, target, allow_scaffold=allow_scaffold).to_tools()
 
 
 class IntpotApp:
@@ -176,6 +229,10 @@ class IntpotApp:
             source_path=self.source_path,
         )
 
+    def assess(self) -> dict[str, Any]:
+        """Report body-recovery diagnostics, not general conversion fidelity."""
+        return assess_schema(self.schema)
+
     @property
     def tools(self) -> list[ToolInfo]:
         """Return detached compatibility models from the compiled schema."""
@@ -185,7 +242,9 @@ class IntpotApp:
         """Return tools transformed for the target framework."""
         return self.project(target).to_tools()
 
-    def project(self, target: str | SourceType) -> ApplicationSchema:
+    def project(
+        self, target: str | SourceType, *, allow_scaffold: bool = False
+    ) -> ApplicationSchema:
         """Return an immutable target projection of the compiled application."""
         if isinstance(target, str):
             try:
@@ -202,33 +261,45 @@ class IntpotApp:
             raise ValueError(
                 f"Source is already a {self.source_type.value.upper()} app"
             )
-        return project_schema(self.schema, target)
+        return project_schema(self.schema, target, allow_scaffold=allow_scaffold)
 
-    def to_cli(self) -> str:
+    def to_cli(self, *, allow_scaffold: bool = False) -> str:
         """Generate Typer CLI code."""
         if self.source_type == SourceType.CLI:
             raise ValueError("Source is already a CLI app")
         from intpot.core.generators.cli import CLIGenerator
 
-        return CLIGenerator().generate(self.project(SourceType.CLI))
+        return CLIGenerator().generate(
+            self.project(SourceType.CLI, allow_scaffold=allow_scaffold)
+        )
 
-    def to_mcp(self) -> str:
+    def to_mcp(self, *, allow_scaffold: bool = False) -> str:
         """Generate FastMCP server code."""
         if self.source_type == SourceType.MCP:
             raise ValueError("Source is already an MCP server")
         from intpot.core.generators.mcp import MCPGenerator
 
-        return MCPGenerator().generate(self.project(SourceType.MCP))
+        return MCPGenerator().generate(
+            self.project(SourceType.MCP, allow_scaffold=allow_scaffold)
+        )
 
-    def to_api(self) -> str:
+    def to_api(self, *, allow_scaffold: bool = False) -> str:
         """Generate FastAPI app code."""
         if self.source_type == SourceType.API:
             raise ValueError("Source is already an API app")
         from intpot.core.generators.api import APIGenerator
 
-        return APIGenerator().generate(self.project(SourceType.API))
+        return APIGenerator().generate(
+            self.project(SourceType.API, allow_scaffold=allow_scaffold)
+        )
 
-    def write(self, path: str | Path, target: str | SourceType) -> Path:
+    def write(
+        self,
+        path: str | Path,
+        target: str | SourceType,
+        *,
+        allow_scaffold: bool = False,
+    ) -> Path:
         """Generate code and write it to a file.
 
         Args:
@@ -242,7 +313,11 @@ class IntpotApp:
         if isinstance(target, SourceType):
             target = target.value
 
-        generators = {"cli": self.to_cli, "mcp": self.to_mcp, "api": self.to_api}
+        generators = {
+            "cli": lambda: self.to_cli(allow_scaffold=allow_scaffold),
+            "mcp": lambda: self.to_mcp(allow_scaffold=allow_scaffold),
+            "api": lambda: self.to_api(allow_scaffold=allow_scaffold),
+        }
         if target not in generators:
             raise ValueError(f"Unknown target '{target}', expected: cli, mcp, api")
         code = generators[target]()

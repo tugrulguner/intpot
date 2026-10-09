@@ -23,6 +23,11 @@ def to_mcp(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview output without writing files"
     ),
+    allow_scaffold: bool = typer.Option(
+        False,
+        "--allow-scaffold",
+        help="Emit explicit NotImplementedError scaffolds for missing bodies",
+    ),
 ) -> None:
     """Convert a CLI or API source to a FastMCP server."""
     convert(
@@ -33,4 +38,5 @@ def to_mcp(
         suffix="_mcp",
         verbose=verbose,
         dry_run=dry_run,
+        allow_scaffold=allow_scaffold,
     )
