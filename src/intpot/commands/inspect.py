@@ -8,7 +8,7 @@ from pathlib import Path
 
 import typer
 
-from intpot.converter import compile_app
+from intpot.converter import assess_schema, compile_app
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
 
@@ -74,6 +74,11 @@ def inspect_command(
                         "source": str(file_path),
                         "type": schema.source_type.value,
                         "tools": [tool.to_dict() for tool in schema.tools],
+                        **(
+                            {"assessment": assess_schema(schema)}
+                            if any(tool.function_body is None for tool in schema.tools)
+                            else {}
+                        ),
                     }
                 )
             typer.echo(json.dumps(out, indent=2, default=str))
@@ -105,6 +110,11 @@ def inspect_command(
                 "source": str(source),
                 "type": schema.source_type.value,
                 "tools": [tool.to_dict() for tool in schema.tools],
+                **(
+                    {"assessment": assess_schema(schema)}
+                    if any(tool.function_body is None for tool in schema.tools)
+                    else {}
+                ),
             }
         ]
         typer.echo(json.dumps(out, indent=2, default=str))

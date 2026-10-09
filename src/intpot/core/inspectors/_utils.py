@@ -259,9 +259,13 @@ def extract_function_body(fn: Any) -> str | None:
 
     # Find the first real statement, skipping a leading docstring
     first_stmt = func_node.body[0]
-    if isinstance(first_stmt, ast.Expr) and isinstance(first_stmt.value, ast.Constant):
+    if (
+        isinstance(first_stmt, ast.Expr)
+        and isinstance(first_stmt.value, ast.Constant)
+        and isinstance(first_stmt.value.value, str)
+    ):
         if len(func_node.body) <= 1:
-            return None  # Only a docstring, no real body
+            return "pass"  # A docstring-only function is a deliberate no-op
         first_stmt = func_node.body[1]
 
     line_index = first_stmt.lineno - 1  # lineno is 1-indexed

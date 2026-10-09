@@ -107,7 +107,8 @@ route/router/app-level dependencies remain available through `.tools` and `inspe
 but `.to_cli()`, `.to_mcp()`, and `.write()` raise
 `intpot.UnsupportedFastAPIDependencyError` rather than emit broken code. Full dependency
 mapping remains tracked in issue #20. A body that cannot be recovered becomes a
-`# TODO: implement` stub; inspect and implement it before treating the output as complete.
+missing implementation; conversion raises `intpot.MissingFunctionBodyError` before output
+writes. Use `allow_scaffold=True` only to generate explicitly unimplemented scaffolds.
 
 Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
 parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
@@ -205,3 +206,14 @@ pip install intpot[all]   # install both framework runtimes
 Install `[mcp]` or `[api]` when intpot must inspect or load a source using that framework,
 or when you import, serve, or invoke that target. Emitting source text alone does not
 require the target extra, but verifying or running the emitted program does.
+
+
+### Missing implementation source
+
+`app.assess()` returns `body_recovery_complete`, `missing_function_body`, and per-tool
+`diagnostics` as JSON-compatible data while keeping `app.schema` inspectable. This checks
+body recovery only, not general conversion readiness. `.project()`, `.to_cli()`,
+`.to_api()`, `.to_mcp()`, and `.write()` raise `intpot.MissingFunctionBodyError` by default.
+Explicit `allow_scaffold=True` emits labeled `NotImplementedError` implementations and
+does not override callback/dependency guards. Low-level generators retain legacy scaffold
+behavior; live `App` behavior is unchanged.

@@ -316,7 +316,20 @@ apps are not detected by the current AST pre-check. Loading a source file direct
 does not add its directory to `sys.path`, so a sibling import such as
 `from helpers import normalize` may require installing the package or setting
 `PYTHONPATH`. External services and configuration are not provisioned for you. If intpot
-cannot recover a body, it emits a `# TODO: implement` stub instead of inventing behavior.
+cannot recover a body, public conversion raises `intpot.MissingFunctionBodyError`
+before writing output. `app.assess()` returns JSON-compatible body-recovery diagnostics
+(`body_recovery_complete`, `missing_function_body`, and per-tool `diagnostics`); this is
+not a general fidelity guarantee. `intpot inspect --json` includes an `assessment` when
+bodies are missing. Schema inspection and the original source remain usable.
+
+Explicit `allow_scaffold=True` on `.project()`, `.to_cli()`, `.to_api()`, `.to_mcp()`, or
+`.write()` (CLI: `--allow-scaffold`) emits labeled `NotImplementedError` implementations,
+not successful dummy results. Mixed directory conversions refuse before any output is
+written. This permission does not bypass callback or dependency refusals. Recovered
+`pass`, ellipsis, and docstring-only no-ops are not missing bodies. Low-level generators
+remain scaffold-capable for compatibility; they do not perform converter assessment,
+and live `App` serving/ejection is unchanged. See
+[`missing_body.py`](examples/missing_body.py) for an executable example.
 
 > [!IMPORTANT]
 > Detection imports the source module, so only inspect or convert code you trust. A source
@@ -472,9 +485,9 @@ directory, the output mirrors the source tree: each generated file keeps its sou
 position, with only the filename changing.
 
 ```
-intpot to cli <source> [--output <path>] [--dry-run] [--verbose]
-intpot to mcp <source> [--output <path>] [--dry-run] [--verbose]
-intpot to api <source> [--output <path>] [--dry-run] [--verbose]
+intpot to cli <source> [--output <path>] [--dry-run] [--allow-scaffold] [--verbose]
+intpot to mcp <source> [--output <path>] [--dry-run] [--allow-scaffold] [--verbose]
+intpot to api <source> [--output <path>] [--dry-run] [--allow-scaffold] [--verbose]
 ```
 
 All three take the same arguments:
@@ -484,6 +497,7 @@ All three take the same arguments:
 | `source` | Path to a source Python file or directory |
 | `--output`, `-o` | Output file/directory path (prints to stdout if omitted). Missing directories are created |
 | `--dry-run` | Print what would be generated, without writing any files |
+| `--allow-scaffold` | Explicitly emit failing scaffolds for unrecovered function bodies |
 | `--verbose`, `-v` | Print detection details to stderr |
 
 `to cli` accepts MCP or API sources, `to mcp` accepts CLI or API, `to api` accepts CLI or

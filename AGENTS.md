@@ -106,3 +106,5 @@ every human reads. If your agent wants a shortcut wrapping them, keep it untrack
 
 (`intpot add skills` writing `.claude/skills/` into a *user's* project is the product, and
 unrelated — it emits six formats and privileges none of them.)
+
+**Converter missing-body assessment:** source schemas remain inspectable when function source cannot be recovered, but public conversion refuses those tools by default. `allow_scaffold=True` / `--allow-scaffold` emits a labeled `NotImplementedError`; never use successful dummy returns. Keep callback and dependency guards non-bypassable. Direct low-level generators remain backward compatible and do not guarantee converter assessment.

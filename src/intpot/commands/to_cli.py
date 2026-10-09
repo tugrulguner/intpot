@@ -23,6 +23,11 @@ def to_cli(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview output without writing files"
     ),
+    allow_scaffold: bool = typer.Option(
+        False,
+        "--allow-scaffold",
+        help="Emit explicit NotImplementedError scaffolds for missing bodies",
+    ),
 ) -> None:
     """Convert an MCP or API source to a Typer CLI app."""
     convert(
@@ -33,4 +38,5 @@ def to_cli(
         suffix="_cli",
         verbose=verbose,
         dry_run=dry_run,
+        allow_scaffold=allow_scaffold,
     )

@@ -43,6 +43,10 @@ Intpot preserves only semantics it can recover from the supported app shape: cal
 
 The importer executes module top-level statements. It can import a file with an unavailable optional framework only after the corresponding extra is installed. A missing FastAPI/Uvicorn module points to `intpot[api]`; missing FastMCP points to `intpot[mcp]`. An unrelated missing sibling module is not repaired by installing a framework extra.
 
+## Missing implementation source (unreleased)
+
+For converter calls (`intpot to ...`, `IntpotApp.project()`, and `to_cli()`/`to_api()`/`to_mcp()`), source recovery failure is distinct from a real no-op implementation. An unrecovered tool body remains visible in the inspectable schema and `app.assess()` reports `body_recovery_complete`, affected tool names under `missing_function_body`, and stable per-tool `diagnostics` (body recovery only, not general fidelity). JSON inspection adds an `assessment` when bodies are missing; public conversion refuses it before writing output. `--allow-scaffold` or `allow_scaffold=True` explicitly opts into a labeled `NotImplementedError` scaffold, never a successful dummy result. Direct low-level generators retain their historical behavior and do not perform converter assessment. This does not change live `App` or `eject` behavior. Callback and dependency safety refusals remain non-bypassable. See [the executable missing-body example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_body.py).
+
 ## CLI parameter callbacks (unreleased)
 
 Typer/Click parameter callbacks can reject or transform values before the command body runs. Intpot marks these parameters with `unsupported_callback=True`; JSON inspection includes the marker only when true. Assignment-style and `Annotated` options and arguments remain inspectable, including the registered-command fallback.

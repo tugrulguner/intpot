@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 
 from intpot.converter import (
+    MissingFunctionBodyError,
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
     compile_app,
@@ -23,15 +24,17 @@ def _schema_or_exit(
     target: SourceType,
     *,
     source_path: Path,
+    allow_scaffold: bool = False,
 ):
     try:
         schema = compile_app(source_type, app_instance, source_path=source_path)
-        return project_schema(schema, target)
+        return project_schema(schema, target, allow_scaffold=allow_scaffold)
     except (
         InspectionError,
         TypeError,
         UnsupportedFastAPIDependencyError,
         UnsupportedCLIParameterCallbackError,
+        MissingFunctionBodyError,
     ) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
@@ -99,6 +102,7 @@ def convert(
     *,
     verbose: bool = False,
     dry_run: bool = False,
+    allow_scaffold: bool = False,
 ) -> None:
     """Shared conversion logic for all `intpot to *` commands.
 
@@ -110,6 +114,7 @@ def convert(
         suffix: File suffix for directory output (e.g. "_cli").
         verbose: Print discovery/detection details to stderr.
         dry_run: Print generated code to stdout without writing files.
+        allow_scaffold: Emit NotImplementedError for unrecovered tool bodies.
     """
     from intpot.core.generators.api import APIGenerator
     from intpot.core.generators.cli import CLIGenerator
@@ -147,6 +152,7 @@ def convert(
                 app_instance,
                 target,
                 source_path=file_path,
+                allow_scaffold=allow_scaffold,
             )
             planned.append((file_path, destination, generator.generate(schema)))
 
@@ -189,6 +195,7 @@ def convert(
         app_instance,
         target,
         source_path=source,
+        allow_scaffold=allow_scaffold,
     )
     code = generator.generate(schema)
 
