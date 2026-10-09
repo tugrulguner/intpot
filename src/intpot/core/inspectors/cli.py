@@ -294,7 +294,11 @@ class CLIInspector(BaseInspector):
 
         params: list[ParameterInfo] = []
         for param in cmd.params:
-            if param.name is None or param.name == "help":
+            if param.name is None or (
+                param.name == "help" and not getattr(param, "expose_value", True)
+            ):
+                # Framework help is not passed to the command callback; a user
+                # parameter named help is, and must retain its validation marker.
                 continue
 
             type_str = _click_type_to_str(param.type)

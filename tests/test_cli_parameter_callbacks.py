@@ -192,6 +192,88 @@ def greet(name: str = "world"):
         assert result.content[0].text == "Hello Ada"
 
 
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+def test_user_parameter_named_help_cannot_bypass_callback_guard(
+    tmp_source, tmp_path, monkeypatch, fallback, target
+):
+    source = (
+        SOURCE.replace(
+            "app = typer.Typer()", "app = typer.Typer(add_help_option=False)"
+        )
+        .replace("@app.command()", "@app.command(add_help_option=False)")
+        .replace(
+            "name: str = typer.Option(..., callback=validate)",
+            "help: str = typer.Option('Camila', '--person', callback=validate)",
+        )
+        .replace("typer.echo(name)", "typer.echo(help)")
+        .replace("return name", "return help")
+    )
+    path = tmp_source(source)
+    loaded = intpot.load(path)
+    rejected = CliRunner().invoke(loaded.app, ["--person", "Rick"])
+    assert rejected.exit_code == 2
+    assert "Only Camila is allowed" in rejected.output
+    accepted = CliRunner().invoke(loaded.app, ["--person", "Camila"])
+    assert accepted.exit_code == 0
+    assert accepted.stdout == "CAMILA\n"
+    if fallback:
+        import typer.main
+
+        def cannot_build(*args, **kwargs):
+            raise RuntimeError("exercise registered-command fallback")
+
+        monkeypatch.setattr(typer.main, "get_group", cannot_build)
+    parameters = loaded.tools[0].parameters
+    assert len(parameters) == 1
+    assert parameters[0].name == "help"
+    assert parameters[0].unsupported_callback is True
+    assert loaded.schema.tools[0].parameters[0].unsupported_callback is True
+    with pytest.raises(
+        intpot.UnsupportedCLIParameterCallbackError, match=r"greet\.help"
+    ):
+        getattr(loaded, f"to_{target}")()
+    output = tmp_path / "generated.py"
+    with pytest.raises(
+        intpot.UnsupportedCLIParameterCallbackError, match=r"greet\.help"
+    ):
+        loaded.write(output, target)
+    assert not output.exists()
+    monkeypatch.undo()
+    from intpot.cli import app
+
+    result = CliRunner().invoke(app, ["to", target, str(path), "--output", str(output)])
+    assert result.exit_code == 1
+    assert "greet.help" in result.output
+    assert not output.exists()
+
+
+def test_framework_help_callback_is_not_a_conversion_blocker(tmp_source):
+    import typer.main
+
+    from intpot.core.generators.api import APIGenerator
+    from intpot.core.generators.mcp import MCPGenerator
+
+    path = tmp_source(
+        SOURCE.replace("typer.Option(..., callback=validate)", '"world"').replace(
+            "app = typer.Typer()", "app = typer.Typer(add_completion=False)"
+        )
+    )
+    loaded = intpot.load(path)
+    command = typer.main.get_command(loaded.app)
+    help_option = command.get_help_option(command.context_class(command))
+    assert help_option is not None
+    assert help_option.name == "help"
+    assert help_option.expose_value is False
+    assert callable(help_option.callback)
+    command.params.append(help_option)
+    tools = intpot.inspect_app(intpot.SourceType.CLI, command)
+    assert [p.name for p in tools[0].parameters] == ["name"]
+    assert not tools[0].parameters[0].unsupported_callback
+    assert APIGenerator().generate(tools)
+    assert MCPGenerator().generate(tools)
+
+
 def test_builtin_typer_conversion_is_not_a_user_callback(tmp_source):
     path = tmp_source("""\
 from pathlib import Path

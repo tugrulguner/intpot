@@ -114,6 +114,9 @@ the contracts a change has to keep.
   positional compatibility, equality/hash, adapters, and JSON mapping (only true is emitted).
 - CLI inspection captures callable parameter callbacks from constructed parameters and
   registered-command fallback metadata. Do not store live callbacks or repr strings.
+- A parameter named `help` can be a real user input. Exclude synthetic help only when
+  it does not expose a value to the command, not by name alone; otherwise its callback
+  bypasses refusal. Keep a real framework auto-help control in callback regressions.
 - `core/callbacks.py` guards API/MCP projection and direct generation, raising public
   `UnsupportedCLIParameterCallbackError` before output is written. Inspection stays available.
 - Callback validation can run before the command body. Compare rejected source inputs and
