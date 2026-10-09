@@ -6,6 +6,12 @@ import functools
 from pathlib import Path
 from typing import Any
 
+from intpot.core.callbacks import (
+    UnsupportedCLIParameterCallbackError as UnsupportedCLIParameterCallbackError,
+)
+from intpot.core.callbacks import (
+    guard_cli_parameter_callbacks,
+)
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
 from intpot.core.projections import (
@@ -110,6 +116,7 @@ def _prepare_tools_for_target(
 
     if source_type == SourceType.API and target in (SourceType.CLI, SourceType.MCP):
         _guard_fastapi_dependencies(tools)
+    guard_cli_parameter_callbacks(tools, target)
     return transform_tools(tools, source_type, target)
 
 
@@ -125,6 +132,7 @@ def project_schema(
         SourceType.MCP,
     ):
         _guard_fastapi_dependencies(schema.to_tools())
+    guard_cli_parameter_callbacks(schema.tools, target)
     transformed = transform_schema(schema, target)
     return project_tool_names(
         project_parameter_aliases(

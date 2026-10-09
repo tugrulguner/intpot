@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
+from intpot.core.callbacks import guard_cli_parameter_callbacks
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo, ToolSchema
 from intpot.core.projections import (
     project_parameter_aliases,
@@ -31,6 +32,7 @@ def generation_context(
             source_type=target,
             tools=source,
         )
+    guard_cli_parameter_callbacks(schema.tools, target)
     return project_tool_names(
         project_parameter_aliases(project_parameter_placement(schema, target), target),
         target,

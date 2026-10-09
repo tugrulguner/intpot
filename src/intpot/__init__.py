@@ -4,6 +4,7 @@ from importlib.metadata import version
 
 from intpot.converter import (
     IntpotApp,
+    UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
     compile_app,
     inspect_app,
@@ -33,6 +34,7 @@ __all__ = [
     "ParameterSchema",
     "SourceType",
     "ToolSchema",
+    "UnsupportedCLIParameterCallbackError",
     "UnsupportedFastAPIDependencyError",
     "compile_app",
     "inspect_app",

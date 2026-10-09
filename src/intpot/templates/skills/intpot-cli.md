@@ -131,6 +131,15 @@ dependencies remain visible to `intpot inspect`, but API-to-CLI/MCP conversion r
 them instead of emitting broken code; full mapping remains tracked in issue #20. A missing
 recoverable body becomes a `# TODO: implement` stub.
 
+Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
+parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
+projection and generation raise `intpot.UnsupportedCLIParameterCallbackError`, naming
+all affected tools/parameters and the target, rather than dropping callback validation or
+transformation. Assignment-style and `Annotated` declarations are detected. The CLI
+reports refusal on stderr with exit status 1 before writing output; `--dry-run` also
+refuses. This is a focused known-loss guard, not a general conversion assessment or
+callback transpiler. Source CLI behavior is unchanged.
+
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values. It does not discover
 or install transitive dependencies across imported modules. Direct file loading does not

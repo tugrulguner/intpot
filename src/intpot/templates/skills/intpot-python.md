@@ -109,6 +109,15 @@ but `.to_cli()`, `.to_mcp()`, and `.write()` raise
 mapping remains tracked in issue #20. A body that cannot be recovered becomes a
 `# TODO: implement` stub; inspect and implement it before treating the output as complete.
 
+Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
+parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
+projection and generation raise `intpot.UnsupportedCLIParameterCallbackError`, naming
+all affected tools/parameters and the target, rather than dropping callback validation or
+transformation. Assignment-style and `Annotated` declarations are detected. The CLI
+reports refusal on stderr with exit status 1 before writing output; `--dry-run` also
+refuses. This is a focused known-loss guard, not a general conversion assessment or
+callback transpiler. Source CLI behavior is unchanged.
+
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values. It does not discover
 or install transitive dependencies across imported modules. Direct file loading does not
@@ -158,7 +167,8 @@ for tool in app.tools:
 framework-visible spelling such as `send-email` when it differs.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
-`param_source`, `placement`, `binding_name`, `interface_name`, `aliases`, plus a
+`param_source`, `placement`, `binding_name`, `interface_name`, `aliases`,
+`unsupported_callback`, plus a
 `required` property. `binding_name` preserves a source callable's valid Python parameter
 spelling when canonical sanitization changes it. `interface_name` is the primary
 framework-visible parameter spelling; `aliases` retains exact additional Typer/Click
@@ -168,6 +178,10 @@ location selected by a projection (`cli_argument`, `cli_option`, `api_body`, `ap
 **The type field is `type_annotation`, not `annotation`.** `default` is a private sentinel
 when the parameter is required — check `param.required` rather than comparing against
 `None`.
+
+`unsupported_callback` records a source CLI parameter callback as a boolean, never the
+callable itself. It survives immutable schema and detached compatibility round trips;
+API/MCP generation refuses it. This does not add callback support to `App.tool()`.
 
 `param_source` is `ParamSource.query` / `header` / `path` / `body` for FastAPI sources
 that declared one, otherwise `None`.

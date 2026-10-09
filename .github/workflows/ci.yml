@@ -90,6 +90,8 @@ jobs:
           - name: FastMCP 2.0.0
             editable: ".[mcp]"
             framework: "fastmcp==2.0.0"
+            # FastMCP 2.0 imports eval_type_backport, removed in Pydantic 2.11.
+            constraint: "pydantic<2.11"
             package: fastmcp
             version: "2.0.0"
             tests: tests/test_inspectors/test_mcp_inspector.py
@@ -104,11 +106,15 @@ jobs:
         env:
           EDITABLE: ${{ matrix.editable }}
           FRAMEWORK: ${{ matrix.framework }}
+          CONSTRAINT: ${{ matrix.constraint }}
           PACKAGE: ${{ matrix.package }}
           VERSION: ${{ matrix.version }}
           TESTS: ${{ matrix.tests }}
         run: |
           run=(uv run --no-project --python 3.11 --with-editable "$EDITABLE" --with "$FRAMEWORK" --with pytest)
+          if [[ -n "$CONSTRAINT" ]]; then
+            run+=(--with "$CONSTRAINT")
+          fi
           "${run[@]}" python -c 'from importlib.metadata import version; import os; actual = version(os.environ["PACKAGE"]); expected = os.environ["VERSION"]; assert actual == expected, (actual, expected)'
           read -r -a tests <<< "$TESTS"
           "${run[@]}" pytest "${tests[@]}" -q

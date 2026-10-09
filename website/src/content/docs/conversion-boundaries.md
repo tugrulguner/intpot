@@ -43,6 +43,12 @@ Intpot preserves only semantics it can recover from the supported app shape: cal
 
 The importer executes module top-level statements. It can import a file with an unavailable optional framework only after the corresponding extra is installed. A missing FastAPI/Uvicorn module points to `intpot[api]`; missing FastMCP points to `intpot[mcp]`. An unrelated missing sibling module is not repaired by installing a framework extra.
 
+## CLI parameter callbacks (unreleased)
+
+Typer/Click parameter callbacks can reject or transform values before the command body runs. Intpot marks these parameters with `unsupported_callback=True`; JSON inspection includes the marker only when true. Assignment-style and `Annotated` options and arguments remain inspectable, including the registered-command fallback.
+
+CLI-to-API/MCP projection and generation raise `intpot.UnsupportedCLIParameterCallbackError` with affected tool/parameter names and the requested target. The CLI exits with status 1, reports the refusal on stderr, and writes no output, including for directory conversion. Dry runs also refuse. This guard does not transpile callbacks or provide a general conversion assessment; the source CLI remains usable. See [the runnable callback example](https://github.com/tugrulguner/intpot/blob/main/examples/callback_cli.py).
+
 ## Validate output instead of trusting generation
 
 Compile each output, then run it with its target framework and test the same inputs and failure cases as the source. Verify required and optional parameters, aliases, body/query/path placement, return encoding, async behavior, and any effectful behavior independently. For HTTP output inspect the generated OpenAPI document and exercise it through an HTTP client; for CLI invoke the generated command; for MCP use a FastMCP client. Generated source is ordinary editable Python, not a proof of behavioral parity.

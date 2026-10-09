@@ -87,7 +87,7 @@ def _primary_option_name(aliases: list[str]) -> str | None:
 
 def _registered_parameter_details(
     annotation: Any, signature_default: Any
-) -> tuple[Any, Any, str, str | None, list[str]]:
+) -> tuple[Any, Any, str, str | None, list[str], bool]:
     """Normalize callback annotations and Typer metadata without building Click."""
     metadata = signature_default
     if get_origin(annotation) is Annotated:
@@ -128,6 +128,7 @@ def _registered_parameter_details(
         description,
         _primary_option_name(declared_aliases),
         declared_aliases,
+        callable(getattr(metadata, "callback", None)),
     )
 
 
@@ -204,6 +205,7 @@ class CLIInspector(BaseInspector):
                     parameter_description,
                     parameter_interface_name,
                     aliases,
+                    unsupported_callback,
                 ) = _registered_parameter_details(
                     annotations.get(param.name, param.annotation), param.default
                 )
@@ -215,6 +217,7 @@ class CLIInspector(BaseInspector):
                         description=parameter_description,
                         interface_name=parameter_interface_name,
                         aliases=aliases,
+                        unsupported_callback=unsupported_callback,
                     )
                 )
 
@@ -291,7 +294,11 @@ class CLIInspector(BaseInspector):
 
         params: list[ParameterInfo] = []
         for param in cmd.params:
-            if param.name is None or param.name == "help":
+            if param.name is None or (
+                param.name == "help" and not getattr(param, "expose_value", True)
+            ):
+                # Framework help is not passed to the command callback; a user
+                # parameter named help is, and must retain its validation marker.
                 continue
 
             type_str = _click_type_to_str(param.type)
@@ -321,6 +328,7 @@ class CLIInspector(BaseInspector):
                     description=desc,
                     interface_name=_primary_option_name(aliases),
                     aliases=aliases,
+                    unsupported_callback=callable(getattr(param, "callback", None)),
                 )
             )
 
