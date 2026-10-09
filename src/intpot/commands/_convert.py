@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 
 from intpot.converter import (
+    UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
     compile_app,
     project_schema,
@@ -26,7 +27,12 @@ def _schema_or_exit(
     try:
         schema = compile_app(source_type, app_instance, source_path=source_path)
         return project_schema(schema, target)
-    except (InspectionError, TypeError, UnsupportedFastAPIDependencyError) as exc:
+    except (
+        InspectionError,
+        TypeError,
+        UnsupportedFastAPIDependencyError,
+        UnsupportedCLIParameterCallbackError,
+    ) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
 

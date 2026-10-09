@@ -108,6 +108,18 @@ the contracts a change has to keep.
   on only some requests.
 - MCP keeps the source annotation, except from CLI, where it becomes `str`.
 
+**CLI parameter callbacks**
+
+- `ParameterInfo` and `ParameterSchema` append the boolean `unsupported_callback`; retain
+  positional compatibility, equality/hash, adapters, and JSON mapping (only true is emitted).
+- CLI inspection captures callable parameter callbacks from constructed parameters and
+  registered-command fallback metadata. Do not store live callbacks or repr strings.
+- `core/callbacks.py` guards API/MCP projection and direct generation, raising public
+  `UnsupportedCLIParameterCallbackError` before output is written. Inspection stays available.
+- Callback validation can run before the command body. Compare rejected source inputs and
+  conversion refusal, not just retained bodies or successful calls. This guard is not a
+  generalized assessment engine and does not change live `App` behavior.
+
 **Errors**
 
 - `detect_source()` raises `DetectionError`. Commands catch it and exit through

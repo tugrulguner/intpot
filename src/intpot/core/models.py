@@ -735,6 +735,7 @@ class ParameterInfo:
     binding_name: str | None = None
     interface_name: str | None = None
     aliases: list[str] = field(default_factory=list)
+    unsupported_callback: bool = False
 
     def __post_init__(self) -> None:
         source_name = self.name
@@ -836,6 +837,7 @@ class ParameterSchema:
     binding_name: str | None = None
     interface_name: str | None = None
     aliases: tuple[str, ...] = ()
+    unsupported_callback: bool = False
 
     def __post_init__(self) -> None:
         source_name = self.name
@@ -866,6 +868,7 @@ class ParameterSchema:
             self.binding_name,
             self.interface_name,
             self.aliases,
+            self.unsupported_callback,
         ) == (
             other.name,
             other.type_annotation,
@@ -876,6 +879,7 @@ class ParameterSchema:
             other.binding_name,
             other.interface_name,
             other.aliases,
+            other.unsupported_callback,
         )
 
     def __hash__(self) -> int:
@@ -890,6 +894,7 @@ class ParameterSchema:
                 self.binding_name,
                 self.interface_name,
                 self.aliases,
+                self.unsupported_callback,
             )
         )
 
@@ -905,6 +910,7 @@ class ParameterSchema:
             binding_name=parameter.binding_name,
             interface_name=parameter.interface_name,
             aliases=tuple(parameter.aliases),
+            unsupported_callback=parameter.unsupported_callback,
         )
 
     @property
@@ -923,6 +929,7 @@ class ParameterSchema:
             binding_name=self.binding_name,
             interface_name=self.interface_name,
             aliases=list(self.aliases),
+            unsupported_callback=self.unsupported_callback,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -940,6 +947,8 @@ class ParameterSchema:
             data["interface_name"] = self.interface_name
         if self.aliases:
             data["aliases"] = list(self.aliases)
+        if self.unsupported_callback:
+            data["unsupported_callback"] = True
         if not self.required:
             data["default"] = _json_default(self.default)
         return data

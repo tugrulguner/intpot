@@ -300,6 +300,15 @@ uses nested Typer command groups, repeatable CLI options, `Annotated[..., Body(.
 Pydantic model parameters, routes with multiple HTTP methods, streaming, background tasks,
 or framework-specific error handling.
 
+Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
+parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
+projection and generation raise `intpot.UnsupportedCLIParameterCallbackError`, naming
+all affected tools/parameters and the target, rather than dropping callback validation or
+transformation. Assignment-style and `Annotated` declarations are detected. The CLI
+reports refusal on stderr with exit status 1 before writing output; `--dry-run` also
+refuses. This is a focused known-loss guard, not a general conversion assessment or
+callback transpiler. Source CLI behavior is unchanged.
+
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values that the body
 references, and it does not follow dependencies across imported modules. Factory-created
@@ -369,7 +378,8 @@ request bodies, `Depends()`, and path parameters. The FastAPI dependency example
 inspectable, but API-to-CLI/MCP conversion intentionally refuses it until issue #20 is
 implemented. The FastAPI input also includes routes with multiple HTTP methods. See
 [`semantic_schema.py`](examples/semantic_schema.py) for a runnable canonical-schema
-inspection example.
+inspection example. See [`callback_cli.py`](examples/callback_cli.py) for executable
+source validation, callback inspection, and intentional conversion refusal.
 
 ## CLI Reference
 
