@@ -93,6 +93,10 @@ starlight-menu-button button { border-radius:var(--mp-radius); background:var(--
 .framework-copy .creator-attribution { margin:.75rem 0 0 -.5rem; }
 .framework-art { min-width:0; margin:0; }
 main:has(.framework-hero) > .content-panel:first-child { display:none; }
+.supporting-diagram { margin:1.5rem auto 2rem; max-width:60rem; }
+.supporting-diagram img { display:block; width:100%; height:auto; border:1px solid var(--mp-border); border-radius:var(--mp-radius); }
+.supporting-diagram figcaption { margin-top:.5rem; color:var(--mp-muted); font-size:.9rem; }
+.supporting-diagram a { overflow-wrap:anywhere; }
 .framework-art img { display:block; width:100%; height:auto; max-height:23rem; object-fit:contain; }
 .installation-strip { display:grid; grid-template-columns:minmax(9rem,.6fr) minmax(14rem,1fr) auto; align-items:center; gap:1rem 1.5rem; margin:0 auto 1.25rem; padding:1.15rem 1.35rem; border:1px solid var(--mp-border); border-radius:var(--mp-radius); background:var(--mp-surface); }
 .installation-strip h2,.project-demo h2 { margin:0; color:var(--mp-ink); font-size:1.2rem; line-height:1.3; letter-spacing:-.02em; }

@@ -9,7 +9,7 @@ const viewports = [
 ];
 
 test('homepage composition renders in both themes at required widths', async ({ page }) => {
-  for (const theme of ['light', 'dark']) {
+  for (const theme of ['light', 'dark', 'auto']) {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto('/');
@@ -20,8 +20,15 @@ test('homepage composition renders in both themes at required widths', async ({ 
       await page.reload();
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('main > .content-panel:first-child')).toHaveCSS('display', 'none');
-      await expect(page.locator('.framework-art img')).toBeVisible();
-      await expect.poll(() => page.locator('.framework-art img').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBeTruthy();
+      const flow = page.locator('.supporting-diagram img');
+      await expect(flow).toBeVisible();
+      await expect(flow).toHaveAttribute('alt', /normalized ToolInfo schema/);
+      await expect.poll(() => flow.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)).toBeTruthy();
+      await expect(page.locator('.supporting-diagram figcaption')).toContainText('full-size diagram');
+      const imageResponse = await page.request.get('/intpot-flow.png');
+      expect(imageResponse.ok()).toBeTruthy();
+      expect(imageResponse.headers()['content-type']).toContain('image/png');
+      expect((await imageResponse.body()).byteLength).toBeGreaterThan(1000);
       await expect(page.locator('.installation-strip')).toBeVisible();
       await expect(page.locator('.installation-strip code')).toHaveText('pip install "intpot[all]"');
       await expect(page.locator('.project-demo')).toBeVisible();
