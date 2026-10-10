@@ -41,6 +41,15 @@ import intpotImage from '../../assets/intpot_image.webp';
   <p class="demo-boundary"><strong>Browser-local preview.</strong> A bounded JavaScript preview—not Python execution, a live Intpot server, or a model call.</p>
 </section>
 
+## How Intpot connects both workflows
+
+Intpot normalizes registered functions and existing framework apps through the same `ToolInfo` schema. From there, it either builds a live CLI, HTTP, or MCP interface, or generates standalone code for a different framework. These interfaces can be used by people or by agents when their host supports them; CLI, HTTP, and MCP are not reserved for a particular kind of user.
+
+<figure class="supporting-diagram">
+  <a href="/intpot-flow.png" target="_blank" rel="noopener"><img src="/intpot-flow.png" alt="Two Intpot workflows meet at the normalized ToolInfo schema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
+  <figcaption>Intpot's shared schema connects app registration and framework conversion. <a href="/intpot-flow.png">Open the full-size diagram</a>.</figcaption>
+</figure>
+
 ## One definition, three ways to run
 
 Register typed Python functions with `@app.tool()`. Intpot keeps behavior in one place and serves it through a Typer CLI, FastAPI, or FastMCP interface. Existing apps can also be converted across all six Typer, FastAPI, and FastMCP directions.

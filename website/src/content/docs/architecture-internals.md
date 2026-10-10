@@ -3,7 +3,12 @@ title: Architecture internals
 description: Follow Intpot's registration, detection, schema, projection, and code-generation data flow from the implementation.
 ---
 
-Intpot has two entry paths that converge on normalized tool metadata and target generators: an Intpot `App` registration path and a framework-app conversion path. The schema is an internal/public Python data model; generated source is the output boundary.
+Intpot has two entry paths that converge on normalized tool metadata and target generators: an Intpot `App` registration path and a framework-app conversion path. The schema is an internal/public Python data model; generated source is the output boundary. CLI, HTTP, and MCP are interfaces, not user categories; people or agents can use them according to their host environment.
+
+<figure class="supporting-diagram">
+  <a href="/intpot-flow.png" target="_blank" rel="noopener"><img src="/intpot-flow.png" alt="Two Intpot workflows meet at the normalized ToolInfo schema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
+  <figcaption>Shared schema, runtime and conversion paths. <a href="/intpot-flow.png">Open the full-size diagram</a>.</figcaption>
+</figure>
 
 ## Define path: registration to live framework
 

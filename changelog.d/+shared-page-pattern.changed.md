@@ -1,0 +1,1 @@
+Intpot's architecture diagram now appears on the website homepage and relevant reference pages, with an accessible description and full-size link.
