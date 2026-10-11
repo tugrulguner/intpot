@@ -39,6 +39,19 @@ test('analytics sends sanitized pageviews and no flag/acquisition leakage from a
     const events = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : [parsed]; } catch { return []; } });
     return events.filter((event: any) => event.event === '$pageview' && event.properties?.['$current_url']?.endsWith('/playground/')).length;
   }, { timeout: 15000 }).toBeGreaterThan(0);
+  await page.getByLabel('Editable interface request').fill('greet ANALYTICS_INPUT_SENTINEL');
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.locator('#computed')).toHaveText('Hello, ANALYTICS_INPUT_SENTINEL');
+  await expect.poll(() => {
+    const events = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : Array.isArray(parsed) ? parsed : [parsed]; } catch { return []; } });
+    return events.filter((event: any) => event.event === 'playground_preview_started' || event.event === 'playground_preview_completed').length;
+  }, { timeout: 15000 }).toBe(2);
+  const outcomeEvents = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : Array.isArray(parsed) ? parsed : [parsed]; } catch { return []; } }).filter((event: any) => event.event === 'playground_preview_started' || event.event === 'playground_preview_completed');
+  expect(outcomeEvents.map((event: any) => event.event)).toEqual(['playground_preview_started', 'playground_preview_completed']);
+  expect(outcomeEvents[0].properties).toMatchObject({ project: 'intpot', mode: 'CLI' });
+  expect(outcomeEvents[1].properties).toMatchObject({ project: 'intpot', mode: 'CLI', result: 'success' });
+  expect(outcomeEvents[0].properties.attempt_id).toBe(outcomeEvents[1].properties.attempt_id);
+  expect(requests.map(({ body }) => body).join('\\n')).not.toContain('ANALYTICS_INPUT_SENTINEL');
   const buildLink = page.locator('main a[href="/build-an-app/"]').first();
   await buildLink.click();
   await expect(page).toHaveURL(/build-an-app/);

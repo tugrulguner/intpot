@@ -22,6 +22,8 @@ const codeTheme = {
 </section>
 <script>
 import { defaultRequests, runRequest } from '../lib/greeting-playground.mjs';
+import { createOutcomeTracker } from '../lib/playground-outcomes.mjs';
+const outcomes = createOutcomeTracker('intpot', (event, properties) => window.posthog?.capture(event, properties));
 const root = document.querySelector<HTMLElement>('[data-playground]')!;
 const input = root.querySelector<HTMLTextAreaElement>('#request')!;
 const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')].filter((tab) => tab.dataset.kind);
@@ -71,6 +73,8 @@ root.querySelector<HTMLButtonElement>('#run-request')!.addEventListener('click',
   clear();
   try {
     const output = runRequest(active, input.value);
+    const attempt = outcomes.start(active);
+    outcomes.complete(attempt, 'success');
     root.querySelector('#arguments')!.textContent = JSON.stringify(output.args);
     root.querySelector('#computed')!.textContent = output.result;
     root.querySelector('#response')!.textContent = typeof output.response === 'string' ? output.response : JSON.stringify(output.response, null, 2);
