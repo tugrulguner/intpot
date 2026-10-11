@@ -1,6 +1,66 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { defaultRequests, parseRequest, runRequest, shellQuote } from '../src/lib/greeting-playground.mjs';
+import { sanitizeAnalyticsEvent, posthogScript } from '../src/lib/analytics-privacy.mjs';
+import vm from 'node:vm';
+
+test('serialized PostHog before_send sanitizes the real SDK event envelope', () => {
+  const posthog = { init(_key, config) { this.config = config; } };
+  const document = { createElement() { return {}; }, getElementsByTagName() { return [{ parentNode: { insertBefore() {} } }]; } };
+  const context = { document, window: { posthog }, posthog, URL, Date };
+  vm.runInNewContext(posthogScript, context);
+  const event = { event: '$pageview', properties: { token: 'phc_public', '$current_url': 'https://site.example/path/?utm_source=SECRET#HASH', '$initial_referrer': 'https://ref.example/path?q=SECRET', '$session_entry_utm_source': 'SECRET', '$session_exit_gclid': 'SECRET' }, timestamp: new Date('2026-01-01T00:00:00Z') };
+  const config = posthog._i[0][1];
+  assert.equal(config.capture_performance, true);
+  const clean = config.before_send(event);
+  assert.equal(clean.properties.token, 'phc_public');
+  assert.equal(clean.properties.$current_url, 'https://site.example/path/');
+  assert.equal(clean.properties.$initial_referrer, 'https://ref.example/path');
+  assert.ok(!JSON.stringify(clean).includes('SECRET'));
+  assert.ok(clean.timestamp instanceof Date);
+});
+
+test('analytics scrubs URL sentinels in event and nested acquisition properties', () => {
+  const event = { event: '$pageview', timestamp: new Date('2026-01-02T00:00:00Z'), properties: {
+    '$current_url': 'https://intpot.modepot.io/playground/?secret=URL_SENTINEL#URL_HASH',
+    '$initial_referrer': 'https://search.example/find?q=REFERRER_SENTINEL#FRAGMENT',
+    '$set': { '$initial_referrer': 'https://evil.example/?secret=NESTED_SENTINEL', '$initial_referring_domain': 'evil.example', '$utm_source': 'SOURCE_SENTINEL', '$initial_utm_source': 'INITIAL_SOURCE_SENTINEL' },
+    '$set_once': { '$initial_referrer': 'https://evil.example/?secret=ONCE_SENTINEL', '$gclid': 'CLICK_SENTINEL', '$initial_utm_source': 'ONCE_SOURCE_SENTINEL' },
+    '$session_entry_utm_source': 'SESSION_SOURCE_SENTINEL', '$session_entry_gclid': 'SESSION_CLICK_SENTINEL', '$session_exit_utm_source': 'EXIT_SOURCE_SENTINEL',
+    '$gad_source': 'GAD_SENTINEL', '$mc_cid': 'MC_SENTINEL', '$gclsrc': 'GCLSRC_SENTINEL', '$igshid': 'IG_SENTINEL', '$rdt_cid': 'RDT_SENTINEL', '$epik': 'EPIK_SENTINEL', '$qclid': 'QCLID_SENTINEL', '$sccid': 'SCCID_SENTINEL', '$irclid': 'IR_SENTINEL', '$_kx': 'KX_SENTINEL',
+    '$referring_domain': 'https://docs.example/path?secret=REF_DOMAIN_SENTINEL', '$host': 'intpot.modepot.io',
+  } };
+  const clean = sanitizeAnalyticsEvent(event);
+  const encoded = JSON.stringify(clean);
+  for (const sentinel of ['URL_SENTINEL','URL_HASH','REFERRER_SENTINEL','FRAGMENT','NESTED_SENTINEL','SOURCE_SENTINEL','INITIAL_SOURCE_SENTINEL','ONCE_SENTINEL','CLICK_SENTINEL','ONCE_SOURCE_SENTINEL','SESSION_SOURCE_SENTINEL','SESSION_CLICK_SENTINEL','EXIT_SOURCE_SENTINEL','GAD_SENTINEL','MC_SENTINEL','GCLSRC_SENTINEL','IG_SENTINEL','RDT_SENTINEL','EPIK_SENTINEL','QCLID_SENTINEL','SCCID_SENTINEL','IR_SENTINEL','KX_SENTINEL','REF_DOMAIN_SENTINEL']) assert.ok(!encoded.includes(sentinel), sentinel);
+  assert.equal(clean.properties.$current_url, 'https://intpot.modepot.io/playground/');
+  assert.equal(clean.properties.$referring_domain, 'docs.example');
+  assert.equal(clean.properties.$host, 'intpot.modepot.io');
+  assert.ok(clean.timestamp instanceof Date);
+});
+
+test('analytics retains public SDK tokens but omits private credential-shaped fields', () => {
+  const clean = sanitizeAnalyticsEvent({ properties: { token: 'phc_public', api_key: 'PRIVATE', nested: { token: 'PRIVATE' } } });
+  assert.equal(clean.properties.token, 'phc_public');
+  assert.ok(!JSON.stringify(clean).includes('PRIVATE'));
+});
+
+test('analytics removes campaign strings and prefixed advertising cookie identifiers', () => {
+  const event = { properties: { token: 'phc_public', $initial_campaign: 'PRIVATE', $fbc: 'PRIVATE', $initial_fbp: 'PRIVATE', $session_entry_fbc: 'PRIVATE', $set_once: { $session_exit_campaign: 'PRIVATE' } } };
+  const clean = sanitizeAnalyticsEvent(event);
+  assert.equal(clean.properties.token, 'phc_public');
+  assert.ok(!JSON.stringify(clean).includes('PRIVATE'));
+});
+
+test('analytics scrubs URL strings under arbitrary property names and nested arrays', () => {
+  const event = { properties: { extra: 'https://x/path?PRIVATE#PRIVATE', entries: [{ value: 'https://y/path?PRIVATE#PRIVATE' }], token: 'phc_public' } };
+  const clean = sanitizeAnalyticsEvent(event);
+  const encoded = JSON.stringify(clean);
+  assert.ok(!encoded.includes('PRIVATE'));
+  assert.equal(clean.properties.extra, 'https://x/path');
+  assert.equal(clean.properties.entries[0].value, 'https://y/path');
+  assert.equal(clean.properties.token, 'phc_public');
+});
 
 test('all three bounded request contracts call the same typed function', () => {
   const drafts = defaultRequests('Ada', true);

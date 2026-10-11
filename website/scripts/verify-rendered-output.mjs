@@ -9,9 +9,13 @@ const requiredPosthogConfig = [
   "person_profiles:'identified_only'",
   'capture_pageview:true',
   'capture_pageleave:true',
-  "dom_event_allowlist:['click']",
-  "element_allowlist:['a','button']",
+  'autocapture:false',
   'disable_session_recording:true',
+  'save_campaign_params:false',
+  'save_referrer:false',
+  'advanced_disable_flags:true',
+  'before_send:function(event)',
+  'function sanitizeAnalyticsEvent(event)',
 ];
 
 async function* htmlFiles(directory) {

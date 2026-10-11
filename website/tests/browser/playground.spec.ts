@@ -1,8 +1,69 @@
 import { mkdirSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { expect, test } from '@playwright/test';
 
 const evidence = process.env.PLAYGROUND_EVIDENCE_DIR ?? new URL('../../evidence/playground-refinement/intpot/', import.meta.url).pathname;
 mkdirSync(evidence, { recursive: true });
+
+test('analytics sends sanitized pageviews and no flag/acquisition leakage from a private URL', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36' });
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    Object.defineProperty(navigator, 'userAgentData', { get: () => ({ brands: [{ brand: 'Chromium', version: '136' }, { brand: 'Google Chrome', version: '136' }, { brand: 'Not:A-Brand', version: '99' }], mobile: false, platform: 'macOS', getHighEntropyValues: async () => ({}), toJSON: () => ({}) }) });
+    localStorage.setItem('ph_phc_qXkp5FBQfrqHQwkqf3ys8iSoGoMYw2tpTHXGugXJhP8V_posthog', JSON.stringify({ distinct_id: 'privacy-test', '$device_id': 'privacy-test', '$initial_utm_source': 'PERSISTED_SOURCE_SENTINEL', '$session_entry_utm_source': 'PERSISTED_SESSION_SOURCE_SENTINEL', '$session_entry_gclid': 'PERSISTED_SESSION_CLICK_SENTINEL' }));
+  });
+  const page = await context.newPage();
+  const requests: { url: string; body: string }[] = [];
+  const diagnostics: string[] = [];
+  page.on('console', (message) => diagnostics.push(`console:${message.type()}:${message.text()}`));
+  page.on('pageerror', (error) => diagnostics.push(`pageerror:${error.message}`));
+  page.on('requestfailed', (request) => diagnostics.push(`failed:${request.url()}:${request.failure()?.errorText}`));
+  page.on('response', (response) => diagnostics.push(`response:${response.status()}:${response.url()}`));
+  await page.route('https://**.i.posthog.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() !== 'POST') {
+      requests.push({ url: request.url(), body: '' });
+      return route.continue();
+    }
+    const bytes = request.postDataBuffer() ?? Buffer.alloc(0);
+    const body = bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes).toString('utf8') : bytes.toString('utf8');
+    requests.push({ url: request.url(), body });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+  });
+  await page.goto('/playground/?utm_source=SOURCE_SENTINEL&gclid=CLICK_SENTINEL#HASH_SENTINEL', { referer: 'https://ref.example/path?ref=REF_SENTINEL#REF_HASH' });
+  await page.waitForFunction(() => (window as any).posthog?.__loaded === true);
+  const runtime = await page.evaluate(() => { const ph = (window as any).posthog; return { pageview: ph.config.capture_pageview, pageleave: ph.config.capture_pageleave, recording: ph.config.disable_session_recording, optOut: ph.has_opted_out_capturing(), botFilter: ph.config.opt_out_useragent_filter }; });
+  expect(runtime).toMatchObject({ pageview: true, pageleave: true, recording: true, optOut: false, botFilter: false });
+  await expect.poll(() => {
+    const events = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : [parsed]; } catch { return []; } });
+    return events.filter((event: any) => event.event === '$pageview' && event.properties?.['$current_url']?.endsWith('/playground/')).length;
+  }, { timeout: 15000 }).toBeGreaterThan(0);
+  const buildLink = page.locator('main a[href="/build-an-app/"]').first();
+  await buildLink.click();
+  await expect(page).toHaveURL(/build-an-app/);
+  await expect.poll(() => {
+    const events = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : [parsed]; } catch { return []; } });
+    return events.filter((event: any) => event.event === '$pageview' && event.properties?.['$current_url']?.endsWith('/build-an-app/')).length;
+  }, { timeout: 15000 }).toBeGreaterThan(0);
+  // `$pageleave` is emitted at a document lifecycle boundary, not every SPA route.
+  await page.route('https://lifecycle-departure.example/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>departed</title>' }));
+  await page.goto('https://lifecycle-departure.example/');
+  await expect(page).toHaveTitle('departed');
+  await page.waitForTimeout(500);
+  const payloads = requests.map((request) => `${request.url}\n${request.body}`).join('\n');
+  for (const sentinel of ['SOURCE_SENTINEL','CLICK_SENTINEL','HASH_SENTINEL','REF_SENTINEL','REF_HASH','PERSISTED_SOURCE_SENTINEL','PERSISTED_SESSION_SOURCE_SENTINEL','PERSISTED_SESSION_CLICK_SENTINEL']) expect(payloads).not.toContain(sentinel);
+  expect(requests.some((request) => request.url.includes('/e/') || request.url.includes('/i/v0/e/')), diagnostics.join('\n')).toBe(true);
+  const events = requests.flatMap(({ body }) => { try { const parsed = JSON.parse(body); return Array.isArray(parsed.batch) ? parsed.batch : [parsed]; } catch { return []; } });
+  const names = events.map((event: any) => event.event);
+  expect(names.filter((name) => name === '$pageview').length).toBeGreaterThanOrEqual(2);
+  // Pageleave configuration is checked above; this test does not require or
+  // claim delivery of a pageleave event at the departure boundary.
+  expect(payloads).toContain('http://127.0.0.1:4387/playground/');
+  expect(payloads).toContain('https://ref.example/path');
+  expect(payloads).toContain('http://127.0.0.1:4387/build-an-app/');
+  expect(requests.every((request) => !request.url.includes('/flags'))).toBe(true);
+});
 
 test('output tabs share a 44px baseline and the active panel fits the inspector at every viewport', async ({ page }) => {
   for (const width of [1280, 768, 320]) {
