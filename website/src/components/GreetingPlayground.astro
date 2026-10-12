@@ -22,6 +22,8 @@ const codeTheme = {
 </section>
 <script>
 import { defaultRequests, runRequest } from '../lib/greeting-playground.mjs';
+import { createOutcomeTracker } from '../lib/playground-outcomes.mjs';
+const outcomes = createOutcomeTracker('intpot', (event, properties) => window.posthog?.capture(event, properties));
 const root = document.querySelector<HTMLElement>('[data-playground]')!;
 const input = root.querySelector<HTMLTextAreaElement>('#request')!;
 const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')].filter((tab) => tab.dataset.kind);
@@ -69,13 +71,24 @@ tabs.forEach((tab, index) => {
 input.addEventListener('input', () => clear('Request edited; run again to compute a fresh result.'));
 root.querySelector<HTMLButtonElement>('#run-request')!.addEventListener('click', () => {
   clear();
+  const attempt = outcomes.start(active);
+  let output: ReturnType<typeof runRequest>;
+  try { output = runRequest(active, input.value); }
+  catch (cause) {
+    outcomes.complete(attempt, 'rejected', 'validation');
+    root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Invalid request.';
+    return;
+  }
   try {
-    const output = runRequest(active, input.value);
     root.querySelector('#arguments')!.textContent = JSON.stringify(output.args);
     root.querySelector('#computed')!.textContent = output.result;
     root.querySelector('#response')!.textContent = typeof output.response === 'string' ? output.response : JSON.stringify(output.response, null, 2);
     root.querySelector<HTMLOListElement>('#trace')!.replaceChildren(...output.trace.map((line) => { const li = document.createElement('li'); li.textContent = line; return li; }));
-  } catch (cause) { root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Invalid request.'; }
+    outcomes.complete(attempt, 'success');
+  } catch (cause) {
+    outcomes.complete(attempt, 'failed', 'execution');
+    root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Preview failed.';
+  }
 });
 root.querySelector<HTMLButtonElement>('.reset')!.addEventListener('click', () => { input.value = defaults[active]; clear(); });
 </script>
