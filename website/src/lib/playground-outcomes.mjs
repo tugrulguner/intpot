@@ -10,7 +10,7 @@ export function createOutcomeTracker(project, capture, createId = () => globalTh
     start(mode) {
       if (!MODES.has(mode)) throw new TypeError('Invalid mode');
       const attempt = Object.freeze({ id: createId(), mode }); active.add(attempt);
-      capture('playground_preview_started', { project, mode, attempt_id: attempt.id }); return attempt;
+      try { capture('playground_preview_started', { project, mode, attempt_id: attempt.id }); } catch { /* Analytics is best-effort; never block the preview. */ } return attempt;
     },
     complete(attempt, result, failureClass) {
       if (!attempt || !active.has(attempt)) return false;
@@ -18,7 +18,7 @@ export function createOutcomeTracker(project, capture, createId = () => globalTh
       if ((result === 'success') !== (failureClass === undefined)) throw new TypeError('Invalid failure class for result');
       if (failureClass !== undefined && !FAILURE_CLASSES.has(failureClass)) throw new TypeError('Invalid failure class');
       active.delete(attempt);
-      capture('playground_preview_completed', { project, mode: attempt.mode, attempt_id: attempt.id, result, ...(failureClass ? { failure_class: failureClass } : {}) }); return true;
+      try { capture('playground_preview_completed', { project, mode: attempt.mode, attempt_id: attempt.id, result, ...(failureClass ? { failure_class: failureClass } : {}) }); } catch { /* Analytics is best-effort; never alter the operation outcome. */ } return true;
     },
   };
 }

@@ -12,3 +12,4 @@ test('listener receives paired unique outcome events with no editable request da
  assert.equal(tracker.complete(one,'success'),false);
 });
 test('tracker rejects unbounded fields and malformed failure/result pairs',()=>{const tracker=createOutcomeTracker('intpot',()=>{});assert.throws(()=>tracker.start('free text'),/mode/);const attempt=tracker.start('CLI');assert.throws(()=>tracker.complete(attempt,'success','execution'),/failure class/);assert.throws(()=>tracker.complete(attempt,'failure'),/result/);});
+test('capture exceptions never block attempts and completion remains deduplicated',()=>{let calls=0;const tracker=createOutcomeTracker('intpot',()=>{calls++;throw Error('analytics offline');},()=> 'attempt');const attempt=tracker.start('CLI');assert.equal(tracker.complete(attempt,'success'),true);assert.equal(tracker.complete(attempt,'success'),false);assert.equal(calls,2);});
