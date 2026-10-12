@@ -199,6 +199,14 @@ test('long output scrolls inside one inspector and edits clear the selected trac
   await expect(page.locator('#trace')).toHaveText('Choose a request and run its browser-local preview.');
 });
 
+test('throwing analytics at start and completion does not block a valid local preview', async ({ page }) => {
+  await page.goto('/playground/');
+  await page.evaluate(() => { (window as any).posthog = { capture: () => { throw new Error('analytics offline'); } }; });
+  await page.getByLabel('Editable interface request').fill('greet Grace');
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.locator('#computed')).toHaveText('Hello, Grace');
+});
+
 test('presentation failures produce one failed completion and never report success', async ({ page }) => {
   await page.route('https://**.i.posthog.com/**', route => route.fulfill({ status: 200, body: '{}' }));
   await page.goto('/playground/');
