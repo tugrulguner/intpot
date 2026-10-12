@@ -199,6 +199,36 @@ test('long output scrolls inside one inspector and edits clear the selected trac
   await expect(page.locator('#trace')).toHaveText('Choose a request and run its browser-local preview.');
 });
 
+test('presentation failures produce one failed completion and never report success', async ({ page }) => {
+  await page.route('https://**.i.posthog.com/**', route => route.fulfill({ status: 200, body: '{}' }));
+  await page.goto('/playground/');
+  await page.evaluate(() => {
+    (window as any).__outcomeEvents = [];
+    (window as any).posthog = { capture: (event: string, properties: any) => (window as any).__outcomeEvents.push({ event, ...properties }) };
+    const trace = document.querySelector('#trace')!;
+    const original = trace.replaceChildren.bind(trace);
+    let calls = 0;
+    trace.replaceChildren = (...nodes: (Node | string)[]) => {
+      // First call clears stale output; second presents the computed result.
+      if (++calls === 2) throw new Error('presentation sentinel');
+      original(...nodes);
+    };
+  });
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.getByRole('alert')).toContainText('presentation sentinel');
+  await expect.poll(() => page.evaluate(() => (window as any).__outcomeEvents)).toHaveLength(2);
+  const completions = await page.evaluate(() => (window as any).__outcomeEvents.filter((event: any) => event.event === 'playground_preview_completed'));
+  expect(completions).toHaveLength(1);
+  expect(completions[0]).toMatchObject({ result: 'failed', failure_class: 'execution' });
+  await page.getByLabel('Editable interface request').fill('invalid command');
+  await page.getByRole('button', { name: /Run local preview/ }).click();
+  await expect(page.getByRole('alert')).toContainText('greet command');
+  const events = await page.evaluate(() => (window as any).__outcomeEvents);
+  expect(events).toHaveLength(4);
+  expect(events[3]).toMatchObject({ event: 'playground_preview_completed', result: 'rejected', failure_class: 'validation' });
+  expect(events[0].attempt_id).not.toBe(events[2].attempt_id);
+});
+
 test('bounded requests compute correct results, reject invalid requests safely, and reset', async ({ page }) => {
   await page.goto('/playground/');
   const input = page.getByLabel('Editable interface request');

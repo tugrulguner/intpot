@@ -72,14 +72,23 @@ input.addEventListener('input', () => clear('Request edited; run again to comput
 root.querySelector<HTMLButtonElement>('#run-request')!.addEventListener('click', () => {
   clear();
   const attempt = outcomes.start(active);
+  let output: ReturnType<typeof runRequest>;
+  try { output = runRequest(active, input.value); }
+  catch (cause) {
+    outcomes.complete(attempt, 'rejected', 'validation');
+    root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Invalid request.';
+    return;
+  }
   try {
-    const output = runRequest(active, input.value);
-    outcomes.complete(attempt, 'success');
     root.querySelector('#arguments')!.textContent = JSON.stringify(output.args);
     root.querySelector('#computed')!.textContent = output.result;
     root.querySelector('#response')!.textContent = typeof output.response === 'string' ? output.response : JSON.stringify(output.response, null, 2);
     root.querySelector<HTMLOListElement>('#trace')!.replaceChildren(...output.trace.map((line) => { const li = document.createElement('li'); li.textContent = line; return li; }));
-  } catch (cause) { outcomes.complete(attempt, 'rejected', 'validation'); root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Invalid request.'; }
+    outcomes.complete(attempt, 'success');
+  } catch (cause) {
+    outcomes.complete(attempt, 'failed', 'execution');
+    root.querySelector<HTMLElement>('.error')!.textContent = cause instanceof Error ? cause.message : 'Preview failed.';
+  }
 });
 root.querySelector<HTMLButtonElement>('.reset')!.addEventListener('click', () => { input.value = defaults[active]; clear(); });
 </script>
