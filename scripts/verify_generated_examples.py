@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from types import ModuleType
 
@@ -125,12 +127,28 @@ def verify_semantic_schema() -> None:
     print("verified semantic schema example")
 
 
+def verify_missing_binding() -> None:
+    module = _load_module(
+        "intpot_missing_binding", ROOT / "examples" / "missing_binding.py"
+    )
+    response = TestClient(module.app).get("/calc", params={"x": 3})
+    assert response.status_code == 200
+    assert response.json() == 21
+    output = StringIO()
+    with redirect_stdout(output):
+        module.main()
+    assert "calc(3) = 21" in output.getvalue()
+    assert "Cannot convert tools with missing bindings" in output.getvalue()
+    print("verified missing-binding diagnostics and refusal example")
+
+
 def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
     verify_dependency_api()
     verify_generated_cli_to_api()
     verify_semantic_schema()
+    verify_missing_binding()
 
 
 if __name__ == "__main__":

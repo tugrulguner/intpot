@@ -45,7 +45,7 @@ The importer executes module top-level statements. It can import a file with an 
 
 ## Missing implementation source (v0.10)
 
-For converter calls (`intpot to ...`, `IntpotApp.project()`, and `to_cli()`/`to_api()`/`to_mcp()`), source recovery failure is distinct from a real no-op implementation. An unrecovered tool body remains visible in the inspectable schema and `app.assess()` reports `body_recovery_complete`, affected tool names under `missing_function_body`, and stable per-tool `diagnostics` (body recovery only, not general fidelity). JSON inspection adds an `assessment` when bodies are missing; public conversion refuses it before writing output. `--allow-scaffold` or `allow_scaffold=True` explicitly opts into a labeled `NotImplementedError` scaffold, never a successful dummy result. Direct low-level generators retain their historical behavior and do not perform converter assessment. This does not change live `App` or `eject` behavior. Callback and dependency safety refusals remain non-bypassable. See [the executable missing-body example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_body.py).
+For converter calls (`intpot to ...`, `IntpotApp.project()`, and `to_cli()`/`to_api()`/`to_mcp()`), source recovery failure is distinct from a real no-op implementation. An unrecovered tool body remains visible in the inspectable schema and `app.assess()` reports `body_recovery_complete`, affected tool names under `missing_function_body`, and stable per-tool `diagnostics` (the v0.10 assessment checks body recovery, not general fidelity; the unreleased binding extension is described below). JSON inspection adds an `assessment` when diagnostics are present; public conversion refuses it before writing output. `--allow-scaffold` or `allow_scaffold=True` explicitly opts into a labeled `NotImplementedError` scaffold, never a successful dummy result. Direct low-level generators retain their historical behavior and do not perform converter assessment. This does not change live `App` or `eject` behavior. Callback and dependency safety refusals remain non-bypassable. See [the executable missing-body example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_body.py).
 
 ## CLI parameter callbacks (v0.10)
 
@@ -60,3 +60,31 @@ Compile each output, then run it with its target framework and test the same inp
 ## Next steps
 
 See [schema and parameter reference](/schema-reference/), [architecture internals](/architecture-internals/), and the [source examples](https://github.com/tugrulguner/intpot/tree/main/examples). [Download this guide as Markdown](/downloads/conversion-boundaries.md).
+
+## Missing body bindings (unreleased)
+
+Public conversion now raises `intpot.MissingBindingError` before output writes when a
+retained implementation refers to globals absent from the generated target module.
+`app.assess()` and conditional `intpot inspect --json` assessment include per-target
+`missing_binding` diagnostics with `tool`, `target`, and sorted `names`. Existing
+`body_recovery_complete` and `missing_function_body` fields retain their meaning:
+recovering a body does not mean its dependencies are available.
+
+Analysis reuses Python scope-aware binding analysis against statically rendered target
+implementations, accounting for locals, nested scopes, comprehensions, retained imports,
+builtins and generated self-recursion bindings. It renders but does not execute generated
+code. Binding availability assumes a normally file-loaded Python module, including
+loader-provided `__file__`, `__cached__`, and other standard module globals. Their values
+belong to the generated file; this does not preserve the original path, resources, or
+package environment. Custom `exec` namespaces must provide their own module globals.
+Targets blocked by existing rendering guards report `reference_analysis_unavailable`
+in assessment instead of implying a successful binding check. Inspection still imports
+trusted source code and is not a sandbox.
+
+This first slice checks retained body bindings, not complete annotations/defaults,
+import availability, conditional binding initialization, runtime state, validation parity,
+or arbitrary Python equivalence. It does not recover helpers/constants. Callback and
+FastAPI dependency refusal remain authoritative; `allow_scaffold=True` / `--allow-scaffold`
+does not bypass missing-binding refusal. Live `App` serving/ejection and direct low-level
+generator compatibility are unchanged. See [the runnable missing-binding example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_binding.py) for an original
+helper-based implementation that returns 21 and an export that is explicitly refused.

@@ -4,6 +4,7 @@ from importlib.metadata import version
 
 from intpot.converter import (
     IntpotApp,
+    MissingBindingError,
     MissingFunctionBodyError,
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
@@ -32,6 +33,7 @@ __all__ = [
     "App",
     "ApplicationSchema",
     "IntpotApp",
+    "MissingBindingError",
     "MissingFunctionBodyError",
     "ParameterSchema",
     "SourceType",

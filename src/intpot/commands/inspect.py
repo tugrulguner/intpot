@@ -26,6 +26,11 @@ def _schema_or_exit(
         raise typer.Exit(1) from None
 
 
+def _assessment_fields(schema):
+    assessment = assess_schema(schema)
+    return {"assessment": assessment} if assessment["diagnostics"] else {}
+
+
 def _params_summary(params):
     parts = []
     for p in params:
@@ -74,11 +79,7 @@ def inspect_command(
                         "source": str(file_path),
                         "type": schema.source_type.value,
                         "tools": [tool.to_dict() for tool in schema.tools],
-                        **(
-                            {"assessment": assess_schema(schema)}
-                            if any(tool.function_body is None for tool in schema.tools)
-                            else {}
-                        ),
+                        **_assessment_fields(schema),
                     }
                 )
             typer.echo(json.dumps(out, indent=2, default=str))
@@ -110,11 +111,7 @@ def inspect_command(
                 "source": str(source),
                 "type": schema.source_type.value,
                 "tools": [tool.to_dict() for tool in schema.tools],
-                **(
-                    {"assessment": assess_schema(schema)}
-                    if any(tool.function_body is None for tool in schema.tools)
-                    else {}
-                ),
+                **_assessment_fields(schema),
             }
         ]
         typer.echo(json.dumps(out, indent=2, default=str))

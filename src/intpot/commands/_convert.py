@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 
 from intpot.converter import (
+    MissingBindingError,
     MissingFunctionBodyError,
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
@@ -35,6 +36,7 @@ def _schema_or_exit(
         UnsupportedFastAPIDependencyError,
         UnsupportedCLIParameterCallbackError,
         MissingFunctionBodyError,
+        MissingBindingError,
     ) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from None
