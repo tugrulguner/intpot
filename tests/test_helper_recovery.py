@@ -298,3 +298,95 @@ def calc(x: int):
             asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3})).content[0].text
             == "21"
         )
+
+
+def test_recovered_constant_cannot_overwrite_generated_typing_binding(
+    tmp_source, tmp_path
+):
+    loaded = intpot.load(
+        tmp_source("""from fastapi import FastAPI
+app = FastAPI()
+Optional = 7
+def scale(x):
+    return x * Optional
+@app.get('/calc')
+def calc(x: int | None = None) -> int:
+    return scale(x or 3)
+""")
+    )
+    assert TestClient(loaded.app).get("/calc").json() == 21
+    output = tmp_path / "generated.py"
+    with pytest.raises(intpot.MissingBindingError, match="Optional"):
+        loaded.write(output, "mcp")
+    assert not output.exists()
+
+
+def test_async_helpers_execute_in_generated_consumers(tmp_source):
+    loaded = intpot.load(
+        tmp_source("""from fastapi import FastAPI
+app = FastAPI()
+FACTOR = 7
+async def scale(x: int) -> int:
+    return x * FACTOR
+@app.get('/calc')
+async def calc(x: int) -> int:
+    return await scale(x)
+""")
+    )
+    assert TestClient(loaded.app).get("/calc", params={"x": 3}).json() == 21
+    for target in ("cli", "mcp"):
+        namespace: dict[str, Any] = {"__name__": "async_helpers"}
+        exec(
+            compile(
+                getattr(loaded, "to_" + target)(), "<target>", "exec", dont_inherit=True
+            ),
+            namespace,
+        )
+        if target == "cli":
+            result = CliRunner().invoke(namespace["app"], ["3"])
+            assert result.exit_code == 0, result.exception
+            assert result.stdout == "21\n"
+        else:
+            assert (
+                asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3}))
+                .content[0]
+                .text
+                == "21"
+            )
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        "FACTOR = (1,)\nglobals()['FACTOR'] = (True,)\ndef scale(x):\n    return type(FACTOR[0]).__name__\n",
+        "def scale(x, factor=1):\n    return type(factor).__name__\nscale.__defaults__ = (True,)\n",
+    ],
+)
+def test_equal_but_different_literal_types_are_not_recovered(tmp_source, binding):
+    loaded = intpot.load(
+        tmp_source(
+            "from fastapi import FastAPI\napp=FastAPI()\n"
+            + binding
+            + "@app.get('/calc')\ndef calc(x: int = 3) -> str:\n    return scale(x)\n"
+        )
+    )
+    assert TestClient(loaded.app).get("/calc").json() == "bool"
+    with pytest.raises(intpot.MissingBindingError, match="scale"):
+        loaded.to_cli()
+
+
+def test_recovered_import_cannot_replace_generated_initialization_builtin(tmp_source):
+    loaded = intpot.load(
+        tmp_source("""from fastapi import FastAPI
+from math import ceil as object
+app = FastAPI()
+def scale(x):
+    return object(x) * 7
+@app.get('/calc')
+def calc(x: int) -> int:
+    return scale(x)
+""")
+    )
+    assert TestClient(loaded.app).get("/calc", params={"x": 3}).json() == 21
+    with pytest.raises(intpot.MissingBindingError, match="object"):
+        loaded.to_mcp()

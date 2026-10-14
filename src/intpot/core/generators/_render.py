@@ -912,7 +912,17 @@ def _collect_support_definitions(tools: Sequence[RenderableTool]) -> list[str]:
     """Deduplicate recovered bindings, rejecting ambiguous cross-tool ownership."""
     owners: dict[str, str] = {}
     definitions: list[str] = []
-    forbidden = {"app", "mcp", *(tool.name for tool in tools)}
+    public_bindings = {"app", "mcp", *(tool.name for tool in tools)}
+    typing_bindings = set(_extract_typing_imports(tools))
+    signature_bindings = set(typing_bindings)
+    for tool in tools:
+        signature_bindings.update(_loaded_names(tool.return_type, mode="eval"))
+        for parameter in tool.parameters:
+            signature_bindings.update(
+                _loaded_names(parameter.type_annotation, mode="eval")
+            )
+    # Required guards and module initialization also resolve these builtins.
+    signature_bindings.update({"object", "TypeError"})
     for tool in tools:
         for source in tool.support_definitions:
             node = ast.parse(source).body[0]
@@ -929,6 +939,28 @@ def _collect_support_definitions(tools: Sequence[RenderableTool]) -> list[str]:
                 }
             else:
                 raise SupportDefinitionError("Unsupported recovered definition")
+            forbidden = public_bindings | signature_bindings
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                forbidden = set(public_bindings)
+                if not (
+                    isinstance(node, ast.ImportFrom)
+                    and node.module == "builtins"
+                    and all(
+                        not alias.asname or alias.asname == alias.name
+                        for alias in node.names
+                    )
+                ):
+                    forbidden.update({"object", "TypeError"})
+                # Canonical typing imports can be repeated without changing identity.
+                if not (
+                    isinstance(node, ast.ImportFrom)
+                    and node.module == "typing"
+                    and all(
+                        not alias.asname or alias.asname == alias.name
+                        for alias in node.names
+                    )
+                ):
+                    forbidden.update(typing_bindings)
             if names & forbidden:
                 raise SupportDefinitionError(
                     "Recovered bindings collide with generated names: "

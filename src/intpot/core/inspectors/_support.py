@@ -102,6 +102,26 @@ def extract_support_definitions(fn: Any) -> list[str]:
             type(value) is tuple and all(immutable(item) for item in value)
         )
 
+    def value_matches(actual: Any, expected: Any) -> bool:
+        """Keep type and representation identity, not Python's coercive equality."""
+        if type(actual) is not type(expected):
+            return False
+        if type(expected) is tuple:
+            return len(actual) == len(expected) and all(
+                value_matches(a, b) for a, b in zip(actual, expected, strict=True)
+            )
+        if isinstance(expected, types.CodeType):
+            return (
+                actual.co_code == expected.co_code
+                and actual.co_names == expected.co_names
+                and actual.co_varnames == expected.co_varnames
+                and actual.co_freevars == expected.co_freevars
+                and actual.co_cellvars == expected.co_cellvars
+                and actual.co_exceptiontable == expected.co_exceptiontable
+                and value_matches(actual.co_consts, expected.co_consts)
+            )
+        return repr(actual) == repr(expected)
+
     def literal(node: ast.AST) -> Any:
         value = ast.literal_eval(node)
         if not immutable(value):
@@ -177,7 +197,7 @@ def extract_support_definitions(fn: Any) -> list[str]:
                 expected = literal(node.value)
             except (ValueError, TypeError, SyntaxError):
                 return False
-            if type(value) is not type(expected) or value != expected:
+            if not value_matches(value, expected):
                 return False
             # Drop variable annotations; the exported constant needs only its value.
             selected[name] = ast.Assign(
@@ -214,19 +234,7 @@ def extract_support_definitions(fn: Any) -> list[str]:
                 for item in compiled.co_consts
                 if isinstance(item, types.CodeType) and item.co_name == node.name
             )
-            if (
-                candidate.co_code,
-                candidate.co_consts,
-                candidate.co_names,
-                candidate.co_varnames,
-                candidate.co_exceptiontable,
-            ) != (
-                value.__code__.co_code,
-                value.__code__.co_consts,
-                value.__code__.co_names,
-                value.__code__.co_varnames,
-                value.__code__.co_exceptiontable,
-            ):
+            if not value_matches(candidate, value.__code__):
                 return False
             expected_defaults = tuple(
                 literal(default) for default in node.args.defaults
@@ -238,9 +246,16 @@ def extract_support_definitions(fn: Any) -> list[str]:
                 )
                 if default is not None
             }
-            if (value.__defaults__ or ()) != expected_defaults or (
-                value.__kwdefaults__ or {}
-            ) != expected_keywords:
+            actual_keywords = value.__kwdefaults__ or {}
+            if (
+                not value_matches(value.__defaults__ or (), expected_defaults)
+                or actual_keywords.keys() != expected_keywords.keys()
+            ):
+                return False
+            if not all(
+                value_matches(actual_keywords[name], expected)
+                for name, expected in expected_keywords.items()
+            ):
                 return False
             if not immutable(value.__defaults__ or ()) or not all(
                 immutable(item) for item in (value.__kwdefaults__ or {}).values()
