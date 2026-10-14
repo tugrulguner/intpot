@@ -33,10 +33,29 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-Make conversion fidelity inspectable before expanding application coverage. The next
-maintainer milestone is a conversion assessment that reports known semantic loss, followed
-by conservative same-module helper and constant recovery. Preserve the existing canonical
-schema and focused shared resolvers rather than begin a broad contract-engine rewrite.
+Diagnose missing implementation dependencies, then successfully convert a bounded
+helper-and-constant application. Generated applications should either execute within the
+defined supported subset or explain why they cannot; more diagnostics alone are not the
+destination. Preserve the existing canonical schema and focused shared resolvers rather
+than begin a broad contract-engine rewrite.
+
+The current boundary is concrete: a recovered tool body can call a same-module helper
+that uses a literal constant, yet the generated API can raise `NameError` because the
+helper was not exported. Body recovery can be complete while implementation dependencies
+are missing. The v0.10 assessment checks body recovery only; it is not a general
+conversion-fidelity assessment.
+
+Deliver this milestone in two independently useful slices:
+
+1. **Explain and refuse demonstrated missing bindings before output writes.** Add
+   scope-aware reference diagnostics with explicit uncertainty and preserve inspection.
+2. **Recover a bounded useful subset.** Export plain same-module helpers and literal
+   constants, including transitive dependencies, and prove source-versus-target behavior
+   through generated CLI, HTTP API, and MCP consumers using applicable source directions.
+
+A runnable helper-and-constant example under `examples/`, its refusal controls, and
+consumer execution are milestone acceptance gates. Broader types, framework coverage,
+performance work, and architectural consolidation must not displace this sequence.
 
 Build confidence in the current supported subset:
 
@@ -94,9 +113,19 @@ or generated-code execution as a prerequisite for live serving.
 - [x] Diagnose unrecoverable bodies and generated TODO stubs; specify intentional scaffold
       opt-in separately from faithful conversion. `IntpotApp.assess()` reports body recovery,
       public conversion refuses missing source by default, and explicit scaffolds fail at runtime.
-- [ ] Diagnose unresolved same-module references in retained bodies, annotations, and
-      defaults before adding dependency recovery. Keep dynamic/ambiguous cases explicit.
-- [ ] Present existing dependency/default refusals consistently without weakening them.
+- [ ] Diagnose unresolved references in retained bodies, annotations, and defaults before
+      adding dependency recovery. Distinguish parameters, locals, builtins, imports,
+      same-module definitions, and captured state; account for nested scopes, comprehensions,
+      shadowing, and recursion rather than collecting every AST name into one flat set.
+- [ ] Record bounded source-binding provenance and dependency edges alongside the existing
+      schema. Report the affected tool/binding, stable diagnostic code, consequence, and
+      suggested action; include source locations where available. Keep dynamic/ambiguous
+      cases explicitly unresolved rather than treating absence of evidence as safety.
+- [ ] Refuse demonstrated missing bindings before any output writes, including mixed
+      directories, while retaining inspection and existing callback/dependency guards.
+- [ ] Extend the diagnostic view incrementally to target-aware callback, dependency, and
+      default refusals without weakening guards or silently breaking existing exception
+      behavior. Do not require a universal assessment redesign before the first binding slice.
 - [ ] Specify Python and CLI access deliberately: keep existing code-string return types,
       keep diagnostics off source-code stdout, and settle readiness/refusal policy before
       introducing broad behavior changes. Start with independently useful guarded slices.
@@ -112,7 +141,8 @@ covered. Static assessment is not a sandbox and does not execute generated code.
 - [ ] Recover statically resolvable plain helpers and literal constants first, including
       transitive same-module references; do not copy the entire source module.
 - [ ] Preserve necessary definition/evaluation ordering, recursion, annotation/default
-      dependencies, and generated-binding collision safety.
+      dependencies, and generated-binding collision safety. Reuse the binding analysis
+      introduced for diagnostics instead of creating a separate recovery-only name scanner.
 - [ ] Explain dynamic globals, closure state, ambiguous bindings, and external configuration
       through the assessment rather than silently dropping them.
 - [ ] Add classes, models, decorators, and base classes only as separately specified,
@@ -178,6 +208,9 @@ audit findings must be reproduced before treating their fixes as verified.
       parameters and tools. Mutable `ToolInfo` remains a compatibility boundary.
 - [ ] Preserve live opaque defaults and runtime callable state without forcing schema
       serialization or generated-code execution into live serving.
+- [ ] Strengthen semantic-field round-trip tests across mutable compatibility models,
+      immutable schemas, serialization, and target projection before refactoring the manual
+      mappings. A new field must survive every applicable boundary.
 - [ ] Isolate existing default-value freezing, serialization, identity, and source-rendering
       behavior behind a small private module. Preserve supported values and regression
       coverage; do not replace these contracts with generic `repr()` or JSON conversion.
@@ -211,12 +244,15 @@ policy, and execution through the generated target—not merely a matching sourc
 
 - [ ] Maintain a compact source-versus-target conformance corpus with supported,
       adapted, inspect-only, refused, and unresolved cases. Include rejected inputs and
-      validation behavior, not only successful calls or generated-text snapshots.
+      validation behavior, exceptions, and relevant side effects, not only successful calls
+      or generated-text snapshots. Grow this corpus with the diagnostics and recovery slices.
 - [ ] Extend declared-floor FastAPI/FastMCP and supported structural-generation lanes to
       import and invoke generated artifacts. Inspector-only success is not full runtime
       compatibility; keep existing Typer CLI compatibility checks.
-- [ ] Install wheel and sdist outside the source tree and exercise public commands and
-      generated consumers; archive presence alone is insufficient.
+- [ ] Automate installed wheel/sdist behavior as CI and release gates outside the source
+      tree, with source-path injection disabled. Exercise installed CLI/version, shipped
+      skills, and generated consumers; archive presence alone is insufficient. Manual
+      release smoke evidence is useful but is not a persistent workflow gate.
 - [ ] Grow runnable example execution alongside capability guarantees. Existing conversion
       snapshot checks and representative consumer smoke tests are useful but not an
       exhaustive six-direction fidelity corpus.
@@ -224,7 +260,13 @@ policy, and execution through the generated target—not merely a matching sourc
 Acceptance: each capability compares observable source and target behavior with explicitly
 allowed adaptations, exercises real framework boundaries and refusal paths, and passes
 full quality checks plus affected compatibility/distribution gates. No unmeasured fidelity
-or performance claims are added.
+or performance claims are added. The Python 3.11–3.14 matrix already exists; extend its
+behavioral evidence rather than treating matrix creation as missing work. Statement
+coverage measures exercised code, not equivalence of source and generated applications.
+
+Triage repeated Python/framework deprecations and schema warnings by cause in separate
+maintenance work, with focused regression tests. Do not mix broad warning suppression or
+unrelated dependency changes into dependency recovery.
 
 ## Phase 5 — Profile, then optimize
 
