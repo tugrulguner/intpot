@@ -634,7 +634,11 @@ recovering a body does not mean its dependencies are available.
 Analysis reuses Python scope-aware binding analysis against statically rendered target
 implementations, accounting for locals, nested scopes, comprehensions, retained imports,
 builtins and generated self-recursion bindings. It renders but does not execute generated
-code. Targets blocked by existing rendering guards report `reference_analysis_unavailable`
+code. Binding availability assumes a normally file-loaded Python module, including
+loader-provided `__file__`, `__cached__`, and other standard module globals. Their values
+belong to the generated file; this does not preserve the original path, resources, or
+package environment. Custom `exec` namespaces must provide their own module globals.
+Targets blocked by existing rendering guards report `reference_analysis_unavailable`
 in assessment instead of implying a successful binding check. Inspection still imports
 trusted source code and is not a sandbox.
 

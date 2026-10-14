@@ -98,7 +98,20 @@ def _reference_diagnostics(
             )
             continue
         module = ast.parse(code)
-        available = set(dir(builtins))
+        # Standalone exports are normal file-loaded Python modules. Their loader
+        # initializes these names without assignments in the emitted AST. Values
+        # describe the generated module, not the original source or its resources;
+        # arbitrary exec namespaces must provide their own module environment.
+        available = set(dir(builtins)) | {
+            "__name__",
+            "__doc__",
+            "__package__",
+            "__loader__",
+            "__spec__",
+            "__file__",
+            "__cached__",
+            "__builtins__",
+        }
         for node in module.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 available.add(node.name)

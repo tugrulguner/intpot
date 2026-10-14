@@ -126,3 +126,63 @@ def run(x: str = typer.Option('ok', callback=validate)):
     assert result.exit_code == 0, result.output
     with pytest.raises(intpot.UnsupportedCLIParameterCallbackError):
         loaded.to_api(allow_scaffold=True)
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        "__file__",
+        "__name__",
+        "__package__",
+        "__spec__",
+        "__loader__",
+        "__cached__",
+        "__doc__",
+        "__builtins__",
+    ],
+)
+def test_file_loader_bindings_execute_generated_consumers(
+    tmp_source, tmp_path, binding
+):
+    import importlib.util
+
+    source = tmp_source(
+        "from fastapi import FastAPI\napp = FastAPI()\n"
+        "@app.get('/module')\ndef module() -> str:\n"
+        f"    return str({binding})\n"
+    )
+    loaded = intpot.load(source)
+    assert loaded.assess()["diagnostics"] == []
+    for target in ("cli", "mcp"):
+        path = tmp_path / f"generated_{target}.py"
+        loaded.write(path, target)
+        spec = importlib.util.spec_from_file_location(f"loader_{target}", path)
+        assert spec is not None and spec.loader is not None
+        generated = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generated)
+        expected = str(getattr(generated, binding))
+        if target == "cli":
+            result = CliRunner().invoke(generated.app, [])
+            assert result.exit_code == 0, result.exception
+            assert result.stdout.rstrip("\n") == expected
+        else:
+            result = asyncio.run(generated.mcp.call_tool("module", {}))
+            assert result.content[0].text == expected
+        if binding == "__file__":
+            assert expected == str(path)
+            assert expected != str(source)
+
+
+def test_package_only_and_similarly_named_bindings_remain_missing(tmp_source):
+    source = tmp_source(
+        "from fastapi import FastAPI\napp = FastAPI()\n"
+        "@app.get('/module')\ndef module() -> str:\n"
+        "    return str(__path__) + str(__file_like__)\n"
+    )
+    loaded = intpot.load(source)
+    assert all(
+        item["names"] == ["__file_like__", "__path__"]
+        for item in loaded.assess()["diagnostics"]
+    )
+    with pytest.raises(intpot.MissingBindingError, match="__path__"):
+        loaded.to_cli()
