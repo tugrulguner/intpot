@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import builtins
 import functools
 from dataclasses import replace
 from pathlib import Path
@@ -14,6 +16,7 @@ from intpot.core.callbacks import (
     guard_cli_parameter_callbacks,
 )
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
+from intpot.core.generators._render import _body_global_names
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
 from intpot.core.projections import (
     project_parameter_aliases,
@@ -27,8 +30,9 @@ class UnsupportedFastAPIDependencyError(Exception):
 
 
 def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
-    """Assess body recovery only; this is not a promise of full fidelity."""
+    """Assess body recovery and retained bindings, not complete fidelity."""
     missing = [tool.name for tool in schema.tools if tool.function_body is None]
+    reference_diagnostics = _reference_diagnostics(schema)
     return {
         "body_recovery_complete": not missing,
         "missing_function_body": missing,
@@ -39,12 +43,119 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
                 "message": "Function source could not be recovered; output requires implementation.",
             }
             for name in missing
-        ],
+        ]
+        + reference_diagnostics,
     }
+
+
+def _reference_diagnostics(
+    schema: ApplicationSchema, target: SourceType | None = None
+) -> list[dict[str, Any]]:
+    """Check retained bodies against bindings actually emitted for each target."""
+    from intpot.core.generators._render import _private_aliases
+    from intpot.core.generators.api import APIGenerator
+    from intpot.core.generators.cli import CLIGenerator
+    from intpot.core.generators.mcp import MCPGenerator
+    from intpot.core.transforms import transform_schema
+
+    generators = {
+        SourceType.CLI: CLIGenerator,
+        SourceType.API: APIGenerator,
+        SourceType.MCP: MCPGenerator,
+    }
+    targets = (
+        [target]
+        if target is not None
+        else [candidate for candidate in generators if candidate != schema.source_type]
+    )
+    diagnostics: list[dict[str, Any]] = []
+    for candidate in targets:
+        projected = (
+            schema
+            if target is not None
+            else project_tool_names(
+                project_parameter_aliases(
+                    project_parameter_placement(
+                        transform_schema(schema, candidate), candidate
+                    ),
+                    candidate,
+                ),
+                candidate,
+            )
+        )
+        try:
+            code = generators[candidate]().generate(projected)
+        except (ValueError, UnsupportedCLIParameterCallbackError) as exc:
+            if target is not None:
+                raise
+            # A pre-existing rendering refusal is not a successful binding check.
+            diagnostics.append(
+                {
+                    "code": "reference_analysis_unavailable",
+                    "target": candidate.value,
+                    "message": str(exc),
+                }
+            )
+            continue
+        module = ast.parse(code)
+        available = set(dir(builtins))
+        for node in module.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                available.add(node.name)
+            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                available.update(
+                    alias.asname
+                    or (
+                        alias.name.split(".", 1)[0]
+                        if isinstance(node, ast.Import)
+                        else alias.name
+                    )
+                    for alias in node.names
+                    if alias.name != "*"
+                )
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets_ = (
+                    node.targets if isinstance(node, ast.Assign) else [node.target]
+                )
+                available.update(
+                    child.id
+                    for assignment in targets_
+                    for child in ast.walk(assignment)
+                    if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
+                )
+        functions = {
+            node.name: node
+            for node in module.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        aliases = _private_aliases(projected.tools)
+        for tool in projected.tools:
+            if not tool.function_body:
+                continue
+            implementation = functions[aliases[f"impl:{tool.name}"]]
+            body = "\n".join(ast.unparse(node) for node in implementation.body)
+            names = sorted(
+                _body_global_names(replace(tool, function_body=body)) - available
+            )
+            if names:
+                diagnostics.append(
+                    {
+                        "code": "missing_binding",
+                        "tool": tool.name,
+                        "target": candidate.value,
+                        "names": names,
+                        "message": "Retained implementation refers to bindings absent from generated output.",
+                    }
+                )
+    return diagnostics
 
 
 class MissingFunctionBodyError(ValueError):
     """Raised when conversion cannot recover a tool implementation."""
+
+
+class MissingBindingError(ValueError):
+    """Raised when retained code references unavailable module bindings."""
 
 
 def _guard_fastapi_dependencies(tools: list[ToolInfo]) -> None:
@@ -183,12 +294,21 @@ def project_schema(
             ),
         )
     transformed = transform_schema(schema, target)
-    return project_tool_names(
+    projected = project_tool_names(
         project_parameter_aliases(
             project_parameter_placement(transformed, target), target
         ),
         target,
     )
+    binding_errors = _reference_diagnostics(projected, target)
+    if binding_errors:
+        detail = "; ".join(
+            f"{item['tool']}: {', '.join(item['names'])}" for item in binding_errors
+        )
+        raise MissingBindingError(
+            "Cannot convert tools with missing bindings: " + detail
+        )
+    return projected
 
 
 def tools_for_target(
@@ -230,7 +350,7 @@ class IntpotApp:
         )
 
     def assess(self) -> dict[str, Any]:
-        """Report body-recovery diagnostics, not general conversion fidelity."""
+        """Report body recovery and per-target bindings, not complete fidelity."""
         return assess_schema(self.schema)
 
     @property

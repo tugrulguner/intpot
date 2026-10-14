@@ -138,3 +138,30 @@ def greet(name: str = typer.Option('world', callback=validate)):
     loaded = intpot.load(tmp_source(source))
     with pytest.raises(intpot.UnsupportedCLIParameterCallbackError):
         loaded.to_api(allow_scaffold=True)
+
+
+def test_missing_reference_assessment_and_refusal(tmp_source, tmp_path):
+    source = """from fastmcp import FastMCP
+mcp = FastMCP('reference')
+FACTOR = 7
+def scale(value: int) -> int:
+    return value * FACTOR
+@mcp.tool()
+def calc(x: int) -> int:
+    return scale(x)
+"""
+    loaded = intpot.load(tmp_source(source))
+    result = asyncio.run(loaded.app.call_tool("calc", {"x": 3}))
+    assert result.content[0].text == "21"
+    report = json.loads(json.dumps(loaded.assess()))
+    assert report["body_recovery_complete"]
+    diagnostic = report["diagnostics"][0]
+    assert diagnostic["code"] == "missing_binding"
+    assert diagnostic["tool"] == "calc"
+    assert diagnostic["names"] == ["scale"]
+    output = tmp_path / "generated.py"
+    with pytest.raises(intpot.MissingBindingError, match="scale"):
+        loaded.write(output, "api")
+    assert not output.exists()
+    with pytest.raises(intpot.MissingBindingError, match="scale"):
+        loaded.to_api(allow_scaffold=True)

@@ -108,3 +108,5 @@ every human reads. If your agent wants a shortcut wrapping them, keep it untrack
 unrelated — it emits six formats and privileges none of them.)
 
 **Converter missing-body assessment:** source schemas remain inspectable when function source cannot be recovered, but public conversion refuses those tools by default. `allow_scaffold=True` / `--allow-scaffold` emits a labeled `NotImplementedError`; never use successful dummy returns. Keep callback and dependency guards non-bypassable. Direct low-level generators remain backward compatible and do not guarantee converter assessment.
+
+**Missing body bindings:** public converter assessment statically renders target implementations and reuses scope-aware global analysis to diagnose absent bindings. Keep `missing_binding` per-target and do not bypass refusal with scaffold permission. Body-recovery fields remain body-only; imports, annotations/defaults and runtime initialization are not certified. Direct generators and live App remain separate compatibility paths.

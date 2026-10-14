@@ -60,6 +60,7 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
         "verified dependency FastAPI route",
         "verified generated CLI-to-API parameter aliases",
         "verified semantic schema example",
+        "verified missing-binding diagnostics and refusal example",
     ]
 
 

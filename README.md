@@ -621,6 +621,31 @@ If intpot removes a duplicate interface from your project, consider
 [starring the repository](https://github.com/tugrulguner/intpot). Stars help other Python
 developers find the project, while issues and pull requests make it better.
 
+
+## Missing body bindings (unreleased)
+
+Public conversion now raises `intpot.MissingBindingError` before output writes when a
+retained implementation refers to globals absent from the generated target module.
+`app.assess()` and conditional `intpot inspect --json` assessment include per-target
+`missing_binding` diagnostics with `tool`, `target`, and sorted `names`. Existing
+`body_recovery_complete` and `missing_function_body` fields retain their meaning:
+recovering a body does not mean its dependencies are available.
+
+Analysis reuses Python scope-aware binding analysis against statically rendered target
+implementations, accounting for locals, nested scopes, comprehensions, retained imports,
+builtins and generated self-recursion bindings. It renders but does not execute generated
+code. Targets blocked by existing rendering guards report `reference_analysis_unavailable`
+in assessment instead of implying a successful binding check. Inspection still imports
+trusted source code and is not a sandbox.
+
+This first slice checks retained body bindings, not complete annotations/defaults,
+import availability, conditional binding initialization, runtime state, validation parity,
+or arbitrary Python equivalence. It does not recover helpers/constants. Callback and
+FastAPI dependency refusal remain authoritative; `allow_scaffold=True` / `--allow-scaffold`
+does not bypass missing-binding refusal. Live `App` serving/ejection and direct low-level
+generator compatibility are unchanged. See `examples/missing_binding.py` for an original
+helper-based implementation that returns 21 and an export that is explicitly refused.
+
 ## License
 
 MIT

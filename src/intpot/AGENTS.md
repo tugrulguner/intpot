@@ -164,3 +164,5 @@ the contracts a change has to keep.
   don't review it. B008 is suppressed deliberately, so
   `typer.Option()` and `typer.Argument()` as defaults are correct.
 - Don't ask for docstrings, annotations, or abstractions on code the change didn't touch.
+
+**Missing body bindings:** public converter assessment statically renders target implementations and reuses scope-aware global analysis to diagnose absent bindings. Keep `missing_binding` per-target and do not bypass refusal with scaffold permission. Body-recovery fields remain body-only; imports, annotations/defaults and runtime initialization are not certified. Direct generators and live App remain separate compatibility paths.
