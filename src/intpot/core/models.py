@@ -797,6 +797,7 @@ class ToolInfo:
     route_description: str | None = None
     route_tags: list[str] = field(default_factory=list)
     route_deprecated: bool | None = None
+    support_definitions: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         canonical_name = sanitize_identifier(self.name)
@@ -974,6 +975,7 @@ class ToolSchema:
     route_description: str | None = None
     route_tags: tuple[str, ...] = ()
     route_deprecated: bool | None = None
+    support_definitions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         canonical_name = sanitize_identifier(self.name)
@@ -999,6 +1001,7 @@ class ToolSchema:
         object.__setattr__(self, "route_tags", tuple(self.route_tags))
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
         object.__setattr__(self, "source_imports", tuple(self.source_imports))
+        object.__setattr__(self, "support_definitions", tuple(self.support_definitions))
 
     @classmethod
     def from_info(cls, tool: ToolInfo) -> ToolSchema:
@@ -1018,6 +1021,7 @@ class ToolSchema:
             route_deprecated=tool.route_deprecated,
             dependencies=tuple(tool.dependencies),
             source_imports=tuple(tool.source_imports),
+            support_definitions=tuple(tool.support_definitions),
             interface_name=tool.interface_name,
         )
 
@@ -1039,6 +1043,7 @@ class ToolSchema:
             route_deprecated=self.route_deprecated,
             dependencies=list(self.dependencies),
             source_imports=list(self.source_imports),
+            support_definitions=list(self.support_definitions),
             interface_name=self.interface_name,
         )
 
@@ -1060,6 +1065,11 @@ class ToolSchema:
             "route_deprecated": self.route_deprecated,
             "dependencies": list(self.dependencies),
             "source_imports": list(self.source_imports),
+            **(
+                {"support_definitions": list(self.support_definitions)}
+                if self.support_definitions
+                else {}
+            ),
             "interface_name": self.interface_name,
         }
 

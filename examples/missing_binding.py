@@ -14,7 +14,7 @@ from fastapi import FastAPI
 import intpot
 
 app = FastAPI()
-FACTOR = 7
+FACTOR = int("7")
 
 
 def scale(value: int) -> int:

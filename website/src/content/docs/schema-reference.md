@@ -70,3 +70,7 @@ Intpot requires Python 3.11 or newer. The current declared minimums are Typer 0.
 - [Architecture internals](/architecture-internals/)
 - [CLI reference in README](https://github.com/tugrulguner/intpot#cli-reference)
 - [Download this guide as Markdown](/downloads/schema-reference.md)
+
+### Recovered support definitions (unreleased)
+
+`ToolSchema.support_definitions` is an ordered immutable tuple of statically recovered helper/constant/import source; `ToolInfo` exposes a detached list. Serialization includes `support_definitions` only when nonempty. This is separate from the tool body and filtered source imports. Generators validate shared bindings before emitting support definitions and tools. See the bounded recovery limits in the conversion-boundaries reference.

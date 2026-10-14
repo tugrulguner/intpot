@@ -16,6 +16,7 @@ from intpot.core.generators.cli import CLIGenerator
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
+    extract_support_definitions,
     python_type_name,
 )
 from intpot.core.models import SourceType
@@ -30,6 +31,19 @@ def _load(path: Path, name: str) -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return getattr(module, name)
+
+
+def test_extracts_same_file_live_helper_and_literal_constant(tmp_path):
+    path = tmp_path / "origin.py"
+    path.write_text(
+        "FACTOR = 7\ndef multiply(value):\n    return value * FACTOR\n"
+        "def endpoint(value):\n    return multiply(value)\n"
+    )
+    endpoint = _load(path, "endpoint")
+    assert extract_support_definitions(endpoint) == [
+        "FACTOR = 7",
+        "def multiply(value):\n    return value * FACTOR",
+    ]
 
 
 def test_equivalent_optional_annotations_have_one_canonical_name() -> None:

@@ -232,6 +232,13 @@ def _annotation_names(annotation: ast.AST, *, parse_strings: bool = True) -> set
     return names
 
 
+def extract_support_definitions(fn: Any) -> list[str]:
+    """Recover a bounded source closure from the callable's owning module."""
+    from intpot.core.inspectors._support import extract_support_definitions as recover
+
+    return recover(fn)
+
+
 def extract_function_body(fn: Any) -> str | None:
     """Extract the body of a function, skipping the def line and docstring.
 

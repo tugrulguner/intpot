@@ -142,6 +142,19 @@ def verify_missing_binding() -> None:
     print("verified missing-binding diagnostics and refusal example")
 
 
+def verify_helper_recovery() -> None:
+    module = _load_module(
+        "intpot_helper_recovery", ROOT / "examples" / "helper_recovery.py"
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        module.main()
+    assert "Generated cli: calc(3) = 21" in output.getvalue()
+    assert "Generated mcp: calc(3) = 21" in output.getvalue()
+    assert "Generated api: calc(3) = 21" in output.getvalue()
+    print("verified bounded helper recovery through CLI API and MCP")
+
+
 def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
@@ -149,6 +162,7 @@ def main() -> None:
     verify_generated_cli_to_api()
     verify_semantic_schema()
     verify_missing_binding()
+    verify_helper_recovery()
 
 
 if __name__ == "__main__":

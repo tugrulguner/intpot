@@ -13,7 +13,7 @@ from intpot.cli import app
 
 MISSING = """from fastapi import FastAPI
 app = FastAPI()
-FACTOR = 7
+FACTOR = int("7")
 def scale(x: int) -> int:
     return x * FACTOR
 @app.get('/calc')
@@ -100,7 +100,7 @@ def test_supported_scopes_execute_generated_consumers(tmp_source, body, expected
 )
 def test_shadowed_names_do_not_hide_missing_globals(tmp_source, body):
     path = tmp_source(
-        'from fastapi import FastAPI\napp = FastAPI()\nhelper = 7\n@app.get("/calc")\ndef calc(x: int) -> int:\n'
+        'from fastapi import FastAPI\napp = FastAPI()\nhelper = int("7")\n@app.get("/calc")\ndef calc(x: int) -> int:\n'
         + body
     )
     loaded = intpot.load(path)

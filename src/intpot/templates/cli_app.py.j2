@@ -16,7 +16,9 @@ import inspect as {{ generated_aliases["cli:inspect"] }}
 {% endif %}
 import typer as {{ generated_aliases["cli:typer"] }}
 
-app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}, help={{ (app_name ~ " — powered by intpot") | repr }}{% endif %})
+{% for definition in support_definitions %}{{ definition }}
+
+{% endfor %}app = {{ generated_aliases["cli:typer"] }}.Typer({% if app_name %}name={{ app_name | repr }}, help={{ (app_name ~ " — powered by intpot") | repr }}{% endif %})
 {% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
 {% endif %}
 {% for tool in tools %}

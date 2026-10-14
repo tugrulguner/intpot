@@ -1,0 +1,1 @@
+Converters now recover a bounded closure of plain same-module helpers and immutable literal constants into standalone CLI, API, and MCP output, while retaining before-write refusal for unsupported state and ambiguous bindings.

@@ -125,7 +125,7 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
                     occupied.add(node.name)
                 elif isinstance(node, ast.MatchMapping) and node.rest:
                     occupied.add(node.rest)
-        for source_import in tool.source_imports:
+        for source_import in (*tool.source_imports, *tool.support_definitions):
             occupied.update(re.findall(r"\b[A-Za-z_]\w*\b", source_import))
 
     def unique(base: str) -> str:
@@ -904,6 +904,47 @@ def _normalize_blank_lines(code: str) -> str:
     return _EXCESS_BLANK_LINES.sub("\n\n\n", code)
 
 
+class SupportDefinitionError(ValueError):
+    """Recovered support bindings cannot be emitted without ambiguity."""
+
+
+def _collect_support_definitions(tools: Sequence[RenderableTool]) -> list[str]:
+    """Deduplicate recovered bindings, rejecting ambiguous cross-tool ownership."""
+    owners: dict[str, str] = {}
+    definitions: list[str] = []
+    forbidden = {"app", "mcp", *(tool.name for tool in tools)}
+    for tool in tools:
+        for source in tool.support_definitions:
+            node = ast.parse(source).body[0]
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                names = {node.name}
+            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = {_bound_name(alias, node) for alias in node.names}
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = (
+                    node.targets if isinstance(node, ast.Assign) else [node.target]
+                )
+                names = {
+                    target.id for target in targets if isinstance(target, ast.Name)
+                }
+            else:
+                raise SupportDefinitionError("Unsupported recovered definition")
+            if names & forbidden:
+                raise SupportDefinitionError(
+                    "Recovered bindings collide with generated names: "
+                    + ", ".join(sorted(names & forbidden))
+                )
+            for name in names:
+                if name in owners and owners[name] != source:
+                    raise SupportDefinitionError(
+                        f"Conflicting recovered binding: {name}"
+                    )
+                owners[name] = source
+            if source not in definitions:
+                definitions.append(source)
+    return definitions
+
+
 def render_template(template_name: str, **kwargs: object) -> str:
     tools: Sequence[RenderableTool] | None = None
     aliases: dict[str, str] = {}
@@ -958,6 +999,10 @@ def render_template(template_name: str, **kwargs: object) -> str:
                 "Cannot generate standalone code because retained source import "
                 f"bindings collide with generated names: {names}"
             )
-        kwargs = dict(kwargs, generated_aliases=aliases)
+        kwargs = dict(
+            kwargs,
+            generated_aliases=aliases,
+            support_definitions=_collect_support_definitions(tools),
+        )
 
     return _normalize_blank_lines(template.render(**kwargs))

@@ -143,7 +143,7 @@ def greet(name: str = typer.Option('world', callback=validate)):
 def test_missing_reference_assessment_and_refusal(tmp_source, tmp_path):
     source = """from fastmcp import FastMCP
 mcp = FastMCP('reference')
-FACTOR = 7
+FACTOR = int("7")
 def scale(value: int) -> int:
     return value * FACTOR
 @mcp.tool()

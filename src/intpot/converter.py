@@ -52,7 +52,7 @@ def _reference_diagnostics(
     schema: ApplicationSchema, target: SourceType | None = None
 ) -> list[dict[str, Any]]:
     """Check retained bodies against bindings actually emitted for each target."""
-    from intpot.core.generators._render import _private_aliases
+    from intpot.core.generators._render import SupportDefinitionError, _private_aliases
     from intpot.core.generators.api import APIGenerator
     from intpot.core.generators.cli import CLIGenerator
     from intpot.core.generators.mcp import MCPGenerator
@@ -87,6 +87,8 @@ def _reference_diagnostics(
             code = generators[candidate]().generate(projected)
         except (ValueError, UnsupportedCLIParameterCallbackError) as exc:
             if target is not None:
+                if isinstance(exc, SupportDefinitionError):
+                    raise MissingBindingError(str(exc)) from None
                 raise
             # A pre-existing rendering refusal is not a successful binding check.
             diagnostics.append(
@@ -147,9 +149,32 @@ def _reference_diagnostics(
                 continue
             implementation = functions[aliases[f"impl:{tool.name}"]]
             body = "\n".join(ast.unparse(node) for node in implementation.body)
-            names = sorted(
+            missing_names = (
                 _body_global_names(replace(tool, function_body=body)) - available
             )
+            from intpot.core.models import ParameterSchema
+
+            for definition in tool.support_definitions:
+                support = ast.parse(definition).body[0]
+                if not isinstance(support, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                arguments = [
+                    *support.args.posonlyargs,
+                    *support.args.args,
+                    *support.args.kwonlyargs,
+                ]
+                if support.args.vararg:
+                    arguments.append(support.args.vararg)
+                if support.args.kwarg:
+                    arguments.append(support.args.kwarg)
+                helper = replace(
+                    tool,
+                    parameters=tuple(ParameterSchema(arg.arg) for arg in arguments),
+                    function_body="\n".join(ast.unparse(node) for node in support.body),
+                    is_async=isinstance(support, ast.AsyncFunctionDef),
+                )
+                missing_names.update(_body_global_names(helper) - available)
+            names = sorted(missing_names)
             if names:
                 diagnostics.append(
                     {
