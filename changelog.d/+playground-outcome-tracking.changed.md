@@ -1,1 +1,0 @@
-Adds privacy-safe browser-local playground outcome events. The shared `playground_preview_started` / `playground_preview_completed` contract includes only bounded project, mode, result, failure class, and an ephemeral per-attempt correlation ID; it excludes request values and output. No library telemetry was added.

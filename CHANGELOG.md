@@ -10,6 +10,24 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.11.0] - 2026-10-14
+
+### Added
+
+- Converters now recover a bounded closure of plain same-module helpers and immutable literal constants into standalone CLI, API, and MCP output, while retaining before-write refusal for unsupported state and ambiguous bindings.
+- Public conversion now diagnoses missing retained-body bindings per target and refuses before output writes, while inspection remains available and explicit scaffolds cannot bypass this guard.
+
+### Changed
+
+- Adds privacy-safe browser-local playground outcome events. The shared `playground_preview_started` / `playground_preview_completed` contract includes only bounded project, mode, result, failure class, and an ephemeral per-attempt correlation ID; it excludes request values and output. No library telemetry was added.
+- Clarify the roadmap's next milestone: scope-aware missing-binding diagnostics followed by executable same-module helper/constant recovery, with installed-artifact and generated-consumer verification gates.
+- Intpot's architecture diagram now appears on the website homepage and relevant reference pages, with an accessible description and full-size link.
+
+### Fixed
+
+- Sanitize website SDK URL and acquisition payloads, disable generic autocapture and unused flags, and add emitted-hook and real-SDK automatic navigation privacy regressions.
+
+
 ## [0.10.0] - 2026-10-09
 
 ### Added

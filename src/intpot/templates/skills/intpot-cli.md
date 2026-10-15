@@ -165,7 +165,7 @@ Install `[mcp]` or `[api]` when intpot must inspect or load a source using that 
 or when you serve, import, or invoke that target. Emitting source text alone does not
 require the target extra, but verifying or running the emitted program does.
 
-## Missing body bindings (unreleased)
+## Missing body bindings (v0.11)
 
 Public conversion now raises `intpot.MissingBindingError` before output writes when a
 retained implementation refers to globals absent from the generated target module.
@@ -193,7 +193,7 @@ does not bypass missing-binding refusal. Live `App` serving/ejection and direct 
 generator compatibility are unchanged. See `examples/missing_binding.py` for an original
 helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
 
-## Bounded helper recovery (unreleased)
+## Bounded helper recovery (v0.11)
 
 Converters recover required undecorated functions and immutable literal constants from
 an inspected callable's owning module, including transitive helpers, ordinary imports,
@@ -215,4 +215,4 @@ applications inspected by the CLI, API, and MCP inspectors.
 Run `uv run python examples/helper_recovery.py` to exercise the helper chain returning 21
 through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
 a refusal control using a dynamically initialized module value rather than a recoverable
-literal. These APIs are not yet part of the published v0.10.0 package.
+literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.

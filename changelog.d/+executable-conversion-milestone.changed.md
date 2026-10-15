@@ -1,1 +1,0 @@
-Clarify the roadmap's next milestone: scope-aware missing-binding diagnostics followed by executable same-module helper/constant recovery, with installed-artifact and generated-consumer verification gates.

@@ -44,7 +44,7 @@ The frozen schema is the normalized boundary between inspection/registration and
 
 A tool includes `name`, `description`, `parameters`, `return_type`, `function_body`, `is_async`, HTTP `http_method` and `route_path`, operation ID/summary/description/tags/deprecation, dependency identifiers, source imports, and original interface name. Values may be absent when a framework does not provide them or the inspector cannot recover them.
 
-A parameter includes its name, type annotation, default/required state, description, HTTP parameter source and placement, binding name, interface name, and aliases. The unreleased `unsupported_callback` boolean records a source CLI parameter callback without storing the callable. It survives schema/compatibility adapters and equality/hash; JSON includes it only when true. API/MCP projection and generation refuse marked parameters with `intpot.UnsupportedCLIParameterCallbackError` rather than dropping validation or transformation. In FastAPI, supported route metadata is read from registered routes and carried into API output. `Depends` and `Security` dependencies are recorded for diagnostics, not executed or translated: API-to-CLI/MCP conversion rejects them, including nested, router-level, and application-level dependencies.
+A parameter includes its name, type annotation, default/required state, description, HTTP parameter source and placement, binding name, interface name, and aliases. The v0.10 `unsupported_callback` boolean records a source CLI parameter callback without storing the callable. It survives schema/compatibility adapters and equality/hash; JSON includes it only when true. API/MCP projection and generation refuse marked parameters with `intpot.UnsupportedCLIParameterCallbackError` rather than dropping validation or transformation. In FastAPI, supported route metadata is read from registered routes and carried into API output. `Depends` and `Security` dependencies are recorded for diagnostics, not executed or translated: API-to-CLI/MCP conversion rejects them, including nested, router-level, and application-level dependencies.
 
 Schema immutability protects the compiled snapshot: nested parameter/tool collections and supported mutable defaults are detached/frozen. Compatibility objects returned by `.tools` are detached copies. A default the schema cannot safely preserve (for example, a locally defined Enum or unsupported object) can fail schema compilation rather than becoming misleading generated source.
 
@@ -71,6 +71,6 @@ Intpot requires Python 3.11 or newer. The current declared minimums are Typer 0.
 - [CLI reference in README](https://github.com/tugrulguner/intpot#cli-reference)
 - [Download this guide as Markdown](/downloads/schema-reference.md)
 
-### Recovered support definitions (unreleased)
+### Recovered support definitions (v0.11)
 
 `ToolSchema.support_definitions` is an ordered immutable tuple of statically recovered helper/constant/import source; `ToolInfo` exposes a detached list. Serialization includes `support_definitions` only when nonempty. This is separate from the tool body and filtered source imports. Generators validate shared bindings before emitting support definitions and tools. See the bounded recovery limits in the conversion-boundaries reference.

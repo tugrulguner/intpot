@@ -45,7 +45,7 @@ The importer executes module top-level statements. It can import a file with an 
 
 ## Missing implementation source (v0.10)
 
-For converter calls (`intpot to ...`, `IntpotApp.project()`, and `to_cli()`/`to_api()`/`to_mcp()`), source recovery failure is distinct from a real no-op implementation. An unrecovered tool body remains visible in the inspectable schema and `app.assess()` reports `body_recovery_complete`, affected tool names under `missing_function_body`, and stable per-tool `diagnostics` (the v0.10 assessment checks body recovery, not general fidelity; the unreleased binding extension is described below). JSON inspection adds an `assessment` when diagnostics are present; public conversion refuses it before writing output. `--allow-scaffold` or `allow_scaffold=True` explicitly opts into a labeled `NotImplementedError` scaffold, never a successful dummy result. Direct low-level generators retain their historical behavior and do not perform converter assessment. This does not change live `App` or `eject` behavior. Callback and dependency safety refusals remain non-bypassable. See [the executable missing-body example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_body.py).
+For converter calls (`intpot to ...`, `IntpotApp.project()`, and `to_cli()`/`to_api()`/`to_mcp()`), source recovery failure is distinct from a real no-op implementation. An unrecovered tool body remains visible in the inspectable schema and `app.assess()` reports `body_recovery_complete`, affected tool names under `missing_function_body`, and stable per-tool `diagnostics` (the v0.10 assessment checks body recovery, not general fidelity; the v0.11 binding extension is described below). JSON inspection adds an `assessment` when diagnostics are present; public conversion refuses it before writing output. `--allow-scaffold` or `allow_scaffold=True` explicitly opts into a labeled `NotImplementedError` scaffold, never a successful dummy result. Direct low-level generators retain their historical behavior and do not perform converter assessment. This does not change live `App` or `eject` behavior. Callback and dependency safety refusals remain non-bypassable. See [the executable missing-body example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_body.py).
 
 ## CLI parameter callbacks (v0.10)
 
@@ -61,7 +61,7 @@ Compile each output, then run it with its target framework and test the same inp
 
 See [schema and parameter reference](/schema-reference/), [architecture internals](/architecture-internals/), and the [source examples](https://github.com/tugrulguner/intpot/tree/main/examples). [Download this guide as Markdown](/downloads/conversion-boundaries.md).
 
-## Missing body bindings (unreleased)
+## Missing body bindings (v0.11)
 
 Public conversion now raises `intpot.MissingBindingError` before output writes when a
 retained implementation refers to globals absent from the generated target module.
@@ -89,7 +89,7 @@ does not bypass missing-binding refusal. Live `App` serving/ejection and direct 
 generator compatibility are unchanged. See [the runnable missing-binding example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_binding.py) for an original
 helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
 
-## Bounded helper recovery (unreleased)
+## Bounded helper recovery (v0.11)
 
 Converters recover required undecorated functions and immutable literal constants from
 an inspected callable's owning module, including transitive helpers, ordinary imports,
@@ -111,4 +111,4 @@ applications inspected by the CLI, API, and MCP inspectors.
 Run `uv run python examples/helper_recovery.py` to exercise the helper chain returning 21
 through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
 a refusal control using a dynamically initialized module value rather than a recoverable
-literal. These APIs are not yet part of the published v0.10.0 package.
+literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
