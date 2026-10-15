@@ -33,29 +33,30 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-Diagnose missing implementation dependencies, then successfully convert a bounded
-helper-and-constant application. Generated applications should either execute within the
-defined supported subset or explain why they cannot; more diagnostics alone are not the
-destination. Preserve the existing canonical schema and focused shared resolvers rather
-than begin a broad contract-engine rewrite.
+Extend dependency assessment to annotations and defaults, and automate installed-artifact
+consumer verification. The retained-body diagnostics and bounded helper/constant recovery
+milestone is delivered in v0.11; broader Python recovery is not.
 
-The current boundary is concrete: a recovered tool body can call a same-module helper
-that uses a literal constant, yet the generated API can raise `NameError` because the
-helper was not exported. Body recovery can be complete while implementation dependencies
-are missing. The v0.10 assessment checks body recovery only; it is not a general
-conversion-fidelity assessment.
+The earlier helper failure now has an executable supported case: `calc(3)` calls a plain
+same-module helper using an immutable literal constant, and generated CLI, HTTP API, and
+MCP consumers compute 21 with their native output adaptation. Unsupported dynamic state,
+closures, decorated helpers, ambiguous/rebound bindings, and collisions remain refused.
+`examples/helper_recovery.py` demonstrates success; `examples/missing_binding.py` preserves
+a dynamically initialized dependency refusal control.
 
-Deliver this milestone in two independently useful slices:
+Keep the next work in independently useful slices:
 
-1. **Explain and refuse demonstrated missing bindings before output writes.** Add
-   scope-aware reference diagnostics with explicit uncertainty and preserve inspection.
-2. **Recover a bounded useful subset.** Export plain same-module helpers and literal
-   constants, including transitive dependencies, and prove source-versus-target behavior
-   through generated CLI, HTTP API, and MCP consumers using applicable source directions.
+1. **Broaden explicit dependency diagnostics.** Cover annotation/default evaluation and
+   definition ordering without certifying package availability, arbitrary runtime state,
+   or Python equivalence. Preserve before-write refusal and inspection.
+2. **Make artifact evidence persistent.** Add installed wheel/sdist CLI and generated-consumer
+   behavior to CI/release gates, and extend affected framework-floor consumer coverage.
+   Manual release smoke tests do not replace these automated gates.
 
-A runnable helper-and-constant example under `examples/`, its refusal controls, and
-consumer execution are milestone acceptance gates. Broader types, framework coverage,
-performance work, and architectural consolidation must not displace this sequence.
+Preserve the canonical schema, focused shared resolvers, and distinct live-callable path.
+Classes, decorators, mutable state and cross-module helper recovery remain later bounded
+capabilities, not implicit extensions of plain-helper support. Performance work and a
+broad contract-engine rewrite must not displace the correctness sequence.
 
 Build confidence in the current supported subset:
 
@@ -68,7 +69,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.10 — Current foundation
+## v0.11 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.
@@ -88,6 +89,12 @@ small useful slices with executable acceptance gates.
   FastAPI response annotations account for value, `None`, and fallthrough outcomes.
 - **Explicit dependency refusal:** inspection records FastAPI dependencies, but conversion
   to CLI/MCP rejects unsupported dependency semantics rather than silently dropping them.
+- **Retained-body dependency diagnostics:** per-target missing bindings are inspectable;
+  public conversion refuses before writes, including mixed directories. Loader-provided
+  globals use the normal generated-file module environment, not the original source path.
+- **Bounded helper recovery:** inspected callable ownership, live code/default/literal
+  identity, ordered support definitions, transitive imports and collision guards support
+  plain same-module helpers plus immutable scalar/tuple literals.
 - **Practical tooling:** recursive Typer command inspection, direct import extraction,
   collision-safe directory output, actionable source failures, scaffolding, and agent skills.
 - **Verification:** generated-artifact execution tests, conversion snapshot drift tests,
@@ -113,15 +120,17 @@ or generated-code execution as a prerequisite for live serving.
 - [x] Diagnose unrecoverable bodies and generated TODO stubs; specify intentional scaffold
       opt-in separately from faithful conversion. `IntpotApp.assess()` reports body recovery,
       public conversion refuses missing source by default, and explicit scaffolds fail at runtime.
-- [ ] Diagnose unresolved references in retained bodies, annotations, and defaults before
-      adding dependency recovery. Distinguish parameters, locals, builtins, imports,
-      same-module definitions, and captured state; account for nested scopes, comprehensions,
-      shadowing, and recursion rather than collecting every AST name into one flat set.
+- [x] Diagnose missing retained-body bindings per target using scope-aware analysis of
+      statically rendered implementations, including locals, nested scopes, comprehensions,
+      imports, builtins, loader-provided globals, and generated self-recursion bindings
+      ([#202](https://github.com/tugrulguner/intpot/pull/202)).
+- [ ] Extend dependency diagnostics to complete annotation/default evaluation and ordering.
+      Retained-body analysis alone is not full conversion readiness.
 - [ ] Record bounded source-binding provenance and dependency edges alongside the existing
       schema. Report the affected tool/binding, stable diagnostic code, consequence, and
       suggested action; include source locations where available. Keep dynamic/ambiguous
       cases explicitly unresolved rather than treating absence of evidence as safety.
-- [ ] Refuse demonstrated missing bindings before any output writes, including mixed
+- [x] Refuse demonstrated missing body bindings before any output writes, including mixed
       directories, while retaining inspection and existing callback/dependency guards.
 - [ ] Extend the diagnostic view incrementally to target-aware callback, dependency, and
       default refusals without weakening guards or silently breaking existing exception
@@ -138,11 +147,15 @@ covered. Static assessment is not a sandbox and does not execute generated code.
 
 ## Phase 2 — Bounded same-module dependency recovery
 
-- [ ] Recover statically resolvable plain helpers and literal constants first, including
-      transitive same-module references; do not copy the entire source module.
-- [ ] Preserve necessary definition/evaluation ordering, recursion, annotation/default
-      dependencies, and generated-binding collision safety. Reuse the binding analysis
-      introduced for diagnostics instead of creating a separate recovery-only name scanner.
+- [x] Recover provenance-checked plain helpers and immutable scalar/tuple literal constants,
+      including transitive same-module helpers and required ordinary imports, without
+      copying module startup or registration ([#203](https://github.com/tugrulguner/intpot/pull/203)).
+      Keep unsupported dynamic/rebound values, closures, decorators and classes refused.
+- [x] Preserve source ordering, recursive/async helper execution and generated-binding
+      collision safety for the recovered subset, with immutable literal helper defaults.
+      Support code has separate immutable metadata and transitive body-reference checks.
+- [ ] Extend definition/evaluation ordering and annotation/default dependency guarantees
+      beyond that bounded subset; do not imply arbitrary initializer recovery.
 - [ ] Explain dynamic globals, closure state, ambiguous bindings, and external configuration
       through the assessment rather than silently dropping them.
 - [ ] Add classes, models, decorators, and base classes only as separately specified,
