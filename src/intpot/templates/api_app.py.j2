@@ -18,7 +18,9 @@ from typing import {{ typing_imports | join(", ") }}
 {%- endfor %}
 from fastapi import FastAPI as {{ "FastAPI" | fastapi_alias }}{% for imp in ns.imports | sort %}, {{ imp }} as {{ imp | fastapi_alias }}{% endfor %}
 
-app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
+{% for definition in support_definitions %}{{ definition }}
+
+{% endfor %}app = {{ "FastAPI" | fastapi_alias }}(title={{ app_name | repr }})
 {%- set has_implementation = tools | selectattr("function_body") | list %}
 {% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
 {% endif %}

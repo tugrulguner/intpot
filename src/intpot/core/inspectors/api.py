@@ -12,6 +12,7 @@ from typing import Annotated, Any, cast, get_args, get_origin
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
+    extract_support_definitions,
     python_return_type_name,
     python_type_name,
 )
@@ -269,6 +270,7 @@ class APIInspector(BaseInspector):
                     http_method=http_method,
                     function_body=extract_function_body(endpoint),
                     source_imports=extract_source_imports(endpoint),
+                    support_definitions=extract_support_definitions(endpoint),
                     is_async=asyncio.iscoroutinefunction(endpoint),
                     route_path=route_path,
                     operation_id=getattr(route, "operation_id", None),

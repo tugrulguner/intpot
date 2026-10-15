@@ -11,6 +11,7 @@ from typing import Annotated, Any, cast, get_args, get_origin
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
+    extract_support_definitions,
     python_return_type_name,
     python_type_name,
 )
@@ -150,6 +151,7 @@ class MCPInspector(BaseInspector):
                     return_type=return_type,
                     function_body=extract_function_body(fn),
                     source_imports=extract_source_imports(fn),
+                    support_definitions=extract_support_definitions(fn),
                     is_async=asyncio.iscoroutinefunction(fn),
                 )
             )

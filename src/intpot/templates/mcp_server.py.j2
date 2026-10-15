@@ -9,7 +9,9 @@ from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
 from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
 
-mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
+{% for definition in support_definitions %}{{ definition }}
+
+{% endfor %}mcp = {{ generated_aliases["mcp:FastMCP"] }}({{ app_name | repr }})
 {%- set has_implementation = tools | selectattr("function_body") | list %}
 {% if has_implementation %}{{ generated_aliases["helper:required"] }} = object()
 {% endif %}

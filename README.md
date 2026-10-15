@@ -644,11 +644,35 @@ trusted source code and is not a sandbox.
 
 This first slice checks retained body bindings, not complete annotations/defaults,
 import availability, conditional binding initialization, runtime state, validation parity,
-or arbitrary Python equivalence. It does not recover helpers/constants. Callback and
+or arbitrary Python equivalence. Recovery of the bounded subset is described below. Callback and
 FastAPI dependency refusal remain authoritative; `allow_scaffold=True` / `--allow-scaffold`
 does not bypass missing-binding refusal. Live `App` serving/ejection and direct low-level
 generator compatibility are unchanged. See `examples/missing_binding.py` for an original
-helper-based implementation that returns 21 and an export that is explicitly refused.
+helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
+
+## Bounded helper recovery (unreleased)
+
+Converters recover required undecorated functions and immutable literal constants from
+an inspected callable's owning module, including transitive helpers, ordinary imports,
+and recursive helper calls. Ordered `support_definitions` is separate from
+`source_imports`, immutable in `ToolSchema`, and detached in `ToolInfo` compatibility views.
+Generated output remains ordinary framework Python with no intpot runtime bridge.
+
+Recovery reads the actual callable's globals and source file, verifies helper code and
+literal defaults against the live function, and rejects ambiguous or rebound bindings.
+It does not copy unrelated startup statements or app registration. Mutable globals,
+closures, decorated helpers, classes, dynamic defaults/global lookup, and helpers that
+write global/nonlocal state remain outside the supported subset. Unsupported dependencies
+still diagnose/refuse before writes; explicit scaffold permission does not bypass them.
+Conflicting support bindings and collisions with generated public names are refused.
+This is bounded source recovery, not purity analysis or arbitrary Python equivalence.
+Live `App` serving/ejection is unchanged; recovery currently applies to existing framework
+applications inspected by the CLI, API, and MCP inspectors.
+
+Run `uv run python examples/helper_recovery.py` to exercise the helper chain returning 21
+through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
+a refusal control using a dynamically initialized module value rather than a recoverable
+literal. These APIs are not yet part of the published v0.10.0 package.
 
 ## License
 
