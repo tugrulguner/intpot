@@ -179,3 +179,46 @@ def test_docs_reference_only_paths_that_exist(doc: str, token: str) -> None:
     pytest.fail(
         f"{doc} references `{token}`, which git does not know about under {tried}"
     )
+
+
+@pytest.mark.parametrize(
+    ("doc", "command", "expected"),
+    [
+        (
+            "website/src/content/docs/quickstart/index.mdx",
+            "intpot serve app.py --cli -- Ada",
+            "Hello, Ada!",
+        ),
+        (
+            "website/src/content/docs/build-an-app.md",
+            "intpot serve app.py --cli -- Ada --excited",
+            "Hello, Ada!",
+        ),
+        (
+            "README.md",
+            "intpot serve app.py --cli greet World --greeting Hi",
+            "Hi, World!",
+        ),
+    ],
+)
+def test_documented_cli_runs_its_corresponding_declaration(
+    doc: str, command: str, expected: str, tmp_path: Path
+) -> None:
+    import shlex
+    import sys
+
+    text = (REPO_ROOT / doc).read_text()
+    assert command in text
+    declaration = re.search(r"```python\n(.*?)```", text, re.DOTALL)
+    assert declaration is not None
+    (tmp_path / "app.py").write_text(declaration.group(1))
+    result = subprocess.run(
+        [str(Path(sys.executable).with_name("intpot")), *shlex.split(command)[1:]],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip() == expected

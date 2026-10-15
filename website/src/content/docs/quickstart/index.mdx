@@ -29,12 +29,12 @@ def greet(name: str, greeting: str = "Hello") -> str:
 The type annotations, defaults, and docstring describe the tool contract. Choose an interface when starting the app:
 
 ```bash
-intpot serve app.py --cli
+intpot serve app.py --cli -- Ada
 intpot serve app.py --api
 intpot serve app.py --mcp
 ```
 
-For HTTP mode, Intpot uses FastAPI/Uvicorn (default port 8000). MCP mode exposes tools through FastMCP. CLI mode dispatches the registered functions as commands.
+For HTTP mode, Intpot uses FastAPI/Uvicorn (default port 8000). MCP mode exposes tools through FastMCP. For this single-tool app, CLI mode takes the name directly and prints `Hello, Ada!`; do not add a `greet` subcommand. Apps with multiple tools use tool-name subcommands. The `--` separator forwards the following arguments to the generated CLI.
 
 ## Export standalone code
 

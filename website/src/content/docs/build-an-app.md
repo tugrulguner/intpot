@@ -38,8 +38,10 @@ The decorator registers the original callable and captures its name, docstring, 
 ## Run the real CLI
 
 ```sh
-intpot serve app.py --cli -- greet Ada --excited
+intpot serve app.py --cli -- Ada --excited
 ```
+
+This app has one tool, so Typer takes `Ada` directly, without a `greet` subcommand. The command prints `Hello, Ada!`. Apps with multiple tools use a tool-name subcommand, as in the [README example](https://github.com/tugrulguner/intpot#write-once-serve-everywhere).
 
 The separator passes arguments to the generated Typer command when they could otherwise be interpreted by Intpot. This invokes the registered function; do not run untrusted application modules merely to inspect them.
 
