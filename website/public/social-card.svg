@@ -12,7 +12,7 @@
       <circle cx="83" cy="103" r="5" fill="#F2B84B"/>
   </g>
   <text x="478" y="190" fill="#F2B84B" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="4">MODEPOT / OPEN SOURCE</text>
-  <text x="472" y="330" fill="#F4F2EA" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" letter-spacing="-4">intpot</text>
+  <text x="472" y="330" fill="#F4F2EA" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" letter-spacing="-4">int<tspan fill="#F2B84B">pot</tspan></text>
   <text x="478" y="402" fill="#C4CAD3" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="400">One typed definition.</text>
   <text x="478" y="443" fill="#C4CAD3" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="400">CLI, API, and MCP.</text>
   <line x1="478" y1="492" x2="1100" y2="492" stroke="#F2B84B" stroke-width="4"/>

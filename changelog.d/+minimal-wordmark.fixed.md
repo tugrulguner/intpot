@@ -1,0 +1,1 @@
+Fixes the Intpot wordmark so its `int` prefix is off-white and its joined `pot` suffix is amber across the canonical lockup and social preview.
