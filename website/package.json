@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "node --test && node scripts/sync-project-docs.mjs && astro build && node scripts/emit-markdown-downloads.mjs && node scripts/verify-rendered-output.mjs && playwright test",
+    "build": "node scripts/render-wordmark.mjs --check && node --test && node scripts/sync-project-docs.mjs && astro build && node scripts/emit-markdown-downloads.mjs && node scripts/verify-rendered-output.mjs && playwright test",
     "test": "node --test",
     "test:parity": "node scripts/verify-playground-parity.mjs",
     "preview": "astro preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "render:wordmark": "node scripts/render-wordmark.mjs",
+    "test:wordmark": "node scripts/render-wordmark.mjs --check"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.42.5",
