@@ -1,7 +1,7 @@
 # intpot
 
 <p align="center">
-  <img src="intpot_image.webp" alt="intpot: Python tools served as CLI, API, or MCP" width="600">
+  <img src="intpot_image.webp?v=wordmark-3" alt="intpot: Python tools served as CLI, API, or MCP" width="600">
 </p>
 
 <p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://intpot.modepot.io/">Project website</a> &nbsp; <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a></p>
