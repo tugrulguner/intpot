@@ -29,7 +29,7 @@ export default defineConfig({
     title: 'Intpot',
     description: 'Define typed Python tools once; expose CLI, API, and MCP interfaces.',
     favicon: '/intpot-mark.svg',
-    social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/tugrulguner/intpot' }],
+    social: [{ icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/tugrulguner/' }, { icon: 'github', label: 'GitHub', href: 'https://github.com/tugrulguner/intpot' }, { icon: 'twitter', label: 'X', href: 'https://x.com/Tugrul_Guner' }],
     customCss: ['./src/styles/custom.css'],
     components: { Header: './src/components/FamilyHeader.astro' },
     head: [

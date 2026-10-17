@@ -11,14 +11,20 @@ const resources = [
   { label: 'Community', href: 'https://discord.gg/u3AANZr6RG' },
   { label: 'About Tugrul', href: 'https://tugrul.modepot.io/' },
 ];
+const socials = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/tugrulguner/', glyph: 'in' },
+  { label: 'GitHub', href: 'https://github.com/tugrulguner/intpot', glyph: 'GH' },
+  { label: 'X', href: 'https://x.com/Tugrul_Guner', glyph: 'X' },
+];
 ---
 <div class="header">
   <div class="title-wrapper sl-flex"><img class="intpot-mark" src="/intpot-mark.svg" alt="" width="20" height="20" /><SiteTitle /></div>
   <div class="sl-flex print:hidden">{shouldRenderSearch && <Search />}</div>
   <div class="sl-flex right-group print:hidden">
     <nav class="family-resources" aria-label="Family resources">
-      {resources.map((resource) => <a href={resource.href}>{resource.label}</a>)}
+      {resources.map((resource) => <a href={resource.href} target={resource.label === 'Feedback / issue' ? '_blank' : undefined} rel={resource.label === 'Feedback / issue' ? 'noopener noreferrer' : undefined}>{resource.label}{resource.label === 'Feedback / issue' && ' ↗'}</a>)}
     </nav>
+    <nav class="family-socials" aria-label="Social links">{socials.map((social) => <a href={social.href} aria-label={social.label} title={social.label} target="_blank" rel="noopener noreferrer">{social.glyph}</a>)}<a class="feedback-link" href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer">Feedback / issue ↗</a></nav>
     <a class="modepot-compact" href="https://modepot.io/">ModePot</a>
     <button class="family-menu-toggle" type="button" aria-expanded="false" aria-controls="family-menu-panel">Menu</button>
     <ThemeSelect />
@@ -28,6 +34,7 @@ const resources = [
     <nav aria-label="Family resources">
       {resources.slice(1).map((resource) => <a href={resource.href}>{resource.label}</a>)}
     </nav>
+    <nav aria-label="Social links">{socials.map((social) => <a href={social.href} target="_blank" rel="noopener noreferrer">{social.label} ↗</a>)}<a href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer">Feedback / issue ↗</a></nav>
     <nav aria-label="Intpot documentation">
       <a href="/">Overview</a>
       <a href="/quickstart/">Quickstart</a>
@@ -64,10 +71,13 @@ const resources = [
   .header { display:flex; gap:var(--sl-nav-gap); justify-content:space-between; align-items:center; height:100%; }
   :global(header.header) { position:relative; }
   .family-resources { display:flex; align-items:center; gap:.25rem; }
+  .family-socials { display:flex; align-items:center; gap:.25rem; }
+  .family-socials a { box-sizing:border-box; display:inline-flex; min-width:44px; min-height:44px; align-items:center; justify-content:center; padding:0 .25rem; color:var(--sl-color-text); text-decoration:none; font-size:23px; font-weight:650; }
   .family-resources a, .modepot-compact, .family-menu-toggle, .family-menu-panel a { box-sizing:border-box; display:inline-flex; min-width:44px; min-height:44px; padding:0 .5rem; align-items:center; justify-content:center; border-radius:6px; color:var(--sl-color-text); text-decoration:none; }
   .modepot-compact { display:none; }
+  .family-resources a[href*='linkedin'], .family-resources a[href*='x.com'] { font-size:15px; font-weight:600; }
   .family-resources a:hover, .family-menu-panel a:hover { background:var(--sl-color-gray-6); }
-  .family-resources a:focus-visible, .modepot-compact:focus-visible, .family-menu-toggle:focus-visible, .family-menu-panel a:focus-visible { outline:2px solid var(--sl-color-accent); outline-offset:2px; }
+  .family-socials a:focus-visible, .family-resources a:focus-visible, .modepot-compact:focus-visible, .family-menu-toggle:focus-visible, .family-menu-panel a:focus-visible { outline:2px solid var(--sl-color-accent); outline-offset:2px; }
   .family-menu-toggle { display:none; border:1px solid var(--sl-color-gray-5); background:var(--sl-color-bg); font:inherit; cursor:pointer; }
   .family-menu-panel { position:absolute; z-index:20; inset-inline:1rem; top:calc(100% + .25rem); display:grid; gap:.25rem; padding:.75rem; border:1px solid var(--sl-color-gray-5); border-radius:6px; background:var(--sl-color-bg); box-shadow:0 8px 24px rgb(0 0 0 / 15%); }
   .family-menu-panel nav { display:grid; gap:.25rem; }
@@ -86,7 +96,7 @@ const resources = [
     .header { gap:.25rem; }
     .title-wrapper { flex:0 0 auto; }
     .right-group { gap:.25rem; }
-    .family-resources { display:none; }
+    .family-resources, .family-socials { display:none; }
     .modepot-compact { display:inline-flex; }
     .family-menu-toggle { display:inline-flex; }
     :global(.sl-menu-button) { display:none !important; }
