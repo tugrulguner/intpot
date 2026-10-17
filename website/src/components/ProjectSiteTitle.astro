@@ -1,0 +1,11 @@
+---
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+---
+<a href={siteTitleHref} class="site-title sl-flex" translate="no"><span class="wordmark"><span class="wordmark-prefix">{siteTitle.slice(0,-3)}</span><span class="wordmark-pot">{siteTitle.slice(-3)}</span></span></a>
+<style>
+.site-title { align-items:center; gap:0; font-size:var(--sl-text-h4); font-weight:600; text-decoration:none; white-space:nowrap; min-width:0; }
+.wordmark-prefix {color:#181a1d;}
+.wordmark-pot {color:#795711;}
+:global(:root[data-theme='dark']) .wordmark-prefix {color:#f4f2ea;}
+:global(:root[data-theme='dark']) .wordmark-pot {color:#f2b84b;}
+</style>
