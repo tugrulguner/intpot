@@ -47,10 +47,18 @@ test('compact Menu exposes family resources first, dismisses with Escape, and re
       await page.setViewportSize({ width, height: 850 });
       await page.goto(route);
       await settle(page);
-      const compactModePot = page.locator('.modepot-compact');
-      await expect(compactModePot).toBeVisible();
-      await expect(compactModePot).toHaveAttribute('href', 'https://modepot.io/');
-      const compactHit = await compactModePot.evaluate((element) => {
+      const compactFeedback = page.locator('.modepot-compact');
+      await expect(compactFeedback).toBeVisible();
+      await expect(compactFeedback).toHaveText('Feedback');
+      await expect(compactFeedback).toHaveAttribute('href', /^https:\/\/github\.com\/tugrulguner\/intpot\/issues\/new\?/);
+      await expect(compactFeedback).toHaveAttribute('target', '_blank');
+      await expect(compactFeedback).toHaveAttribute('rel', 'noopener noreferrer');
+      await expect(compactFeedback).toHaveClass(/ph-no-autocapture/);
+      const feedbackUrl = new URL(await compactFeedback.getAttribute('href')!);
+      const expectedPath = route === '/404.html' ? '/404/' : new URL(page.url()).pathname;
+      expect(feedbackUrl.searchParams.get('body')).toBe(`Page: https://intpot.modepot.io${expectedPath}\n\nPlease describe the issue. Do not include private data.`);
+      expect(feedbackUrl.searchParams.get('body')).not.toMatch(/[?#]|input|email|token|secret/i);
+      const compactHit = await compactFeedback.evaluate((element) => {
         const rect = element.getBoundingClientRect();
         const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
         return { width: rect.width, height: rect.height, centerHit: center === element || element.contains(center) };
@@ -59,6 +67,7 @@ test('compact Menu exposes family resources first, dismisses with Escape, and re
       expect(compactHit.height).toBeGreaterThanOrEqual(44);
       expect(compactHit.centerHit).toBe(true);
       const menu = page.locator('.family-menu-toggle');
+      await expect(page.locator('.family-resources')).toBeHidden();
       await expect(menu).toBeVisible();
       await menu.focus();
       await page.keyboard.press('Enter');
@@ -67,7 +76,8 @@ test('compact Menu exposes family resources first, dismisses with Escape, and re
       await expect(region).toBeVisible();
       const resourceNav = region.getByRole('navigation', { name: 'Family resources' });
       const links = resourceNav.locator('a');
-      await expect(links).toHaveText(resources.map(([label]) => label));
+      await expect(links).toHaveText([['ModePot', 'https://modepot.io/'], ...resources].map(([label]) => label));
+      await expect(resourceNav.getByRole('link', { name: 'ModePot', exact: true })).toHaveAttribute('href', 'https://modepot.io/');
       for (const [label, href] of resources) {
         const resourceLink = resourceNav.getByRole('link', { name: label, exact: true });
         await expect(resourceLink).toHaveAttribute('href', href);
@@ -94,6 +104,17 @@ test('compact Menu exposes family resources first, dismisses with Escape, and re
       await expect(menu).toHaveAttribute('aria-expanded', 'false');
       await expect(menu).toBeFocused();
     }
+  }
+});
+
+test('Feedback header visual evidence at required widths and themes', async ({ page }) => {
+  const evidence=process.env.FEEDBACK_EVIDENCE_DIR;
+  test.skip(!evidence, 'evidence capture is opt-in'); mkdirSync(evidence!,{recursive:true});
+  for(const width of [1280,390,320]) for(const theme of ['light','dark']) {
+    await page.setViewportSize({width,height:850}); await page.goto('/'); await settle(page);
+    await page.locator('header starlight-theme-select select').selectOption(theme);
+    const feedback=width>=768?page.locator('header .family-feedback-links .feedback-link'):page.locator('header .modepot-compact');
+    await expect(feedback).toBeVisible(); await feedback.screenshot({path:join(evidence!,`header-feedback-${width}-${theme}.png`)});
   }
 });
 
