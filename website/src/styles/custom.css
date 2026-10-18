@@ -143,7 +143,7 @@ main:has(.framework-hero) > .content-panel:first-child { display:none; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
-/* Native social glyphs remain legible; the links retain a 44px interactive target. */
-.social-icons a { box-sizing:border-box; display:inline-flex; width:44px; min-width:44px; height:44px; min-height:44px; align-items:center; justify-content:center; }
-.social-icons svg { width:23px !important; height:23px !important; }
-.social-icons a:focus-visible { outline:2px solid var(--sl-color-accent); outline-offset:2px; }
+
+/* Personal social links belong beside the existing creator attribution. */
+.framework-copy .creator-row { display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:0;margin-top:12px;font-size:15px;line-height:1.5; }
+.framework-copy .creator-row .creator-attribution { margin:0;padding:0;font:inherit; }

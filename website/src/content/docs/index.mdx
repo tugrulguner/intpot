@@ -3,6 +3,8 @@ title: Python CLI, API, and MCP Interface Framework
 description: Define typed Python tools once, then serve or convert them across CLI, FastAPI, and MCP interfaces.
 template: splash
 ---
+import CreatorSocials from '../../components/CreatorSocials.astro';
+
 
 import { Image } from 'astro:assets';
 import intpotImage from '../../assets/intpot_image.webp';
@@ -19,7 +21,7 @@ import intpotImage from '../../assets/intpot_image.webp';
       <a class="framework-action tertiary" href="https://github.com/tugrulguner/intpot" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
     </nav>
     <p class="feedback-action"><a class="framework-action secondary" href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer" aria-label="Feedback or issue (opens GitHub in a new tab)">Feedback / issue ↗</a></p>
-    <a class="creator-attribution" href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>
+    <div class="creator-row"><a class="creator-attribution" href="https://tugrul.modepot.io/">Created by Tugrul Guner</a><CreatorSocials /></div>
   </div>
   <figure class="framework-art">
     <Image src={intpotImage} alt="Intpot turns typed Python tools into CLI, HTTP API, or MCP interfaces." width={1200} height={900} />
