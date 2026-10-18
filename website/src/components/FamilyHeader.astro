@@ -11,6 +11,7 @@ const resources = [
   { label: 'Community', href: 'https://discord.gg/u3AANZr6RG' },
   { label: 'About Tugrul', href: 'https://tugrul.modepot.io/' },
 ];
+const feedbackUrl = "https://github.com/tugrulguner/intpot/issues/new?" + new URLSearchParams({ title: "Website feedback", body: `Page: https://intpot.modepot.io${Astro.url.pathname}\n\nPlease describe the issue. Do not include private data.` }).toString();
 ---
 <div class="header">
   <div class="title-wrapper sl-flex"><img class="intpot-mark" src="/intpot-mark.svg" alt="" width="20" height="20" /><SiteTitle /></div>
@@ -19,15 +20,15 @@ const resources = [
     <nav class="family-resources" aria-label="Family resources">
       {resources.map((resource) => <a href={resource.href} target={resource.label === 'Feedback / issue' ? '_blank' : undefined} rel={resource.label === 'Feedback / issue' ? 'noopener noreferrer' : undefined}>{resource.label}{resource.label === 'Feedback / issue' && ' ↗'}</a>)}
     </nav>
-    <nav class="family-feedback-links" aria-label="Feedback"><a class="feedback-link" href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer">Feedback / issue ↗</a></nav>
-    <a class="modepot-compact" href="https://modepot.io/">ModePot</a>
+    <nav class="family-feedback-links" aria-label="Feedback"><a class="feedback-link feedback-entry ph-no-autocapture" href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer">Feedback / issue ↗</a></nav>
+    <a class="modepot-compact feedback-entry ph-no-autocapture" href={feedbackUrl} target="_blank" rel="noopener noreferrer" aria-label="Feedback / report an issue (opens GitHub in a new tab)">Feedback</a>
     <button class="family-menu-toggle" type="button" aria-expanded="false" aria-controls="family-menu-panel">Menu</button>
     <ThemeSelect />
     <LanguageSelect />
   </div>
   <div id="family-menu-panel" class="family-menu-panel" role="region" aria-label="Menu" hidden>
     <nav aria-label="Family resources">
-      {resources.slice(1).map((resource) => <a href={resource.href}>{resource.label}</a>)}
+      {resources.map((resource) => <a href={resource.href}>{resource.label}</a>)}
     </nav>
     <nav class="family-feedback-menu" aria-label="Feedback"><a href="https://github.com/tugrulguner/intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F%0A%0ADescription%3A%20" target="_blank" rel="noopener noreferrer">Feedback / issue ↗</a></nav>
     <nav aria-label="Intpot documentation">
@@ -63,6 +64,7 @@ const resources = [
   });
 </script>
 <style>
+  .feedback-entry { border:1px solid currentColor; border-radius:4px; font-size:14px !important; font-weight:600; text-decoration:none; }
   .header { display:flex; gap:var(--sl-nav-gap); justify-content:space-between; align-items:center; height:100%; }
   :global(header.header) { position:relative; }
   .family-resources { display:flex; align-items:center; gap:.25rem; }
