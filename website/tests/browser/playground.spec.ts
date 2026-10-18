@@ -72,9 +72,9 @@ test('analytics sends sanitized pageviews and no flag/acquisition leakage from a
   expect(names.filter((name) => name === '$pageview').length).toBeGreaterThanOrEqual(2);
   // Pageleave configuration is checked above; this test does not require or
   // claim delivery of a pageleave event at the departure boundary.
-  expect(payloads).toContain('http://127.0.0.1:4387/playground/');
+  expect(payloads).toContain(`http://127.0.0.1:${process.env.SITE_TEST_PORT ?? '4387'}/playground/`);
   expect(payloads).toContain('https://ref.example/path');
-  expect(payloads).toContain('http://127.0.0.1:4387/build-an-app/');
+  expect(payloads).toContain(`http://127.0.0.1:${process.env.SITE_TEST_PORT ?? '4387'}/build-an-app/`);
   expect(requests.every((request) => !request.url.includes('/flags'))).toBe(true);
 });
 

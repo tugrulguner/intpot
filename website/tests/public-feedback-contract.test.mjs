@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const root = new URL('../', import.meta.url);
+const header = readFileSync(new URL('src/components/FamilyHeader.astro', root), 'utf8');
+const config = readFileSync(new URL('astro.config.mjs', root), 'utf8');
+const home = readFileSync(new URL('src/content/docs/index.mdx', root), 'utf8');
+test('public feedback/social destinations are canonical and intentionally static', () => {
+  for (const href of ['https://www.linkedin.com/in/tugrulguner/', 'https://x.com/Tugrul_Guner', 'https://github.com/tugrulguner/intpot']) assert.ok(header.includes(href) || config.includes(href), href);
+  assert.ok(config.includes("icon: 'linkedin'") && config.includes("icon: 'twitter'"));
+  assert.ok(header.includes('Feedback / issue') && home.includes('Feedback / issue'));
+  assert.ok(header.includes('intpot/issues/new?title=Website%20feedback&body=Page%3A%20https%3A%2F%2Fintpot.modepot.io%2F'));
+  assert.ok(header.includes('noopener noreferrer'));
+  assert.ok(!header.match(/(?:textarea|input|location\.search|navigator\.userAgent)/i));
+});
