@@ -10,7 +10,7 @@ test('analytics sends sanitized pageviews and no flag/acquisition leakage from a
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', { get: () => ({ brands: [{ brand: 'Chromium', version: '136' }, { brand: 'Google Chrome', version: '136' }, { brand: 'Not:A-Brand', version: '99' }], mobile: false, platform: 'macOS', getHighEntropyValues: async () => ({}), toJSON: () => ({}) }) });
-    localStorage.setItem('ph_phc_qXkp5FBQfrqHQwkqf3ys8iSoGoMYw2tpTHXGugXJhP8V_posthog', JSON.stringify({ distinct_id: 'privacy-test', '$device_id': 'privacy-test', '$initial_utm_source': 'PERSISTED_SOURCE_SENTINEL', '$session_entry_utm_source': 'PERSISTED_SESSION_SOURCE_SENTINEL', '$session_entry_gclid': 'PERSISTED_SESSION_CLICK_SENTINEL' }));
+    localStorage.setItem('ph_phc_qXkp5FBQfrqHQwkqf3ys8iSoGoMYw2tpTHXGugXJhP8V_posthog', JSON.stringify({ distinct_id: 'privacy-test', '$device_id': 'privacy-test', '$referring_domain': 'ref.example', '$initial_utm_source': 'PERSISTED_SOURCE_SENTINEL', '$session_entry_utm_source': 'PERSISTED_SESSION_SOURCE_SENTINEL', '$session_entry_gclid': 'PERSISTED_SESSION_CLICK_SENTINEL' }));
   });
   const page = await context.newPage();
   const requests: { url: string; body: string }[] = [];
@@ -74,6 +74,8 @@ test('analytics sends sanitized pageviews and no flag/acquisition leakage from a
   // claim delivery of a pageleave event at the departure boundary.
   expect(payloads).toContain(`http://127.0.0.1:${process.env.SITE_TEST_PORT ?? '4387'}/playground/`);
   expect(payloads).toContain('https://ref.example/path');
+  // A surviving full referrer does not prove a bare referring domain survived.
+  expect(events.some((event: any) => event.event === '$pageview' && event.properties?.['$referring_domain'] === 'ref.example')).toBe(true);
   expect(payloads).toContain(`http://127.0.0.1:${process.env.SITE_TEST_PORT ?? '4387'}/build-an-app/`);
   expect(requests.every((request) => !request.url.includes('/flags'))).toBe(true);
 });

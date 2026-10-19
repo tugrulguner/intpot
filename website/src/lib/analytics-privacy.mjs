@@ -8,6 +8,9 @@ export function sanitizeAnalyticsEvent(event) {
       if (typeof value !== 'string') return value;
       if (PRIVATE_CAMPAIGN_KEY.test(key)) return undefined;
       if (/^(?:token|api_key)$/i.test(key)) return key === 'token' && /^phc_[A-Za-z0-9_]+$/.test(value) ? value : undefined;
+      const domainKey = /(?:^|[_$])referring_domain$/i.test(key);
+      if (domainKey && value === '$direct') return value;
+      if (domainKey && /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(value)) return value.toLowerCase();
       const looksLikeUrl = /^(?:https?:)?\/\//i.test(value);
       if (!URL_KEY.test(key) && !looksLikeUrl) return value;
       try {
