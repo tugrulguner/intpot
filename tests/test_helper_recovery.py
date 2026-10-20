@@ -10,6 +10,13 @@ from typer.testing import CliRunner
 import intpot
 
 
+async def _call_mcp(server: Any, name: str, arguments: dict[str, Any]) -> Any:
+    from fastmcp import Client
+
+    async with Client(server) as client:
+        return await client.call_tool(name, arguments)
+
+
 @pytest.mark.parametrize("target", ["cli", "mcp", "api"])
 def test_helper_and_constant_execute_through_generated_consumers(tmp_source, target):
     if target == "api":
@@ -44,7 +51,7 @@ def test_helper_and_constant_execute_through_generated_consumers(tmp_source, tar
         assert result.exit_code == 0, result.exception
         assert result.stdout == "21\n"
     else:
-        result = asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3}))
+        result = asyncio.run(_call_mcp(namespace["mcp"], "calc", {"x": 3}))
         if isinstance(result, list):
             assert result[0].text == "21"
         elif isinstance(getattr(result, "structured_content", None), dict):
@@ -304,9 +311,11 @@ def calc(x: int):
         assert response.status_code == 200, response.text
         assert response.json() == {"result": "21"}
     else:
+        result = asyncio.run(_call_mcp(namespace["mcp"], "calc", {"x": 3}))
         assert (
-            asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3})).content[0].text
-            == "21"
+            result[0].text == "21"
+            if isinstance(result, list)
+            else result.content[0].text == "21"
         )
 
 
@@ -357,11 +366,11 @@ async def calc(x: int) -> int:
             assert result.exit_code == 0, result.exception
             assert result.stdout == "21\n"
         else:
+            result = asyncio.run(_call_mcp(namespace["mcp"], "calc", {"x": 3}))
             assert (
-                asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3}))
-                .content[0]
-                .text
-                == "21"
+                result[0].text == "21"
+                if isinstance(result, list)
+                else result.content[0].text == "21"
             )
 
 

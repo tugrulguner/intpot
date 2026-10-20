@@ -120,7 +120,9 @@ def main() -> None:
                     script = (
                         "import importlib.util,sys,asyncio; s=importlib.util.spec_from_file_location('g',sys.argv[1]);"
                         "m=importlib.util.module_from_spec(s); s.loader.exec_module(m);"
-                        "r=asyncio.run(m.mcp.call_tool('calc',{'x':3}));"
+                        "\nfrom fastmcp import Client\n"
+                        "async def run():\n async with Client(m.mcp) as c: return await c.call_tool('calc',{'x':3})\n"
+                        "r=asyncio.run(run());"
                         "v=(r[0].text if isinstance(r,list) else getattr(r,'structured_content',None));"
                         "v=(v['result'] if isinstance(v,dict) and 'result' in v else v if isinstance(v,str) else r.content[0].text);"
                         "assert str(v)=='21',r"
