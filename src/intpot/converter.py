@@ -15,6 +15,7 @@ from intpot.core.callbacks import (
 from intpot.core.callbacks import (
     guard_cli_parameter_callbacks,
 )
+from intpot.core.definition_bindings import definition_time_missing
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
 from intpot.core.generators._render import _body_global_names
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
@@ -100,6 +101,7 @@ def _reference_diagnostics(
             )
             continue
         module = ast.parse(code)
+        definition_missing = definition_time_missing(module)
         # Standalone exports are normal file-loaded Python modules. Their loader
         # initializes these names without assignments in the emitted AST. Values
         # describe the generated module, not the original source or its resources;
@@ -145,6 +147,32 @@ def _reference_diagnostics(
         }
         aliases = _private_aliases(projected.tools)
         for tool in projected.tools:
+            owned_definitions = {tool.name, aliases.get(f"impl:{tool.name}", "")}
+            for definition in tool.support_definitions:
+                support = ast.parse(definition).body[0]
+                if isinstance(support, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    owned_definitions.add(support.name)
+            definition_names = sorted(
+                {
+                    name
+                    for owner in owned_definitions
+                    for name in definition_missing.get(owner, [])
+                }
+            )
+            if definition_names:
+                diagnostics.append(
+                    {
+                        "code": "missing_definition_binding",
+                        "tool": tool.name,
+                        "target": candidate.value,
+                        "names": definition_names,
+                        "message": (
+                            "Generated definition evaluates names before their bindings exist; "
+                            "provide the required import/definition before the function "
+                            "or adapt the source to the supported subset."
+                        ),
+                    }
+                )
             if not tool.function_body:
                 continue
             implementation = functions[aliases[f"impl:{tool.name}"]]

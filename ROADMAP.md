@@ -46,9 +46,12 @@ a dynamically initialized dependency refusal control.
 
 Keep the next work in independently useful slices:
 
-1. **Broaden explicit dependency diagnostics.** Cover annotation/default evaluation and
-   definition ordering without certifying package availability, arbitrary runtime state,
-   or Python equivalence. Preserve before-write refusal and inspection.
+1. **Broaden explicit dependency diagnostics.** The bounded ordered check now covers
+   generated function decorators, defaults and eager annotation names, including support
+   functions and wrappers, with `missing_definition_binding` refusal before writes.
+   Extend assessment separately to string/postponed annotation resolution and richer
+   evaluation guarantees without certifying package availability, arbitrary runtime state,
+   or Python equivalence. Inspection remains available.
 2. **Make artifact evidence persistent.** Add installed wheel/sdist CLI and generated-consumer
    behavior to CI/release gates, and extend affected framework-floor consumer coverage.
    Manual release smoke tests do not replace these automated gates.
