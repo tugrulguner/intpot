@@ -1,0 +1,12 @@
+---
+const { head } = Astro.locals.starlightRoute;
+const markdownExports = new Map([
+  ['/build-an-app/', ['/downloads/build-an-app.md', 'Build and run an Intpot app']],
+  ['/conversion-boundaries/', ['/downloads/conversion-boundaries.md', 'Convert, inspect, and eject applications']],
+  ['/schema-reference/', ['/downloads/schema-reference.md', 'Schema and parameter reference']],
+  ['/architecture-internals/', ['/downloads/architecture-internals.md', 'Architecture internals']],
+]);
+const representation = markdownExports.get(Astro.url.pathname);
+---
+{head.map(({ tag: Tag, attrs, content }) => <Tag {...attrs} set:html={content} />)}
+{representation && <link rel="alternate" type="text/markdown" href={representation[0]} title={`${representation[1]} as Markdown`} />}

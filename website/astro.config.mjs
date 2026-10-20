@@ -31,10 +31,9 @@ export default defineConfig({
     favicon: '/intpot-mark.svg',
     social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/tugrulguner/intpot' }],
     customCss: ['./src/styles/custom.css'],
-    components: { Header: './src/components/FamilyHeader.astro' },
+    components: { Header: './src/components/FamilyHeader.astro', Head: './src/components/DocumentationHead.astro' },
     head: [
       { tag: 'script', attrs: {}, content: posthogScript },
-      { tag: 'link', attrs: { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'Intpot summary for AI agents' } },
       { tag: 'meta', attrs: { property: 'og:image', content: 'https://intpot.modepot.io/social-card-v2.png' } },
       { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
       { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
