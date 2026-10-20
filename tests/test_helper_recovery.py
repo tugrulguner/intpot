@@ -12,11 +12,16 @@ import intpot
 
 @pytest.mark.parametrize("target", ["cli", "mcp", "api"])
 def test_helper_and_constant_execute_through_generated_consumers(tmp_source, target):
-    registration = (
-        'from fastmcp import FastMCP\napp = FastMCP("helpers")\n@app.tool()\n'
-        if target == "api"
-        else 'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/calc")\n'
-    )
+    if target == "api":
+        registration = "import typer\napp = typer.Typer()\n@app.command()\n"
+    elif target == "mcp":
+        registration = (
+            'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/calc")\n'
+        )
+    else:
+        registration = (
+            'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/calc")\n'
+        )
     header, decorator = registration.rsplit("@", 1)
     source = (
         header
@@ -40,7 +45,12 @@ def test_helper_and_constant_execute_through_generated_consumers(tmp_source, tar
         assert result.stdout == "21\n"
     else:
         result = asyncio.run(namespace["mcp"].call_tool("calc", {"x": 3}))
-        assert result.content[0].text == "21"
+        if isinstance(result, list):
+            assert result[0].text == "21"
+        elif isinstance(getattr(result, "structured_content", None), dict):
+            assert result.structured_content["result"] == 21
+        else:
+            assert result.content[0].text == "21"
     assert loaded.schema is schema
 
 
