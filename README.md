@@ -652,6 +652,10 @@ helper-based implementation with a dynamically initialized dependency that retur
 
 ## Definition-evaluation binding diagnostics
 
+**Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
+
+Run `uv run --all-extras --with httpx python examples/definition_bindings.py` for a working original HTTP API whose MCP export reports the missing `Model` annotation and refuses before creating output, even with scaffold opt-in. The consumer check requires `httpx`.
+
 Public converter assessment also reports `missing_definition_binding` when generated
 function decorators, defaults, or non-postponed annotation expressions refer to an absent
 or later module binding. Diagnostics retain `tool`, `target`, sorted `names`, and an
