@@ -265,7 +265,7 @@ policy, and execution through the generated target—not merely a matching sourc
 - [ ] Extend declared-floor FastAPI/FastMCP and supported structural-generation lanes to
       import and invoke generated artifacts. Inspector-only success is not full runtime
       compatibility; keep existing Typer CLI compatibility checks.
-- [ ] Automate installed wheel/sdist behavior as CI and release gates outside the source
+- [x] Automate installed wheel/sdist behavior as CI and release gates outside the source
       tree, with source-path injection disabled. Exercise installed CLI/version, shipped
       skills, and generated consumers; archive presence alone is insufficient. Manual
       release smoke evidence is useful but is not a persistent workflow gate.
