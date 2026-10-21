@@ -36,7 +36,7 @@ def main() -> None:
         for artifact in (wheels[0], sdists[0]):
             kind = "sdist" if artifact.name.endswith(".tar.gz") else "wheel"
             home = base / kind
-            venv.EnvBuilder(with_pip=False, symlinks=False).create(home)
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(home)
             python = home / "bin" / "python"
             cli = home / "bin" / "intpot"
             env = os.environ.copy()
