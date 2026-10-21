@@ -650,6 +650,25 @@ does not bypass missing-binding refusal. Live `App` serving/ejection and direct 
 generator compatibility are unchanged. See `examples/missing_binding.py` for an original
 helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
 
+## Definition-evaluation binding diagnostics
+
+Public converter assessment also reports `missing_definition_binding` when generated
+function decorators, defaults, or non-postponed annotation expressions refer to an absent
+or later module binding. Diagnostics retain `tool`, `target`, sorted `names`, and an
+actionable message; provide the required import/definition before the affected function,
+or adapt the source to the supported subset. Checks include generated wrappers and the
+ordered support functions owned by each tool, without executing generated code.
+
+Projection, conversion, and writes raise `MissingBindingError` for these diagnostics,
+including `--dry-run` and `--allow-scaffold`; mixed-directory conversion writes nothing.
+Inspection remains available, and body-recovery fields still describe bodies only.
+
+This is a bounded ordered binding check, not full annotation/default readiness. String
+and postponed annotations (including later framework resolution), called initializer
+behavior, arbitrary conditional initialization, import availability, and Python equivalence
+are not certified. Lambda bodies and generator bodies are deferred; comprehension locals
+are not module dependencies. Live `App` and direct low-level generators are unchanged.
+
 ## Bounded helper recovery (v0.11)
 
 Converters recover required undecorated functions and immutable literal constants from
