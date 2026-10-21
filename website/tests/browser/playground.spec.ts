@@ -385,6 +385,8 @@ test('documentation guides navigate, expose stable anchors, and serve canonical 
     await expect(page).toHaveURL(/\/build-an-app\/$/);
     await expect(page.getByRole('heading', { name: 'Build and run an Intpot app', level: 1 })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Download this guide as Markdown' })).toHaveAttribute('href', '/downloads/build-an-app.md');
+    await expect(page.locator('head link[rel="alternate"][type="text/markdown"]')).toHaveAttribute('href', '/downloads/build-an-app.md');
+    await expect(page.locator('head link[rel="alternate"][href="/llms.txt"]')).toHaveCount(0);
     const download = await page.request.get('/downloads/build-an-app.md');
     expect(download.status()).toBe(200);
     expect(await download.text()).toContain('intpot serve app.py --api');
@@ -394,6 +396,44 @@ test('documentation guides navigate, expose stable anchors, and serve canonical 
     await expect(page.locator('a[href="/architecture-internals/"]').first()).toHaveAttribute('href', '/architecture-internals/');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
     expect(overflow).toBe(true);
+  }
+});
+
+test('standalone Markdown downloads index is canonical, descriptive, crawlable, and useful', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/downloads/');
+  await expect(page).toHaveTitle('Intpot Markdown exports');
+  await expect(page.getByRole('heading', { name: 'Download Intpot guides as Markdown', level: 1 })).toBeVisible();
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /canonical Markdown/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://intpot.modepot.io/downloads/');
+  await expect(page.locator('meta[name="robots"]')).not.toHaveAttribute('content', /noindex/);
+  const main = page.getByRole('main');
+  for (const [name, label] of [['build-an-app', 'Build and run an Intpot app'], ['conversion-boundaries', 'Convert, inspect, and eject applications'], ['schema-reference', 'Schema and parameter reference'], ['architecture-internals', 'Architecture internals']]) {
+    const link = main.getByRole('link', { name: label });
+    await expect(link).toHaveAttribute('href', `/downloads/${name}.md`);
+    const response = await page.request.get(`/downloads/${name}.md`);
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toContain('---');
+  }
+  await expect(main.getByRole('link', { name: /agent discovery map/i })).toHaveAttribute('href', '/llms.txt');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('each guide advertises its own complete Markdown representation, not the discovery map', async ({ page }) => {
+  for (const [route, name, label] of [
+    ['/build-an-app/', 'build-an-app', 'Build and run an Intpot app'],
+    ['/conversion-boundaries/', 'conversion-boundaries', 'Convert, inspect, and eject applications'],
+    ['/schema-reference/', 'schema-reference', 'Schema and parameter reference'],
+    ['/architecture-internals/', 'architecture-internals', 'Architecture internals'],
+  ]) {
+    await page.goto(route);
+    const markdownPath = `/downloads/${name}.md`;
+    await expect(page.locator('head link[rel="alternate"][type="text/markdown"]')).toHaveAttribute('href', markdownPath);
+    await expect(page.locator('head link[rel="alternate"][href="/llms.txt"]')).toHaveCount(0);
+    await expect(page.getByRole('main').getByRole('link', { name: 'Download this guide as Markdown' })).toHaveAttribute('href', markdownPath);
+    const download = await page.request.get(markdownPath);
+    expect(download.status()).toBe(200);
+    expect(await download.text()).toContain(`title: ${label}`);
   }
 });
 

@@ -55,7 +55,6 @@ for await (const path of htmlFiles(distRoot)) {
   }
   if (html.includes('modepot.com')) failures.push(`${relative(distRoot, path)}: stale ModePot domain`);
   for (const token of [
-    'rel="alternate" type="text/plain" href="/llms.txt"',
     'property="og:image" content="https://intpot.modepot.io/social-card-v2.png"',
     'name="twitter:image" content="https://intpot.modepot.io/social-card-v2.png"',
   ]) {
@@ -106,6 +105,8 @@ for (const name of markdownSources) {
   if (!title || !page.includes(title)) failures.push(`${name}: canonical heading/title missing from rendered page`);
   if ((page.match(/<h1\b/g) ?? []).length !== 1) failures.push(`${name}: expected exactly one rendered H1`);
   if (!page.includes(`href="/downloads/${name}.md"`)) failures.push(`${name}: missing Markdown download link`);
+  if (!page.includes(`rel="alternate" type="text/markdown" href="/downloads/${name}.md"`)) failures.push(`${name}: missing page-specific Markdown alternate`);
+  if (page.includes('rel="alternate" type="text/plain" href="/llms.txt"')) failures.push(`${name}: llms.txt is a discovery map, not a page representation`);
   for (const [, href, fragment] of page.matchAll(/href="(\/[^"#?]+)(?:#([^"?]+))?"/g)) {
     const route = href.slice(1);
     const targetPath = href.endsWith('/') || !route.split('/').at(-1).includes('.')
@@ -120,8 +121,23 @@ for (const name of markdownSources) {
   }
 }
 const downloadIndex = await readFile(join(distRoot, 'downloads', 'index.html'), 'utf8');
+for (const token of [
+  '<html lang="en">',
+  '<meta name="description"',
+  '<link rel="canonical" href="https://intpot.modepot.io/downloads/">',
+  '<meta name="viewport"',
+  '<main',
+  'Markdown exports',
+  'llms.txt',
+]) {
+  if (!downloadIndex.includes(token)) failures.push(`downloads index: missing ${token}`);
+}
+if ((downloadIndex.match(/<h1\b/g) ?? []).length !== 1) failures.push('downloads index: expected one H1');
 for (const name of markdownSources) {
   if (!downloadIndex.includes(`${name}.md`)) failures.push(`downloads index: missing ${name}.md`);
+}
+if ((downloadIndex.match(/href="\/downloads\/[^\"]+\.md"/g) ?? []).length !== markdownSources.length) {
+  failures.push(`downloads index: expected exactly ${markdownSources.length} Markdown export links`);
 }
 const socialCard = await readFile(join(distRoot, 'social-card-v2.png'));
 if (socialCard.readUInt32BE(16) !== 1200 || socialCard.readUInt32BE(20) !== 630) {
