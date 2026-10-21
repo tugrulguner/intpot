@@ -22,6 +22,53 @@ def calc(x: int) -> int:
 """
 
 
+@pytest.mark.parametrize("options", [[], ["--dry-run"], ["--allow-scaffold"]])
+def test_definition_time_annotation_binding_is_reported_and_refused(
+    tmp_source, tmp_path, options
+):
+    source = tmp_source("""from fastapi import FastAPI
+from pydantic import BaseModel
+class Model(BaseModel):
+    value: int
+app = FastAPI()
+@app.post('/value')
+def value(x: Model) -> int:
+    return 1
+""")
+    loaded = intpot.load(source)
+    response = TestClient(loaded.app).post("/value", json={"value": 3})
+    assert response.status_code == 200, response.text
+    assert response.json() == 1
+    diagnostics = loaded.assess()["diagnostics"]
+    assert [(item["code"], item["target"], item["names"]) for item in diagnostics] == [
+        ("missing_definition_binding", "mcp", ["Model"])
+    ]
+    for target in ("mcp",):
+        with pytest.raises(intpot.MissingBindingError, match="Model"):
+            loaded.project(target)
+    output = tmp_path / "converted.py"
+    with pytest.raises(intpot.MissingBindingError, match="Model"):
+        loaded.write(output, "mcp", allow_scaffold=True)
+    assert not output.exists()
+    inspection = CliRunner().invoke(app, ["inspect", str(source), "--json"])
+    assert inspection.exit_code == 0, inspection.output
+    assert json.loads(inspection.stdout)[0]["assessment"] == loaded.assess()
+    sources = tmp_path / "mixed"
+    sources.mkdir()
+    (sources / "z_bad.py").write_text(source.read_text())
+    (sources / "a_good.py").write_text(
+        "from fastapi import FastAPI\napp = FastAPI()\n@app.get('/ok')\ndef ok() -> int:\n    return 1\n"
+    )
+    directory = tmp_path / "converted"
+    result = CliRunner().invoke(
+        app, ["to", "mcp", str(sources), "--output", str(directory), *options]
+    )
+    assert result.exit_code == 1, result.output
+    assert "Model" in result.stderr
+    assert result.stdout == ""
+    assert not directory.exists()
+
+
 def test_json_inspection_reports_missing_bindings(tmp_source):
     path = tmp_source(MISSING)
     loaded = intpot.load(path)

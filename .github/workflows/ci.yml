@@ -30,8 +30,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --all-extras --locked
-      - run: uv run ruff check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
-      - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+      - run: uv run ruff check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
+      - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
 
   typecheck:
     name: typecheck
@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --all-extras --locked
-      - run: uv run pyright src/ tests/ examples/semantic_schema.py scripts/verify_generated_examples.py
+      - run: uv run pyright src/ tests/ examples/semantic_schema.py examples/definition_bindings.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
 
   test:
     name: test (${{ matrix.python-version }})
@@ -87,6 +87,7 @@ jobs:
             package: fastapi
             version: "0.100.0"
             tests: tests/test_inspectors/test_api_inspector.py
+            consumers: api
           - name: FastMCP 2.0.0
             editable: ".[mcp]"
             framework: "fastmcp==2.0.0"
@@ -95,6 +96,7 @@ jobs:
             package: fastmcp
             version: "2.0.0"
             tests: tests/test_inspectors/test_mcp_inspector.py
+            consumers: mcp
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -110,14 +112,32 @@ jobs:
           PACKAGE: ${{ matrix.package }}
           VERSION: ${{ matrix.version }}
           TESTS: ${{ matrix.tests }}
+          CONSUMERS: ${{ matrix.consumers }}
         run: |
           run=(uv run --no-project --python 3.11 --with-editable "$EDITABLE" --with "$FRAMEWORK" --with pytest)
+          if [[ "$CONSUMERS" == "api" ]]; then
+            run+=(--with httpx --with 'httpx<0.28')
+          elif [[ "$CONSUMERS" == "mcp" ]]; then
+            run+=(--with "pydantic<2.11")
+          fi
           if [[ -n "$CONSTRAINT" ]]; then
             run+=(--with "$CONSTRAINT")
           fi
           "${run[@]}" python -c 'from importlib.metadata import version; import os; actual = version(os.environ["PACKAGE"]); expected = os.environ["VERSION"]; assert actual == expected, (actual, expected)'
           read -r -a tests <<< "$TESTS"
           "${run[@]}" pytest "${tests[@]}" -q
+          if [[ -n "$CONSUMERS" ]]; then
+            consumer_tests=(tests/test_helper_recovery.py)
+            case "$CONSUMERS" in
+              api) target_filter='api and helper_and_constant' ;;
+              mcp) target_filter='mcp and helper_and_constant' ;;
+              *) echo "unsupported consumer target: $CONSUMERS" >&2; exit 2 ;;
+            esac
+            if [[ "$CONSUMERS" == "mcp" ]]; then
+              run+=(--with "pydantic<2.11")
+            fi
+            "${run[@]}" pytest "${consumer_tests[@]}" -q -k "$target_filter"
+          fi
 
   compatibility-fastmcp-2-latest:
     name: latest FastMCP 2.x
@@ -163,6 +183,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv build
+      - name: Exercise installed wheel and sdist consumers
+        run: uv run --no-project --python 3.11 --with fastapi --with httpx --with fastmcp python scripts/verify_installed_artifacts.py
       # Packaging breaks are otherwise only discovered while cutting a release.
       - name: Verify distribution artifacts
         run: |

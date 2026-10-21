@@ -76,6 +76,8 @@ jobs:
         with:
           enable-cache: false # Build the artifact that ships from a clean slate.
       - run: uv build
+      - name: Exercise installed wheel and sdist consumers
+        run: uv run --no-project --python 3.11 --with fastapi --with httpx --with fastmcp python scripts/verify_installed_artifacts.py
       - name: Verify release artifacts
         run: |
           python3 - <<'PY'

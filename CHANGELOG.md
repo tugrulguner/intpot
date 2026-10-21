@@ -10,6 +10,25 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.11.1] - 2026-10-21
+
+### Changed
+
+- Installed wheel and sdist packages are now checked in CI and before release for working CLI commands, shipped skills, and generated CLI, API, and MCP consumers.
+
+### Fixed
+
+- Add accessible social links and a product-specific feedback route to the Intpot website.
+- Conversion now refuses missing or late bindings in generated function decorators, defaults and eager annotations before writing output, while retaining per-target inspection diagnostics.
+- Correct the single-tool first-use CLI commands and distinguish them from multiple-tool subcommands.
+- Fixes the Intpot wordmark so its `int` prefix is off-white and its joined `pot` suffix is amber across the canonical lockup and social preview.
+- Keep a direct, clearly labeled Feedback action visible in compact navigation, while retaining ModePot in the menu and keeping feedback context limited to the canonical public page.
+- Keep personal GitHub, LinkedIn and X links beside the creator attribution with restrained text sizing instead of crowding project navigation.
+- Keep the Intpot site-header prefix neutral and its pot suffix flask amber in light and dark themes.
+- Preserve validated referring domains and direct visits in privacy-sanitized website analytics without retaining private URL queries or fragments.
+- The Markdown downloads index now describes its guides clearly, and each guide advertises its own Markdown export.
+
+
 ## [0.11.0] - 2026-10-14
 
 ### Added

@@ -21,6 +21,20 @@ This directory contains example source files and their generated conversions.
 | `advanced_api.py` | FastAPI | User CRUD with `Body(...)`, `Optional`, path params, multiple HTTP methods |
 | `dependency_api.py` | FastAPI | Authenticated profile route with `Depends()`; intentionally rejected by CLI/MCP conversion |
 
+## Definition-binding diagnostics
+
+`definition_bindings.py` exercises the bounded diagnostics added in v0.11.1. It creates a
+temporary FastAPI source with a Pydantic `Model` annotation, requests the original endpoint,
+then inspects why the standalone MCP conversion cannot preserve that binding. Conversion
+raises `MissingBindingError` before creating any output directory, including scaffold opt-in.
+
+```bash
+uv run --all-extras --with httpx python examples/definition_bindings.py
+```
+
+This does not recover arbitrary classes or certify deferred/string annotation resolution.
+The example starts no network server and removes its temporary source on exit.
+
 ## Generated Conversions
 
 The `conversions/` directory contains all conversion outputs — 6 basic + 6 advanced.
