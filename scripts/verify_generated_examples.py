@@ -155,6 +155,21 @@ def verify_helper_recovery() -> None:
     print("verified bounded helper recovery through CLI API and MCP")
 
 
+def verify_definition_bindings() -> None:
+    module = _load_module(
+        "intpot_definition_bindings", ROOT / "examples" / "definition_bindings.py"
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        module.main()
+    assert output.getvalue().splitlines() == [
+        "Original HTTP API: /value = 1",
+        "mcp: missing_definition_binding names=['Model']",
+        "MCP conversion refused before writing, including scaffold opt-in",
+    ]
+    print("verified definition-binding diagnostics and before-write refusal")
+
+
 def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
@@ -163,6 +178,7 @@ def main() -> None:
     verify_semantic_schema()
     verify_missing_binding()
     verify_helper_recovery()
+    verify_definition_bindings()
 
 
 if __name__ == "__main__":

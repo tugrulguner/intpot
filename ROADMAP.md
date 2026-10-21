@@ -33,9 +33,14 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-Extend dependency assessment to annotations and defaults, and automate installed-artifact
-consumer verification. The retained-body diagnostics and bounded helper/constant recovery
-milestone is delivered in v0.11; broader Python recovery is not.
+The v0.11.1 release candidate adds bounded ordered diagnostics for generated function
+decorators, defaults and eager annotation names, plus persistent installed wheel/sdist
+consumer gates. The retained-body diagnostics and bounded helper/constant recovery
+milestone is delivered in v0.11.0; broader Python recovery is not.
+
+The next development slice is explicit assessment of string/postponed annotation
+resolution. Keep that work separate from the completed eager-definition check and from
+package availability or arbitrary runtime initialization guarantees.
 
 The earlier helper failure now has an executable supported case: `calc(3)` calls a plain
 same-module helper using an immutable literal constant, and generated CLI, HTTP API, and
@@ -52,9 +57,10 @@ Keep the next work in independently useful slices:
    Extend assessment separately to string/postponed annotation resolution and richer
    evaluation guarantees without certifying package availability, arbitrary runtime state,
    or Python equivalence. Inspection remains available.
-2. **Make artifact evidence persistent.** Add installed wheel/sdist CLI and generated-consumer
-   behavior to CI/release gates, and extend affected framework-floor consumer coverage.
-   Manual release smoke tests do not replace these automated gates.
+2. **Keep artifact evidence persistent.** Installed wheel/sdist CLI, shipped skills and
+   generated CLI/API/MCP consumers now run in CI and release gates outside the source tree.
+   FastAPI/FastMCP floor lanes exercise generated consumers; broader structural-generation
+   coverage remains a separate open item. Manual smoke tests do not replace these gates.
 
 Preserve the canonical schema, focused shared resolvers, and distinct live-callable path.
 Classes, decorators, mutable state and cross-module helper recovery remain later bounded

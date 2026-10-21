@@ -62,7 +62,27 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
         "verified semantic schema example",
         "verified missing-binding diagnostics and refusal example",
         "verified bounded helper recovery through CLI API and MCP",
+        "verified definition-binding diagnostics and before-write refusal",
     ]
+
+
+def test_definition_binding_example_refuses_before_writing(tmp_path: Path) -> None:
+    example = ROOT / "examples" / "definition_bindings.py"
+    assert example.is_file(), "The release needs a runnable definition-binding example"
+    result = subprocess.run(
+        [sys.executable, str(example)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        "Original HTTP API: /value = 1",
+        "mcp: missing_definition_binding names=['Model']",
+        "MCP conversion refused before writing, including scaffold opt-in",
+    ]
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_semantic_schema_example_prints_strict_json() -> None:

@@ -89,6 +89,31 @@ does not bypass missing-binding refusal. Live `App` serving/ejection and direct 
 generator compatibility are unchanged. See [the runnable missing-binding example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_binding.py) for an original
 helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
 
+## Definition-binding diagnostics (v0.11.1)
+
+**Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
+
+Public conversion reports `missing_definition_binding` when generated function decorators,
+defaults, or non-postponed annotation expressions refer to an absent or later module binding.
+Diagnostics identify `tool`, `target`, sorted `names`, and an actionable message. The check
+includes generated implementations, public wrappers, and ordered support functions without
+executing generated code.
+
+Projection, conversion, and writes raise `intpot.MissingBindingError` before any output
+is created, including `--dry-run` and `--allow-scaffold`. Inspection remains available;
+body-recovery fields still describe bodies only.
+
+Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source
+checkout. The [runnable example](https://github.com/tugrulguner/intpot/blob/main/examples/definition_bindings.py)
+requests a working original HTTP API, inspects its missing `Model` annotation in the MCP
+target, and proves refusal creates no output directory, with and without scaffold opt-in.
+
+This is bounded ordered name availability, not full annotation/default readiness.
+String/postponed annotations (including later framework resolution), called initializer
+behavior, arbitrary conditional initialization, import availability, and Python equivalence
+are not certified. Lambda and generator bodies are deferred; comprehension locals are not
+module dependencies. Live `App` and direct low-level generators are unchanged.
+
 ## Bounded helper recovery (v0.11)
 
 Converters recover required undecorated functions and immutable literal constants from
