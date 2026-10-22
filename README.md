@@ -640,6 +640,32 @@ The [runnable example](examples/definition_bindings.py) requests a working origi
 API, then reports a missing `Model` in the generated CLI annotations and refuses before
 creating output. [Open the full-size assessment diagram](docs/assets/intpot-assessment.png).
 
+## Actionable binding context (unreleased)
+
+**Availability:** source checkout containing this change only; these additive fields are
+not included in the published v0.12.0 package.
+
+`loaded.assess()` and `intpot inspect app.py --json` expose `references`,
+`suggested_action`, and `source_location` on `missing_binding`,
+`missing_definition_binding`, and `missing_annotation_binding` diagnostics. Existing
+codes, tool/target identity, names, messages and refusal exceptions remain unchanged.
+Each reference pairs a missing `name` with its `generated_definition`, including owned
+helpers and generated wrappers/implementations. These are emitted Python identifiers,
+not original-source coordinates. References are sorted by generated definition then name.
+Suggestions name the missing bindings; eager definition dependencies must exist before
+those definitions, while body and deferred-annotation dependencies must exist before use.
+
+`source_location` is currently always `null` (`None` in Python): this schema does not
+retain verified original callable/helper coordinates. An application `source_path` is
+not sufficient provenance. No generated AST position is presented as an original line.
+Source-location capture remains separate future work. Diagnostics are observations of
+bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
+Scaffold permission cannot bypass refusal, and inspection still imports trusted code.
+
+Run [the diagnostic-context example](https://github.com/tugrulguner/intpot/blob/main/examples/diagnostic_context.py)
+from the source checkout. It checks the original API via TestClient, prints real JSON
+context, and verifies that CLI/MCP refusal leaves output directories absent.
+
 ## Missing body bindings (v0.11)
 
 Public conversion now raises `intpot.MissingBindingError` before output writes when a

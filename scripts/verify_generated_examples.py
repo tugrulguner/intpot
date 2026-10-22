@@ -169,6 +169,24 @@ def verify_definition_bindings() -> None:
         "CLI and MCP conversion refused before writing, including scaffold opt-in",
     ]
     print("verified definition-binding diagnostics and before-write refusal")
+    context = _load_module(
+        "intpot_diagnostic_context", ROOT / "examples" / "diagnostic_context.py"
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        context.main()
+    diagnostics = json.loads(output.getvalue())
+    assert {item["code"] for item in diagnostics} == {
+        "missing_annotation_binding",
+        "missing_definition_binding",
+    }
+    assert all(
+        item["source_location"] is None
+        and item["references"]
+        and "Model" in item["suggested_action"]
+        for item in diagnostics
+    )
+    print("verified actionable diagnostic context and before-write refusal")
 
 
 def main() -> None:
