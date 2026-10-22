@@ -654,7 +654,7 @@ helper-based implementation with a dynamically initialized dependency that retur
 
 **Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
 
-Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source checkout for a working original HTTP API whose MCP export reports the eager missing `Model` annotation and whose CLI export reports the unreleased postponed-annotation diagnostic described below. Both refuse before output, even with scaffold opt-in. The consumer check requires `httpx`.
+Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source checkout for a working original HTTP API whose MCP export reports the eager missing `Model` annotation and whose CLI export reports the v0.12.0 postponed-annotation diagnostic described below. Both refuse before output, even with scaffold opt-in. The consumer check requires `httpx`.
 
 Public converter assessment also reports `missing_definition_binding` when generated
 function decorators, defaults, or non-postponed annotation expressions refer to an absent
@@ -673,10 +673,11 @@ import availability, and Python equivalence are not certified. Lambda bodies and
 bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
 low-level generators are unchanged.
 
-## String/postponed annotation bindings (unreleased)
+## String/postponed annotation bindings (v0.12.0)
 
-**Availability:** source checkout containing this change only. Published v0.11.1 does not
-include `missing_annotation_binding`.
+**Availability:** requires v0.12.0 or newer. Older versions, including v0.11.1, do not
+include `missing_annotation_binding`. Until v0.12.0 is available from your package index,
+use a source checkout containing this change.
 
 Public assessment reports `missing_annotation_binding` for missing global roots in parsed
 string annotations and annotations postponed by an emitted future import. It checks the

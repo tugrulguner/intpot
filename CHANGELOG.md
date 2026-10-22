@@ -10,6 +10,14 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.12.0] - 2026-10-22
+
+### Fixed
+
+- Public conversion now reports missing global names in generated string/postponed annotations and refuses before writes, without evaluating annotations or bypassing the check through scaffold permission.
+- Repository lockfiles include patched MCP SDK, Vite, PostCSS selector parser and development virtualenv dependencies; public dependency minimums are unchanged, so existing consumer environments must update their own resolved dependencies.
+
+
 ## [0.11.1] - 2026-10-21
 
 ### Changed
