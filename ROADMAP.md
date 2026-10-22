@@ -33,14 +33,15 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-The v0.11.1 release candidate adds bounded ordered diagnostics for generated function
+The published v0.11.1 release provides bounded ordered diagnostics for generated function
 decorators, defaults and eager annotation names, plus persistent installed wheel/sdist
 consumer gates. The retained-body diagnostics and bounded helper/constant recovery
 milestone is delivered in v0.11.0; broader Python recovery is not.
 
-The next development slice is explicit assessment of string/postponed annotation
-resolution. Keep that work separate from the completed eager-definition check and from
-package availability or arbitrary runtime initialization guarantees.
+The current source-only slice adds `missing_annotation_binding` for absent global roots in
+emitted string/postponed annotations, with refusal before writes and an extended runnable
+example. It is not yet published. Full type resolution, alias-value validation and framework
+registration timing remain separate from name availability and runtime initialization.
 
 The earlier helper failure now has an executable supported case: `calc(3)` calls a plain
 same-module helper using an immutable literal constant, and generated CLI, HTTP API, and
@@ -54,9 +55,10 @@ Keep the next work in independently useful slices:
 1. **Broaden explicit dependency diagnostics.** The bounded ordered check now covers
    generated function decorators, defaults and eager annotation names, including support
    functions and wrappers, with `missing_definition_binding` refusal before writes.
-   Extend assessment separately to string/postponed annotation resolution and richer
-   evaluation guarantees without certifying package availability, arbitrary runtime state,
-   or Python equivalence. Inspection remains available.
+   Source-only `missing_annotation_binding` now checks string/postponed annotation names
+   against the completed emitted module. Richer type/alias evaluation, framework timing,
+   package availability, arbitrary runtime state and Python equivalence remain uncertified.
+   Inspection remains available.
 2. **Keep artifact evidence persistent.** Installed wheel/sdist CLI, shipped skills and
    generated CLI/API/MCP consumers now run in CI and release gates outside the source tree.
    FastAPI/FastMCP floor lanes exercise generated consumers; broader structural-generation

@@ -79,8 +79,9 @@ def test_definition_binding_example_refuses_before_writing(tmp_path: Path) -> No
     assert result.returncode == 0, result.stderr
     assert result.stdout.splitlines() == [
         "Original HTTP API: /value = 1",
+        "cli: missing_annotation_binding names=['Model']",
         "mcp: missing_definition_binding names=['Model']",
-        "MCP conversion refused before writing, including scaffold opt-in",
+        "CLI and MCP conversion refused before writing, including scaffold opt-in",
     ]
     assert list(tmp_path.iterdir()) == []
 

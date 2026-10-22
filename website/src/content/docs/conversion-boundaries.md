@@ -105,14 +105,41 @@ body-recovery fields still describe bodies only.
 
 Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source
 checkout. The [runnable example](https://github.com/tugrulguner/intpot/blob/main/examples/definition_bindings.py)
-requests a working original HTTP API, inspects its missing `Model` annotation in the MCP
-target, and proves refusal creates no output directory, with and without scaffold opt-in.
+requests a working original HTTP API and inspects its eager missing `Model` annotation in
+the MCP target plus the unreleased postponed CLI diagnostic described below. It proves both
+refusals create no output directory, with and without scaffold opt-in.
 
-This is bounded ordered name availability, not full annotation/default readiness.
-String/postponed annotations (including later framework resolution), called initializer
-behavior, arbitrary conditional initialization, import availability, and Python equivalence
-are not certified. Lambda and generator bodies are deferred; comprehension locals are not
-module dependencies. Live `App` and direct low-level generators are unchanged.
+This is a bounded ordered binding check, not full annotation/default readiness. Later
+framework resolution, called initializer behavior, arbitrary conditional initialization,
+import availability, and Python equivalence are not certified. Lambda bodies and generator
+bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
+low-level generators are unchanged.
+
+## String/postponed annotation bindings (unreleased)
+
+**Availability:** source checkout containing this change only. Published v0.11.1 does not
+include `missing_annotation_binding`.
+
+Public assessment reports `missing_annotation_binding` for missing global roots in parsed
+string annotations and annotations postponed by an emitted future import. It checks the
+actual generated implementations, wrappers and owned support functions against bindings
+in the completed emitted module, not just those preceding a function. Names are sorted
+and deduplicated per tool/target. Annotation-only declarations do not create bindings.
+Projection and writes refuse before output, including dry-run and scaffold opt-in;
+inspection and body-recovery fields remain unchanged.
+
+Type-position strings are parsed inside nested quotes, unions and recognized builtin/typing
+generics. Unknown/custom subscriptions and assignment aliases keep strings as values;
+their type-argument semantics are not certified. Imported
+`typing`/`typing_extensions` aliases for `Literal` and `Annotated` preserve value strings:
+`Literal["red"]` and `Annotated[int, "label"]` do not invent type dependencies. Strings in
+call arguments are values, not recursively parsed types. Analysis never evaluates the
+annotation expression; source detection still imports trusted user code and is not a sandbox.
+
+This is name availability, not type resolution, alias-value validation or class recovery.
+Late framework registration/resolution, imported attributes, dynamic aliases, malformed or
+excessively nested annotation syntax and arbitrary expression behavior remain uncertified.
+An empty diagnostic list is not a guarantee that `get_type_hints()` or a framework succeeds.
 
 ## Bounded helper recovery (v0.11)
 

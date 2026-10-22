@@ -23,16 +23,17 @@ This directory contains example source files and their generated conversions.
 
 ## Definition-binding diagnostics
 
-`definition_bindings.py` exercises the bounded diagnostics added in v0.11.1. It creates a
-temporary FastAPI source with a Pydantic `Model` annotation, requests the original endpoint,
-then inspects why the standalone MCP conversion cannot preserve that binding. Conversion
-raises `MissingBindingError` before creating any output directory, including scaffold opt-in.
+`definition_bindings.py` exercises the eager diagnostics published in v0.11.1 and the
+unreleased string/postponed-annotation name check (source checkout required). It creates a
+temporary FastAPI source with a Pydantic `Model` annotation and requests the original endpoint.
+It then reports `missing_definition_binding` for MCP and `missing_annotation_binding` for CLI.
+Both conversions raise `MissingBindingError` before any output directory, even with scaffold opt-in.
 
 ```bash
 uv run --all-extras --with httpx python examples/definition_bindings.py
 ```
 
-This does not recover arbitrary classes or certify deferred/string annotation resolution.
+This checks missing global roots; it does not recover classes or certify complete annotation resolution.
 The example starts no network server and removes its temporary source on exit.
 
 ## Generated Conversions

@@ -1,0 +1,1 @@
+Public conversion now reports missing global names in generated string/postponed annotations and refuses before writes, without evaluating annotations or bypassing the check through scaffold permission.

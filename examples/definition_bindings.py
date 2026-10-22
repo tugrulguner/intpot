@@ -1,4 +1,4 @@
-"""Inspect an eager annotation that cannot survive standalone MCP conversion.
+"""Inspect eager MCP and postponed CLI annotations before standalone conversion.
 
 Run: uv run --all-extras --with httpx python examples/definition_bindings.py
 Requires: intpot[api] and httpx for the original HTTP consumer check.
@@ -48,23 +48,30 @@ def main() -> None:
         assert [
             (item["code"], item["tool"], item["target"], item["names"])
             for item in diagnostics
-        ] == [("missing_definition_binding", "value", "mcp", ["Model"])]
+        ] == [
+            ("missing_annotation_binding", "value", "cli", ["Model"]),
+            ("missing_definition_binding", "value", "mcp", ["Model"]),
+        ]
+        print("cli: missing_annotation_binding names=['Model']")
         print("mcp: missing_definition_binding names=['Model']")
 
-        for scaffold in (False, True):
-            output = root / f"generated-{scaffold}" / "server.py"
-            try:
-                loaded.write(output, "mcp", allow_scaffold=scaffold)
-            except intpot.MissingBindingError as exc:
-                assert "Model" in str(exc), exc
-            else:
-                raise AssertionError(
-                    "An unavailable annotation binding must be refused"
+        for target in ("cli", "mcp"):
+            for scaffold in (False, True):
+                output = root / f"generated-{target}-{scaffold}" / "app.py"
+                try:
+                    loaded.write(output, target, allow_scaffold=scaffold)
+                except intpot.MissingBindingError as exc:
+                    assert "Model" in str(exc), exc
+                else:
+                    raise AssertionError(
+                        "An unavailable annotation binding must be refused"
+                    )
+                assert not output.parent.exists(), (
+                    "Refusal must happen before output writes"
                 )
-            assert not output.parent.exists(), (
-                "Refusal must happen before output writes"
-            )
-        print("MCP conversion refused before writing, including scaffold opt-in")
+        print(
+            "CLI and MCP conversion refused before writing, including scaffold opt-in"
+        )
 
 
 if __name__ == "__main__":

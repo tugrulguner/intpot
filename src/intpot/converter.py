@@ -15,7 +15,7 @@ from intpot.core.callbacks import (
 from intpot.core.callbacks import (
     guard_cli_parameter_callbacks,
 )
-from intpot.core.definition_bindings import definition_time_missing
+from intpot.core.definition_bindings import annotation_missing, definition_time_missing
 from intpot.core.detector import SourceImportError, detect_instance, detect_source
 from intpot.core.generators._render import _body_global_names
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
@@ -140,6 +140,7 @@ def _reference_diagnostics(
                     for child in ast.walk(assignment)
                     if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
                 )
+        annotation_bindings = annotation_missing(module)
         functions = {
             node.name: node
             for node in module.body
@@ -170,6 +171,26 @@ def _reference_diagnostics(
                             "Generated definition evaluates names before their bindings exist; "
                             "provide the required import/definition before the function "
                             "or adapt the source to the supported subset."
+                        ),
+                    }
+                )
+            annotation_names = sorted(
+                {
+                    name
+                    for owner in owned_definitions
+                    for name in annotation_bindings.get(owner, [])
+                }
+            )
+            if annotation_names:
+                diagnostics.append(
+                    {
+                        "code": "missing_annotation_binding",
+                        "tool": tool.name,
+                        "target": candidate.value,
+                        "names": annotation_names,
+                        "message": (
+                            "Generated annotation refers to bindings absent from the emitted module; "
+                            "provide the required import/definition or adapt the source to the supported subset."
                         ),
                     }
                 )
