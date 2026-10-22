@@ -25,6 +25,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 _GENERATED_FLAGS = {"--help", "--install-completion", "--show-completion"}
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "README.md",
+        "src/intpot/templates/skills/intpot-cli.md",
+        "src/intpot/templates/skills/intpot-python.md",
+        "website/src/content/docs/conversion-boundaries.md",
+    ],
+)
+def test_annotation_diagnostics_release_availability(path):
+    text = (REPO_ROOT / path).read_text()
+    assert "String/postponed annotation bindings (v0.12.0)" in text
+    assert "**Availability:** requires v0.12.0 or newer." in text
+    assert "Until v0.12.0 is available from your package index" in text
+    assert "String/postponed annotation bindings (unreleased)" not in text
+
+
 def _cli_flags() -> list[tuple[str, str]]:
     """Every long option the CLI exposes, as (command path, flag)."""
     found: list[tuple[str, str]] = []

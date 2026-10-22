@@ -33,14 +33,15 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-The published v0.11.1 release provides bounded ordered diagnostics for generated function
+The v0.11.1 release introduced bounded ordered diagnostics for generated function
 decorators, defaults and eager annotation names, plus persistent installed wheel/sdist
 consumer gates. The retained-body diagnostics and bounded helper/constant recovery
 milestone is delivered in v0.11.0; broader Python recovery is not.
 
-The current source-only slice adds `missing_annotation_binding` for absent global roots in
+The v0.12.0 release adds `missing_annotation_binding` for absent global roots in
 emitted string/postponed annotations, with refusal before writes and an extended runnable
-example. It is not yet published. Full type resolution, alias-value validation and framework
+example. This requires v0.12.0 or newer; use a source checkout until that version is
+available from your package index. Full type resolution, alias-value validation and framework
 registration timing remain separate from name availability and runtime initialization.
 
 The earlier helper failure now has an executable supported case: `calc(3)` calls a plain
@@ -55,7 +56,7 @@ Keep the next work in independently useful slices:
 1. **Broaden explicit dependency diagnostics.** The bounded ordered check now covers
    generated function decorators, defaults and eager annotation names, including support
    functions and wrappers, with `missing_definition_binding` refusal before writes.
-   Source-only `missing_annotation_binding` now checks string/postponed annotation names
+   v0.12.0 `missing_annotation_binding` checks string/postponed annotation names
    against the completed emitted module. Richer type/alias evaluation, framework timing,
    package availability, arbitrary runtime state and Python equivalence remain uncertified.
    Inspection remains available.
@@ -80,7 +81,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.11 — Current foundation
+## v0.12 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.

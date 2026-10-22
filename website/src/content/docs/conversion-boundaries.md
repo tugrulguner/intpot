@@ -106,7 +106,7 @@ body-recovery fields still describe bodies only.
 Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source
 checkout. The [runnable example](https://github.com/tugrulguner/intpot/blob/main/examples/definition_bindings.py)
 requests a working original HTTP API and inspects its eager missing `Model` annotation in
-the MCP target plus the unreleased postponed CLI diagnostic described below. It proves both
+the MCP target plus the v0.12.0 postponed CLI diagnostic described below. It proves both
 refusals create no output directory, with and without scaffold opt-in.
 
 This is a bounded ordered binding check, not full annotation/default readiness. Later
@@ -115,10 +115,11 @@ import availability, and Python equivalence are not certified. Lambda bodies and
 bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
 low-level generators are unchanged.
 
-## String/postponed annotation bindings (unreleased)
+## String/postponed annotation bindings (v0.12.0)
 
-**Availability:** source checkout containing this change only. Published v0.11.1 does not
-include `missing_annotation_binding`.
+**Availability:** requires v0.12.0 or newer. Older versions, including v0.11.1, do not
+include `missing_annotation_binding`. Until v0.12.0 is available from your package index,
+use a source checkout containing this change.
 
 Public assessment reports `missing_annotation_binding` for missing global roots in parsed
 string annotations and annotations postponed by an emitted future import. It checks the

@@ -24,7 +24,7 @@ This directory contains example source files and their generated conversions.
 ## Definition-binding diagnostics
 
 `definition_bindings.py` exercises the eager diagnostics published in v0.11.1 and the
-unreleased string/postponed-annotation name check (source checkout required). It creates a
+v0.12.0 string/postponed-annotation name check. It creates a
 temporary FastAPI source with a Pydantic `Model` annotation and requests the original endpoint.
 It then reports `missing_definition_binding` for MCP and `missing_annotation_binding` for CLI.
 Both conversions raise `MissingBindingError` before any output directory, even with scaffold opt-in.
