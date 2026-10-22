@@ -216,6 +216,19 @@ import availability, and Python equivalence are not certified. Lambda bodies and
 bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
 low-level generators are unchanged.
 
+## Actionable binding context (unreleased source only)
+
+The published v0.12.0 does not include these additional fields. In a source checkout
+containing this change, the three missing-binding diagnostic codes expose `references`
+(each missing `name` and its `generated_definition`), `suggested_action`, and
+`source_location`. Generated names identify owned helpers, wrappers and implementations;
+they are not source locations. `source_location` is currently always `None`/JSON `null`
+because original callable/helper coordinates are not retained. Never infer them from
+`source_path`. Existing codes, tool/target/names/message fields and refusal exceptions
+stay unchanged. Suggestions distinguish eager before-definition ordering from body and
+postponed-annotation availability before use. Inspection remains available; scaffold
+permission does not bypass refusal. Run `examples/diagnostic_context.py` from source.
+
 ## String/postponed annotation bindings (v0.12.0)
 
 **Availability:** requires v0.12.0 or newer. Older versions, including v0.11.1, do not

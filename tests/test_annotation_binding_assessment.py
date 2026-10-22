@@ -32,6 +32,12 @@ def test_string_helper_annotation_reports_missing_binding_before_projection():
             "tool": "double",
             "target": target,
             "names": ["AbsentType"],
+            "source_location": None,
+            "references": [{"name": "AbsentType", "generated_definition": "scale"}],
+            "suggested_action": (
+                "Import or define AbsentType in the generated module before use, "
+                "or adapt the source to the supported subset."
+            ),
             "message": (
                 "Generated annotation refers to bindings absent from the emitted module; "
                 "provide the required import/definition or adapt the source to the supported subset."

@@ -49,6 +49,30 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
     }
 
 
+def _binding_context(
+    bindings: dict[str, list[str]], owners: set[str], *, before_definition: bool
+) -> dict[str, Any]:
+    """Describe emitted owners without inventing original-source coordinates."""
+    references = [
+        {"name": name, "generated_definition": owner}
+        for owner in sorted(owners)
+        for name in sorted(bindings.get(owner, []))
+    ]
+    names = ", ".join(sorted({item["name"] for item in references}))
+    timing = (
+        "before the affected generated definitions"
+        if before_definition
+        else "in the generated module before use"
+    )
+    return {
+        "source_location": None,
+        "references": references,
+        "suggested_action": (
+            f"Import or define {names} {timing}, or adapt the source to the supported subset."
+        ),
+    }
+
+
 def _reference_diagnostics(
     schema: ApplicationSchema, target: SourceType | None = None
 ) -> list[dict[str, Any]]:
@@ -167,6 +191,11 @@ def _reference_diagnostics(
                         "tool": tool.name,
                         "target": candidate.value,
                         "names": definition_names,
+                        **_binding_context(
+                            definition_missing,
+                            owned_definitions,
+                            before_definition=True,
+                        ),
                         "message": (
                             "Generated definition evaluates names before their bindings exist; "
                             "provide the required import/definition before the function "
@@ -188,6 +217,11 @@ def _reference_diagnostics(
                         "tool": tool.name,
                         "target": candidate.value,
                         "names": annotation_names,
+                        **_binding_context(
+                            annotation_bindings,
+                            owned_definitions,
+                            before_definition=False,
+                        ),
                         "message": (
                             "Generated annotation refers to bindings absent from the emitted module; "
                             "provide the required import/definition or adapt the source to the supported subset."
@@ -201,6 +235,7 @@ def _reference_diagnostics(
             missing_names = (
                 _body_global_names(replace(tool, function_body=body)) - available
             )
+            body_bindings = {implementation.name: sorted(missing_names)}
             from intpot.core.models import ParameterSchema
 
             for definition in tool.support_definitions:
@@ -222,7 +257,9 @@ def _reference_diagnostics(
                     function_body="\n".join(ast.unparse(node) for node in support.body),
                     is_async=isinstance(support, ast.AsyncFunctionDef),
                 )
-                missing_names.update(_body_global_names(helper) - available)
+                helper_missing = _body_global_names(helper) - available
+                body_bindings[support.name] = sorted(helper_missing)
+                missing_names.update(helper_missing)
             names = sorted(missing_names)
             if names:
                 diagnostics.append(
@@ -231,6 +268,9 @@ def _reference_diagnostics(
                         "tool": tool.name,
                         "target": candidate.value,
                         "names": names,
+                        **_binding_context(
+                            body_bindings, owned_definitions, before_definition=False
+                        ),
                         "message": "Retained implementation refers to bindings absent from generated output.",
                     }
                 )

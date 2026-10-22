@@ -63,6 +63,7 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
         "verified missing-binding diagnostics and refusal example",
         "verified bounded helper recovery through CLI API and MCP",
         "verified definition-binding diagnostics and before-write refusal",
+        "verified actionable diagnostic context and before-write refusal",
     ]
 
 

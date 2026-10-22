@@ -40,6 +40,32 @@ The frozen schema is the normalized boundary between inspection/registration and
 
 `ApplicationSchema.from_tools(...)` compiles compatibility `ToolInfo` instances; `.to_tools()` returns detached mutable records; `.to_dict()` yields a JSON-compatible representation. `compile_app(source_type, app_instance, source_path=...)` compiles a live app. `load(path_or_instance)` detects a source and returns `IntpotApp`; its cached `.schema`, detached `.tools`, `.project(target)`, `.to_cli()`, `.to_api()`, `.to_mcp()`, and `.write(path, target)` provide the Python conversion API. Passing the same source target to `.project()` is rejected.
 
+## Actionable binding context (unreleased)
+
+**Availability:** source checkout containing this change only; these additive fields are
+not included in the published v0.12.0 package.
+
+`loaded.assess()` and `intpot inspect app.py --json` expose `references`,
+`suggested_action`, and `source_location` on `missing_binding`,
+`missing_definition_binding`, and `missing_annotation_binding` diagnostics. Existing
+codes, tool/target identity, names, messages and refusal exceptions remain unchanged.
+Each reference pairs a missing `name` with its `generated_definition`, including owned
+helpers and generated wrappers/implementations. These are emitted Python identifiers,
+not original-source coordinates. References are sorted by generated definition then name.
+Suggestions name the missing bindings; eager definition dependencies must exist before
+those definitions, while body and deferred-annotation dependencies must exist before use.
+
+`source_location` is currently always `null` (`None` in Python): this schema does not
+retain verified original callable/helper coordinates. An application `source_path` is
+not sufficient provenance. No generated AST position is presented as an original line.
+Source-location capture remains separate future work. Diagnostics are observations of
+bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
+Scaffold permission cannot bypass refusal, and inspection still imports trusted code.
+
+Run [the diagnostic-context example](https://github.com/tugrulguner/intpot/blob/main/examples/diagnostic_context.py)
+from the source checkout. It checks the original API via TestClient, prints real JSON
+context, and verifies that CLI/MCP refusal leaves output directories absent.
+
 ## `ToolSchema` and `ParameterSchema`
 
 A tool includes `name`, `description`, `parameters`, `return_type`, `function_body`, `is_async`, HTTP `http_method` and `route_path`, operation ID/summary/description/tags/deprecation, dependency identifiers, source imports, and original interface name. Values may be absent when a framework does not provide them or the inspector cannot recover them.
