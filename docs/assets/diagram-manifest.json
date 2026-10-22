@@ -1,0 +1,23 @@
+{
+  "baseline": "a662e8c04a6c03d1629d21ed538bb176bff609d1",
+  "overviewEditBounds": [
+    1009,
+    564,
+    1391,
+    646
+  ],
+  "sources": {
+    "docs/assets/intpot-flow-label.svg": "d2b244dad5026b4c382306447c644dc107b165e3904c1c188828ec69a93f6f94",
+    "docs/assets/intpot-assessment.svg": "9805d1c065a439be4bbe10dbdeaedf929185f12cf6e8a75a09b56a9e2baa1ccc"
+  },
+  "outputs": {
+    "docs/assets/intpot-flow.png": "226cc6dce7d3c972c708ce19fb01b6db1824bb3aa5913644c5f13d980980168a",
+    "website/public/intpot-flow.png": "226cc6dce7d3c972c708ce19fb01b6db1824bb3aa5913644c5f13d980980168a",
+    "docs/assets/intpot-assessment.png": "5a4a9f5633543fcec47a07818c434c2944e02defb3115e5b581d7df1c8c8d1e3",
+    "website/public/intpot-assessment.png": "5a4a9f5633543fcec47a07818c434c2944e02defb3115e5b581d7df1c8c8d1e3"
+  },
+  "preserved": {
+    "intpot_image.webp": "342299b9a261e34e1bb530cd4fcd23cc7bf6c1b9306ba8e16c6750ef3ce285e5",
+    "website/src/assets/intpot_image.webp": "342299b9a261e34e1bb530cd4fcd23cc7bf6c1b9306ba8e16c6750ef3ce285e5"
+  }
+}

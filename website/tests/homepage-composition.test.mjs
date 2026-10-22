@@ -14,9 +14,9 @@ test('homepage uses one consistent hero, install strip, honest playground, then 
   for (const label of ['Quick start', 'Playground', 'GitHub', 'Created by Tugrul Guner', 'Browser-local preview', 'not Python execution']) assert.ok(homepage.includes(label), label);
   assert.match(homepage, /intpot_image\.webp/);
   assert.match(homepage, /intpot\[all\]/);
-  assert.match(homepage, /src="\/intpot-flow\.png"/);
+  assert.match(homepage, /src="\/intpot-flow\.png\?v=canonical-schema-2"/);
   assert.match(homepage, /Open the full-size diagram/);
-  assert.match(homepage, /same `ToolInfo` schema/);
+  assert.match(homepage, /immutable `ApplicationSchema` with `ToolSchema` records/);
   assert.match(homepage, /used by people or by agents/);
   assert.ok(styles.includes('.supporting-diagram'));
   assert.match(styles, /@media \(max-width: 50rem\)/);

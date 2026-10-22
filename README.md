@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/intpot-flow.png" alt="Intpot uses the same normalized ToolInfo schema in two workflows: registered Python tools can be served or ejected as CLI, API, or MCP interfaces, while existing Typer, FastAPI, or FastMCP apps can be inspected and converted into standalone code" width="960">
+  <img src="docs/assets/intpot-flow.png?v=canonical-schema-2" alt="Intpot uses the same canonical ApplicationSchema in two workflows: registered Python tools can be served or ejected as CLI, API, or MCP interfaces, while existing Typer, FastAPI, or FastMCP apps can be inspected and converted into standalone code" width="960">
 </p>
 
 ## Why intpot?
@@ -621,6 +621,24 @@ If intpot removes a duplicate interface from your project, consider
 [starring the repository](https://github.com/tugrulguner/intpot). Stars help other Python
 developers find the project, while issues and pull requests make it better.
 
+
+## Conversion assessment before output
+
+<p align="center">
+  <a href="docs/assets/intpot-assessment.png"><img src="docs/assets/intpot-assessment.png" alt="Intpot inspects an application, checks bindings per target, and either generates supported standalone code or reports a missing name before any output writes" width="960" height="662"></a>
+</p>
+
+This supplementary diagram describes the public converter, not the live `App` path or a
+literal execution trace. Conversion uses `ApplicationSchema` with `ToolSchema` records.
+Target-specific assessment checks body bindings, eager definition expressions, and supported
+string/postponed annotations. Inspection stays available when a known missing binding
+prevents conversion; scaffold permission cannot bypass that refusal. These bounded checks
+do not evaluate types, recover arbitrary classes or certify Python equivalence. Detection
+imports trusted source code and is not a sandbox.
+
+The [runnable example](examples/definition_bindings.py) requests a working original HTTP
+API, then reports a missing `Model` in the generated CLI annotations and refuses before
+creating output. [Open the full-size assessment diagram](docs/assets/intpot-assessment.png).
 
 ## Missing body bindings (v0.11)
 

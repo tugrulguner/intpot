@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1380" viewBox="0 0 2000 1380">
+<title>Intpot conversion assessment: inspect, check a target, then generate or refuse before writes</title>
+<desc>Conceptual converter flow, not a literal execution trace. Missing body, eager-definition and string/postponed annotation bindings are checked per tool and target. Inspection remains available. Scaffold permission cannot bypass missing bindings. Static name analysis does not evaluate types or recover arbitrary classes. Detection imports trusted source code.</desc>
+<defs>
+ <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#080e20"/><stop offset="1" stop-color="#10182e"/></linearGradient>
+ <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#28334c" stroke-opacity=".32"/></pattern>
+ <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12" fill="#a9b6d0"/></marker>
+ <marker id="green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12" fill="#50dfb0"/></marker>
+ <marker id="red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12" fill="#ff879a"/></marker>
+ <style>text{font-family:Arial,sans-serif;fill:#eff4ff} .eyebrow{font-size:26px;font-weight:700;letter-spacing:4px;fill:#ffbf42}.title{font-size:60px;font-weight:700}.sub{font-size:30px;fill:#b1bfd6}.name{font-size:40px;font-weight:700}.body{font-size:30px;fill:#c4cee0}.mono{font-family:monospace;font-size:29px}.label{font-size:25px;font-weight:700;letter-spacing:2px}</style>
+</defs>
+<rect x="2" y="2" width="1996" height="1376" rx="38" fill="url(#bg)" stroke="#33415b" stroke-width="3"/>
+<rect x="2" y="2" width="1996" height="1376" rx="38" fill="url(#grid)"/>
+<text x="1000" y="77" text-anchor="middle" class="eyebrow">INTPOT · CONVERSION ASSESSMENT</text>
+<text x="1000" y="155" text-anchor="middle" class="title">Check the target before writing output.</text>
+<text x="1000" y="209" text-anchor="middle" class="sub">A supported conversion and a known missing binding take different paths.</text>
+<!-- Connections behind the cards. -->
+<path d="M610 399H717" fill="none" stroke="#a9b6d0" stroke-width="4" marker-end="url(#arrow)"/>
+<path d="M1260 399H1367" fill="none" stroke="#a9b6d0" stroke-width="4" marker-end="url(#arrow)"/>
+<path d="M1640 535V600H1000V630" fill="none" stroke="#a9b6d0" stroke-width="4"/>
+<path d="M1000 630H525V696" fill="none" stroke="#50dfb0" stroke-width="4" marker-end="url(#green)"/>
+<path d="M1000 630H1475V696" fill="none" stroke="#ff879a" stroke-width="4" stroke-dasharray="12 9" marker-end="url(#red)"/>
+<circle cx="1000" cy="630" r="7" fill="#a9b6d0"/>
+<g data-panel="source">
+ <rect x="90" y="280" width="520" height="255" rx="24" fill="#0c2131" stroke="#38c7e3" stroke-width="3"/>
+ <text x="124" y="329" class="label" style="fill:#73e1ed">01 · LOAD THE SOURCE</text>
+ <text x="124" y="390" class="name">Existing application</text>
+ <text x="124" y="443" class="body">Typer · FastAPI · FastMCP</text>
+ <text x="124" y="495" class="body">Detection imports trusted code.</text>
+</g>
+<g data-panel="schema">
+ <rect x="740" y="280" width="520" height="255" rx="24" fill="#14203b" stroke="#738af9" stroke-width="3"/>
+ <text x="774" y="329" class="label" style="fill:#abb9ff">02 · INSPECT</text>
+ <text x="774" y="390" class="name">Inspectable schema</text>
+ <text x="774" y="443" class="mono">ApplicationSchema</text>
+ <text x="774" y="495" class="body">ToolSchema records</text>
+</g>
+<g data-panel="assessment">
+ <rect x="1390" y="280" width="520" height="255" rx="24" fill="#241d39" stroke="#ad8afa" stroke-width="3"/>
+ <text x="1424" y="329" class="label" style="fill:#d4b9ff">03 · ASSESS EACH TARGET</text>
+ <text x="1424" y="390" class="body">Body bindings</text>
+ <text x="1424" y="440" class="body">Eager definition expressions</text>
+ <text x="1424" y="490" class="body">String/postponed annotations</text>
+</g>
+<g data-panel="supported">
+ <rect x="90" y="710" width="860" height="300" rx="24" fill="#0b2a29" stroke="#50dfb0" stroke-width="3"/>
+ <text x="128" y="762" class="label" style="fill:#7be6c3">WITHIN THE SUPPORTED SUBSET</text>
+ <text x="128" y="826" class="name">Generate standalone code</text>
+ <text x="128" y="886" class="body">CLI · HTTP API · MCP</text>
+ <text x="128" y="944" class="body">Native framework output.</text>
+ <text x="128" y="984" class="body">No Intpot runtime bridge.</text>
+</g>
+<g data-panel="refused">
+ <rect x="1050" y="710" width="860" height="300" rx="24" fill="#301b2c" stroke="#ff879a" stroke-width="3"/>
+ <text x="1088" y="762" class="label" style="fill:#ffb1be">KNOWN MISSING NAME · REFUSE BEFORE WRITES</text>
+ <text x="1088" y="826" class="name">Example: original API works</text>
+ <text x="1088" y="880" class="mono">CLI: missing_annotation_binding</text>
+ <text x="1088" y="925" class="mono">names=['Model']</text>
+ <text x="1088" y="984" class="body">No output file or directory is created.</text>
+</g>
+<g data-panel="limits">
+ <rect x="90" y="1070" width="1820" height="215" rx="24" fill="#0b1225" stroke="#46536c" stroke-width="2"/>
+ <text x="128" y="1128" class="name">Inspection stays available.</text>
+ <text x="128" y="1185" class="body">Scaffold permission cannot bypass missing-binding refusal.</text>
+ <text x="128" y="1239" class="body">Static name checks. No type evaluation, arbitrary class recovery or sandbox guarantee.</text>
+</g>
+<text x="1000" y="1338" class="sub" text-anchor="middle">Conceptual converter flow · example: examples/definition_bindings.py · live App is a separate path</text>
+</svg>

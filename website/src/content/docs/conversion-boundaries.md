@@ -89,6 +89,15 @@ does not bypass missing-binding refusal. Live `App` serving/ejection and direct 
 generator compatibility are unchanged. See [the runnable missing-binding example](https://github.com/tugrulguner/intpot/blob/main/examples/missing_binding.py) for an original
 helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
 
+## Conversion assessment before output
+
+<figure class="supporting-diagram">
+  <a href="/intpot-assessment.png" target="_blank" rel="noopener"><img src="/intpot-assessment.png" alt="Intpot inspects an application, checks bindings per target, and either generates supported standalone code or reports a missing name before any output writes." width="2000" height="1380" loading="lazy" /></a>
+  <figcaption>Conceptual converter flow. Inspection remains available; scaffold permission cannot bypass missing-binding refusal. <a href="/intpot-assessment.png">Open the full-size assessment diagram</a>.</figcaption>
+</figure>
+
+The original HTTP API can work while the generated CLI lacks its `Model` annotation binding. The diagram illustrates that supported refusal case, not full conversion readiness or Python equivalence. Source inspection imports trusted code; this is not a sandbox. Live `App` and direct low-level generators are separate paths.
+
 ## Definition-binding diagnostics (v0.11.1)
 
 **Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.

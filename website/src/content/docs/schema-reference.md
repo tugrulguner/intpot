@@ -6,8 +6,8 @@ description: Reference for Intpot App, schema records, CLI operations, route met
 Intpot's registered-app and conversion APIs meet through the normalized schema below; the shared flow is shown in the [architecture overview](/architecture-internals/).
 
 <figure class="supporting-diagram">
-  <a href="/intpot-flow.png" target="_blank" rel="noopener"><img src="/intpot-flow.png" alt="Two Intpot workflows meet at the normalized ToolInfo schema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
-  <figcaption>How app registration and framework conversion converge. <a href="/intpot-flow.png">Open the full-size diagram</a>.</figcaption>
+  <a href="/intpot-flow.png?v=canonical-schema-2" target="_blank" rel="noopener"><img src="/intpot-flow.png?v=canonical-schema-2" alt="Two Intpot workflows meet at the canonical ApplicationSchema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
+  <figcaption>How app registration and framework conversion converge. <a href="/intpot-flow.png?v=canonical-schema-2">Open the full-size diagram</a>.</figcaption>
 </figure>
 
 ## `App`

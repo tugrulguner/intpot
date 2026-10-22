@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1350" viewBox="0 0 2400 1350">
+  <title>Canonical schema label correction for the existing Intpot overview</title>
+  <desc>A bounded label overlay. The original overview remains underneath without changes outside this badge.</desc>
+  <rect x="1010" y="565" width="380" height="80" rx="10" fill="#0d1730" stroke="#34506f" stroke-width="2"/>
+  <g fill="#f1f5f9" text-anchor="middle" font-family="Arial, sans-serif">
+    <text x="1200" y="599" font-size="32" font-weight="700">ApplicationSchema</text>
+    <text x="1200" y="630" font-size="25" fill="#b5d9e9">ToolSchema records</text>
+  </g>
+</svg>
