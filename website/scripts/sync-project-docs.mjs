@@ -16,7 +16,11 @@ for (const sourceName of ['README.md', 'ROADMAP.md']) {
   const rewritten = text.replace(/(!?)\[([^\]]*)\]\((?!https?:|mailto:|#)([^)]+)\)/g, (_match, image, label, target) => {
     const destination = image ? `${repository.replace('github.com/', 'raw.githubusercontent.com/')}/${revision}/${target}` : `${base}${target}`;
     return `${image}[${label}](${destination})`;
-  }).replace(/(<img\b[^>]*?\bsrc=["'])(?!https?:|data:)([^"']+)(["'])/gi, (_match, before, target, after) => `${before}${repository.replace('github.com/', 'raw.githubusercontent.com/')}/${revision}/${target}${after}`);
+  }).replace(/(<img\b[^>]*?\bsrc=["'])(?!https?:|data:)([^"']+)(["'])/gi, (_match, before, target, after) => {
+    const owned = /^docs\/assets\/intpot-(?:flow|assessment)\.png(?:\?[^"']*)?$/.test(target);
+    const destination = owned ? `/${target.slice('docs/assets/'.length)}` : `${repository.replace('github.com/', 'raw.githubusercontent.com/')}/${revision}/${target}`;
+    return `${before}${destination}${after}`;
+  }).replace(/(<a\b[^>]*?\bhref=["'])docs\/assets\/(intpot-(?:flow|assessment)\.png(?:\?[^"']*)?)(["'])/gi, (_match, before, target, after) => `${before}/${target}${after}`);
   const slug = sourceName.toLowerCase().replace('.md', '');
   const title = slug === 'readme' ? 'Project README' : 'Project roadmap';
   const content = `---\ntitle: ${title}\ndescription: "Generated from the repository ${sourceName}; source identity: ${identity}."\n---\n\n> **Source:** [${sourceName}](${base}${sourceName}) at \`${revision}\`. This is a repository snapshot, not a claim about the latest published release.\n\n${rewritten}`;

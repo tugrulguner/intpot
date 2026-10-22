@@ -20,11 +20,11 @@ test('homepage composition renders in both themes at required widths', async ({ 
       await page.reload();
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('main > .content-panel:first-child')).toHaveCSS('display', 'none');
-      const flow = page.locator('.supporting-diagram img');
+      const flow = page.locator('.supporting-diagram img[src^="/intpot-flow.png"]');
       await expect(flow).toBeVisible();
-      await expect(flow).toHaveAttribute('alt', /normalized ToolInfo schema/);
+      await expect(flow).toHaveAttribute('alt', /canonical ApplicationSchema/);
       await expect.poll(() => flow.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)).toBeTruthy();
-      await expect(page.locator('.supporting-diagram figcaption')).toContainText('full-size diagram');
+      await expect(page.locator('.supporting-diagram').filter({ has: page.locator('img[src^="/intpot-flow.png"]') }).locator('figcaption')).toContainText('full-size diagram');
       const imageResponse = await page.request.get('/intpot-flow.png');
       expect(imageResponse.ok()).toBeTruthy();
       expect(imageResponse.headers()['content-type']).toContain('image/png');

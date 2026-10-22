@@ -46,11 +46,11 @@ import intpotImage from '../../assets/intpot_image.webp';
 
 ## How Intpot connects both workflows
 
-Intpot normalizes registered functions and existing framework apps through the same `ToolInfo` schema. From there, it either builds a live CLI, HTTP, or MCP interface, or generates standalone code for a different framework. These interfaces can be used by people or by agents when their host supports them; CLI, HTTP, and MCP are not reserved for a particular kind of user.
+Conversion and ejection use the immutable `ApplicationSchema` with `ToolSchema` records. Inspectors and registrations retain `ToolInfo` compatibility metadata; live serving keeps the registered callables. The overview is conceptual, not a literal execution trace. These interfaces can be used by people or by agents when their host supports them; CLI, HTTP, and MCP are not reserved for a particular kind of user.
 
 <figure class="supporting-diagram">
-  <a href="/intpot-flow.png" target="_blank" rel="noopener"><img src="/intpot-flow.png" alt="Two Intpot workflows meet at the normalized ToolInfo schema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
-  <figcaption>Intpot's shared schema connects app registration and framework conversion. <a href="/intpot-flow.png">Open the full-size diagram</a>.</figcaption>
+  <a href="/intpot-flow.png?v=canonical-schema-2" target="_blank" rel="noopener"><img src="/intpot-flow.png?v=canonical-schema-2" alt="Two Intpot workflows meet at the canonical ApplicationSchema: registered Python tools are served or ejected as CLI, API, or MCP interfaces; existing Typer, FastAPI, or FastMCP apps are inspected and converted to standalone code." loading="lazy" /></a>
+  <figcaption>Intpot's shared schema connects app registration and framework conversion. <a href="/intpot-flow.png?v=canonical-schema-2">Open the full-size diagram</a>.</figcaption>
 </figure>
 
 ## One definition, three ways to run
@@ -73,6 +73,15 @@ intpot serve app.py --cli
 intpot serve app.py --api
 intpot serve app.py --mcp
 ```
+
+## Inspect conversion before writing output
+
+<figure class="supporting-diagram">
+  <a href="/intpot-assessment.png" target="_blank" rel="noopener"><img src="/intpot-assessment.png" alt="Intpot inspects an application, checks bindings per target, and either generates supported standalone code or reports a missing name before any output writes." width="2000" height="1380" loading="lazy" /></a>
+  <figcaption>Conceptual converter flow. Inspection remains available; scaffold permission cannot bypass missing-binding refusal. <a href="/intpot-assessment.png">Open the full-size assessment diagram</a>.</figcaption>
+</figure>
+
+The supported subset produces standalone framework code. Known missing body, eager-definition or string/postponed annotation bindings refuse before output writes. Static name checks do not evaluate types or recover arbitrary classes; source detection imports trusted code. Live `App` serving is a separate path. [Read the boundaries and runnable example](/conversion-boundaries/).
 
 ## Explore the interface playground
 
