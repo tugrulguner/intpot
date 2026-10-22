@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import tempfile
@@ -128,8 +129,22 @@ def main() -> None:
                         "assert str(v)=='21',r"
                     )
                 run([str(python), "-c", script, str(generated)], cwd=base, env=env)
+            diagnostics = json.loads(
+                run(
+                    [str(python), str(ROOT / "examples" / "diagnostic_context.py")],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert len(diagnostics) == 2
+            assert all(
+                item["source_location"] is None
+                and item["references"]
+                and "Model" in item["suggested_action"]
+                for item in diagnostics
+            )
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context"
             )
 
 
