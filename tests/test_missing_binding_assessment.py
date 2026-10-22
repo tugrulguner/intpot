@@ -23,8 +23,9 @@ def calc(x: int) -> int:
 
 
 @pytest.mark.parametrize("options", [[], ["--dry-run"], ["--allow-scaffold"]])
+@pytest.mark.parametrize("target", ["cli", "mcp"])
 def test_definition_time_annotation_binding_is_reported_and_refused(
-    tmp_source, tmp_path, options
+    tmp_source, tmp_path, options, target
 ):
     source = tmp_source("""from fastapi import FastAPI
 from pydantic import BaseModel
@@ -41,14 +42,14 @@ def value(x: Model) -> int:
     assert response.json() == 1
     diagnostics = loaded.assess()["diagnostics"]
     assert [(item["code"], item["target"], item["names"]) for item in diagnostics] == [
-        ("missing_definition_binding", "mcp", ["Model"])
+        ("missing_annotation_binding", "cli", ["Model"]),
+        ("missing_definition_binding", "mcp", ["Model"]),
     ]
-    for target in ("mcp",):
-        with pytest.raises(intpot.MissingBindingError, match="Model"):
-            loaded.project(target)
+    with pytest.raises(intpot.MissingBindingError, match="Model"):
+        loaded.project(target)
     output = tmp_path / "converted.py"
     with pytest.raises(intpot.MissingBindingError, match="Model"):
-        loaded.write(output, "mcp", allow_scaffold=True)
+        loaded.write(output, target, allow_scaffold=True)
     assert not output.exists()
     inspection = CliRunner().invoke(app, ["inspect", str(source), "--json"])
     assert inspection.exit_code == 0, inspection.output
@@ -61,7 +62,7 @@ def value(x: Model) -> int:
     )
     directory = tmp_path / "converted"
     result = CliRunner().invoke(
-        app, ["to", "mcp", str(sources), "--output", str(directory), *options]
+        app, ["to", target, str(sources), "--output", str(directory), *options]
     )
     assert result.exit_code == 1, result.output
     assert "Model" in result.stderr

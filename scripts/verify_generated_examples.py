@@ -164,8 +164,9 @@ def verify_definition_bindings() -> None:
         module.main()
     assert output.getvalue().splitlines() == [
         "Original HTTP API: /value = 1",
+        "cli: missing_annotation_binding names=['Model']",
         "mcp: missing_definition_binding names=['Model']",
-        "MCP conversion refused before writing, including scaffold opt-in",
+        "CLI and MCP conversion refused before writing, including scaffold opt-in",
     ]
     print("verified definition-binding diagnostics and before-write refusal")
 

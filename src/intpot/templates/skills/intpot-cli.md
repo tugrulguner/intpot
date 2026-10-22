@@ -197,7 +197,7 @@ helper-based implementation with a dynamically initialized dependency that retur
 
 **Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
 
-Run `uv run --all-extras --with httpx python examples/definition_bindings.py` for a working original HTTP API whose MCP export reports the missing `Model` annotation and refuses before creating output, even with scaffold opt-in. The consumer check requires `httpx`.
+Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source checkout for a working original HTTP API whose MCP export reports the eager missing `Model` annotation and whose CLI export reports the unreleased postponed-annotation diagnostic described below. Both refuse before output, even with scaffold opt-in. The consumer check requires `httpx`.
 
 Public converter assessment also reports `missing_definition_binding` when generated
 function decorators, defaults, or non-postponed annotation expressions refer to an absent
@@ -210,11 +210,35 @@ Projection, conversion, and writes raise `MissingBindingError` for these diagnos
 including `--dry-run` and `--allow-scaffold`; mixed-directory conversion writes nothing.
 Inspection remains available, and body-recovery fields still describe bodies only.
 
-This is a bounded ordered binding check, not full annotation/default readiness. String
-and postponed annotations (including later framework resolution), called initializer
-behavior, arbitrary conditional initialization, import availability, and Python equivalence
-are not certified. Lambda bodies and generator bodies are deferred; comprehension locals
-are not module dependencies. Live `App` and direct low-level generators are unchanged.
+This is a bounded ordered binding check, not full annotation/default readiness. Later
+framework resolution, called initializer behavior, arbitrary conditional initialization,
+import availability, and Python equivalence are not certified. Lambda bodies and generator
+bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
+low-level generators are unchanged.
+
+## String/postponed annotation bindings (unreleased)
+
+**Availability:** source checkout containing this change only. Published v0.11.1 does not
+include `missing_annotation_binding`.
+
+Public assessment reports `missing_annotation_binding` for missing global roots in parsed
+string annotations and annotations postponed by an emitted future import. It checks the
+actual generated implementations, wrappers and owned support functions against bindings
+in the completed emitted module, not just those preceding a function. Names are sorted
+and deduplicated per tool/target. Annotation-only declarations do not create bindings.
+Projection and writes refuse before output, including dry-run and scaffold opt-in;
+inspection and body-recovery fields remain unchanged.
+
+Supported syntax includes nested quoted references, generic arguments and unions. Imported
+`typing`/`typing_extensions` aliases for `Literal` and `Annotated` preserve value strings:
+`Literal["red"]` and `Annotated[int, "label"]` do not invent type dependencies. Strings in
+call arguments are values, not recursively parsed types. Analysis never evaluates the
+annotation expression; source detection still imports trusted user code and is not a sandbox.
+
+This is name availability, not type resolution, alias-value validation or class recovery.
+Late framework registration/resolution, imported attributes, dynamic aliases, malformed or
+excessively nested annotation syntax and arbitrary expression behavior remain uncertified.
+An empty diagnostic list is not a guarantee that `get_type_hints()` or a framework succeeds.
 
 ## Bounded helper recovery (v0.11)
 
