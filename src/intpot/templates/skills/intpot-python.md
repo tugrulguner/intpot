@@ -284,7 +284,9 @@ and deduplicated per tool/target. Annotation-only declarations do not create bin
 Projection and writes refuse before output, including dry-run and scaffold opt-in;
 inspection and body-recovery fields remain unchanged.
 
-Supported syntax includes nested quoted references, generic arguments and unions. Imported
+Type-position strings are parsed inside nested quotes, unions and recognized builtin/typing
+generics. Unknown/custom subscriptions and assignment aliases keep strings as values;
+their type-argument semantics are not certified. Imported
 `typing`/`typing_extensions` aliases for `Literal` and `Annotated` preserve value strings:
 `Literal["red"]` and `Annotated[int, "label"]` do not invent type dependencies. Strings in
 call arguments are values, not recursively parsed types. Analysis never evaluates the

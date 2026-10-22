@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from typing import Any, get_type_hints
+from typing import Any, get_args, get_type_hints
 
 import pytest
 
@@ -73,6 +73,7 @@ def test_postponed_public_signature_is_checked_in_emitted_cli():
     [
         ('Literal["red"]', "from typing import Literal"),
         ('Choices["red"]', "from typing import Literal as Choices"),
+        ('Choices["red"]', "from typing import Literal\nChoices = Literal"),
         ('t.Literal["red"]', "import typing as t"),
         ('Annotated[int, "label"]', "from typing import Annotated"),
         ('Labels[int, "label"]', "from typing import Annotated as Labels"),
@@ -90,6 +91,34 @@ def test_postponed_annotation_data_strings_are_not_type_references(annotation, i
         "def factory(label): return int\n"
     )
     assert annotation_missing(module) == {}
+
+
+@pytest.mark.parametrize(
+    "source, expected",
+    [
+        ('def f(x: Weird["Missing"]): pass', {"f": ["Weird"]}),
+        (
+            'from typing import Optional as O\ndef f(x: O["Missing"]): pass',
+            {"f": ["Missing"]},
+        ),
+        (
+            'from typing import Literal\nlist = Literal\ndef f(x: list["label"]): pass',
+            {},
+        ),
+        ('from typing import Literal as X\nX = object\ndef f(x: X["label"]): pass', {}),
+        (
+            'def f(x: "A", /, *args: "B", y: "C", **kw: "D") -> "R": pass',
+            {"f": ["A", "B", "C", "D", "R"]},
+        ),
+    ],
+)
+def test_annotation_unknown_roots_do_not_invent_type_positions(source, expected):
+    from intpot.core.definition_bindings import annotation_missing
+
+    assert (
+        annotation_missing(ast.parse("from __future__ import annotations\n" + source))
+        == expected
+    )
 
 
 def test_annotation_only_support_binding_does_not_satisfy_forward_reference():
@@ -170,7 +199,8 @@ def test_supported_annotation_strings_execute_generated_consumers(target):
                 support_definitions=[
                     "from typing import Annotated as Tagged, Literal as Choice",
                     "def scale(x: Tagged['int', 'label']) -> 'int':\n    return x * 2",
-                    "def label(x: Choice['red', 'blue']) -> 'str':\n    return x",
+                    "ChoiceValues = Choice",
+                    "def label(x: ChoiceValues['red', 'blue']) -> 'str':\n    return x",
                 ],
             )
         ],
@@ -191,6 +221,8 @@ def test_supported_annotation_strings_execute_generated_consumers(target):
     )
     hints = get_type_hints(namespace["scale"], globalns=namespace, include_extras=True)
     assert hints["return"] is int
+    labels = get_type_hints(namespace["label"], globalns=namespace)
+    assert get_args(labels["x"]) == ("red", "blue")
     if target == SourceType.CLI:
         result = CliRunner().invoke(namespace["app"], ["3"])
         assert result.exit_code == 0, result.exception

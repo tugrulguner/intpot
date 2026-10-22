@@ -135,6 +135,7 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
     available = set(dir(builtins)) | MODULE_BINDINGS
     typing_names: dict[str, str] = {}
     typing_modules: set[str] = set()
+    builtin_generics = {"list", "dict", "tuple", "set", "frozenset", "type"}
     for statement in module.body:
         bound: set[str] = set()
         if isinstance(statement, (ast.Import, ast.ImportFrom)):
@@ -170,12 +171,13 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
         for name in bound:
             typing_names.pop(name, None)
         typing_modules.difference_update(bound)
+        builtin_generics.difference_update(bound)
         if isinstance(statement, ast.ImportFrom) and statement.module in (
             "typing",
             "typing_extensions",
         ):
             for alias in statement.names:
-                if alias.name in ("Literal", "Annotated"):
+                if alias.name != "*":
                     typing_names[alias.asname or alias.name] = alias.name
         elif isinstance(statement, ast.Import):
             typing_modules.update(
@@ -206,12 +208,18 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
             special = None
             if isinstance(root, ast.Name):
                 special = typing_names.get(root.id)
+                if special is None and root.id in builtin_generics:
+                    special = "generic"
             elif (
                 isinstance(root, ast.Attribute)
                 and isinstance(root.value, ast.Name)
                 and root.value.id in typing_modules
             ):
                 special = root.attr
+            if special is None:
+                # An assignment/custom subscription can interpret strings as data.
+                # Check real expression loads, but do not guess its type grammar.
+                return collect(expression, direct=direct, strings=False)
             elements = (
                 list(expression.slice.elts)
                 if isinstance(expression.slice, ast.Tuple)
