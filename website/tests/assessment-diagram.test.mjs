@@ -19,6 +19,30 @@ test('assessment placements supplement rather than replace the overview', async 
   assert.ok(guide.includes('full-size assessment diagram'));
 });
 
+test('README assessment belongs to conversion, before community and roadmap', async () => {
+  const source = await text('README.md');
+  const sections = [
+    '## Convert an existing app',
+    '## Conversion assessment before output',
+    '## Give your coding agent intpot context',
+    '## What conversion preserves',
+    '## Actionable binding context (unreleased)',
+    '## Missing body bindings (v0.11)',
+    '## Bounded helper recovery (v0.11)',
+    '## Architecture',
+    '## Community',
+    '## Roadmap',
+    '## Support intpot',
+    '## License',
+  ];
+  let previous = -1;
+  for (const section of sections) {
+    const position = source.indexOf(section + '\n');
+    assert.ok(position > previous, `${section} must follow the preceding section`);
+    previous = position;
+  }
+});
+
 test('diagram sources, PNG derivatives and original branding stay in sync', async () => {
   const manifest = JSON.parse(await text('docs/assets/diagram-manifest.json'));
   for (const [path, digest] of Object.entries({...manifest.sources,...manifest.outputs,...manifest.preserved})) {

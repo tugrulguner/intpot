@@ -166,6 +166,24 @@ Use `intpot inspect app.py` first when you want to see the normalized tool defin
 before generating code. Converted output is readable Python that you can review, test,
 and change.
 
+## Conversion assessment before output
+
+<p align="center">
+  <a href="docs/assets/intpot-assessment.png"><img src="docs/assets/intpot-assessment.png" alt="Intpot inspects an application, checks bindings per target, and either generates supported standalone code or reports a missing name before any output writes" width="960" height="662"></a>
+</p>
+
+This supplementary diagram describes the public converter, not the live `App` path or a
+literal execution trace. Conversion uses `ApplicationSchema` with `ToolSchema` records.
+Target-specific assessment checks body bindings, eager definition expressions, and supported
+string/postponed annotations. Inspection stays available when a known missing binding
+prevents conversion; scaffold permission cannot bypass that refusal. These bounded checks
+do not evaluate types, recover arbitrary classes or certify Python equivalence. Detection
+imports trusted source code and is not a sandbox.
+
+The [runnable example](examples/definition_bindings.py) requests a working original HTTP
+API, then reports a missing `Model` in the generated CLI annotations and refuses before
+creating output. [Open the full-size assessment diagram](docs/assets/intpot-assessment.png).
+
 ## Give your coding agent intpot context
 
 Install project-local instructions for Claude Code, Cursor, Windsurf, GitHub Copilot,
@@ -337,6 +355,134 @@ and live `App` serving/ejection is unchanged. See
 > intpot reports the bad file and continues with the rest. intpot is alpha software:
 > compile the generated file, import it with its dependencies, and exercise a real CLI
 > command, API request, or MCP tool before shipping it.
+
+## Actionable binding context (unreleased)
+
+**Availability:** source checkout containing this change only; these additive fields are
+not included in the published v0.12.0 package.
+
+`loaded.assess()` and `intpot inspect app.py --json` expose `references`,
+`suggested_action`, and `source_location` on `missing_binding`,
+`missing_definition_binding`, and `missing_annotation_binding` diagnostics. Existing
+codes, tool/target identity, names, messages and refusal exceptions remain unchanged.
+Each reference pairs a missing `name` with its `generated_definition`, including owned
+helpers and generated wrappers/implementations. These are emitted Python identifiers,
+not original-source coordinates. References are sorted by generated definition then name.
+Suggestions name the missing bindings; eager definition dependencies must exist before
+those definitions, while body and deferred-annotation dependencies must exist before use.
+
+`source_location` is currently always `null` (`None` in Python): this schema does not
+retain verified original callable/helper coordinates. An application `source_path` is
+not sufficient provenance. No generated AST position is presented as an original line.
+Source-location capture remains separate future work. Diagnostics are observations of
+bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
+Scaffold permission cannot bypass refusal, and inspection still imports trusted code.
+
+Run [the diagnostic-context example](https://github.com/tugrulguner/intpot/blob/main/examples/diagnostic_context.py)
+from the source checkout. It checks the original API via TestClient, prints real JSON
+context, and verifies that CLI/MCP refusal leaves output directories absent.
+
+## Missing body bindings (v0.11)
+
+Public conversion now raises `intpot.MissingBindingError` before output writes when a
+retained implementation refers to globals absent from the generated target module.
+`app.assess()` and conditional `intpot inspect --json` assessment include per-target
+`missing_binding` diagnostics with `tool`, `target`, and sorted `names`. Existing
+`body_recovery_complete` and `missing_function_body` fields retain their meaning:
+recovering a body does not mean its dependencies are available.
+
+Analysis reuses Python scope-aware binding analysis against statically rendered target
+implementations, accounting for locals, nested scopes, comprehensions, retained imports,
+builtins and generated self-recursion bindings. It renders but does not execute generated
+code. Binding availability assumes a normally file-loaded Python module, including
+loader-provided `__file__`, `__cached__`, and other standard module globals. Their values
+belong to the generated file; this does not preserve the original path, resources, or
+package environment. Custom `exec` namespaces must provide their own module globals.
+Targets blocked by existing rendering guards report `reference_analysis_unavailable`
+in assessment instead of implying a successful binding check. Inspection still imports
+trusted source code and is not a sandbox.
+
+This first slice checks retained body bindings, not complete annotations/defaults,
+import availability, conditional binding initialization, runtime state, validation parity,
+or arbitrary Python equivalence. Recovery of the bounded subset is described below. Callback and
+FastAPI dependency refusal remain authoritative; `allow_scaffold=True` / `--allow-scaffold`
+does not bypass missing-binding refusal. Live `App` serving/ejection and direct low-level
+generator compatibility are unchanged. See `examples/missing_binding.py` for an original
+helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
+
+## Definition-evaluation binding diagnostics
+
+**Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
+
+Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source checkout for a working original HTTP API whose MCP export reports the eager missing `Model` annotation and whose CLI export reports the v0.12.0 postponed-annotation diagnostic described below. Both refuse before output, even with scaffold opt-in. The consumer check requires `httpx`.
+
+Public converter assessment also reports `missing_definition_binding` when generated
+function decorators, defaults, or non-postponed annotation expressions refer to an absent
+or later module binding. Diagnostics retain `tool`, `target`, sorted `names`, and an
+actionable message; provide the required import/definition before the affected function,
+or adapt the source to the supported subset. Checks include generated wrappers and the
+ordered support functions owned by each tool, without executing generated code.
+
+Projection, conversion, and writes raise `MissingBindingError` for these diagnostics,
+including `--dry-run` and `--allow-scaffold`; mixed-directory conversion writes nothing.
+Inspection remains available, and body-recovery fields still describe bodies only.
+
+This is a bounded ordered binding check, not full annotation/default readiness. Later
+framework resolution, called initializer behavior, arbitrary conditional initialization,
+import availability, and Python equivalence are not certified. Lambda bodies and generator
+bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
+low-level generators are unchanged.
+
+## String/postponed annotation bindings (v0.12.0)
+
+**Availability:** requires v0.12.0 or newer. Older versions, including v0.11.1, do not
+include `missing_annotation_binding`. Until v0.12.0 is available from your package index,
+use a source checkout containing this change.
+
+Public assessment reports `missing_annotation_binding` for missing global roots in parsed
+string annotations and annotations postponed by an emitted future import. It checks the
+actual generated implementations, wrappers and owned support functions against bindings
+in the completed emitted module, not just those preceding a function. Names are sorted
+and deduplicated per tool/target. Annotation-only declarations do not create bindings.
+Projection and writes refuse before output, including dry-run and scaffold opt-in;
+inspection and body-recovery fields remain unchanged.
+
+Type-position strings are parsed inside nested quotes, unions and recognized builtin/typing
+generics. Unknown/custom subscriptions and assignment aliases keep strings as values;
+their type-argument semantics are not certified. Imported
+`typing`/`typing_extensions` aliases for `Literal` and `Annotated` preserve value strings:
+`Literal["red"]` and `Annotated[int, "label"]` do not invent type dependencies. Strings in
+call arguments are values, not recursively parsed types. Analysis never evaluates the
+annotation expression; source detection still imports trusted user code and is not a sandbox.
+
+This is name availability, not type resolution, alias-value validation or class recovery.
+Late framework registration/resolution, imported attributes, dynamic aliases, malformed or
+excessively nested annotation syntax and arbitrary expression behavior remain uncertified.
+An empty diagnostic list is not a guarantee that `get_type_hints()` or a framework succeeds.
+
+## Bounded helper recovery (v0.11)
+
+Converters recover required undecorated functions and immutable literal constants from
+an inspected callable's owning module, including transitive helpers, ordinary imports,
+and recursive helper calls. Ordered `support_definitions` is separate from
+`source_imports`, immutable in `ToolSchema`, and detached in `ToolInfo` compatibility views.
+Generated output remains ordinary framework Python with no intpot runtime bridge.
+
+Recovery reads the actual callable's globals and source file, verifies helper code and
+literal defaults against the live function, and rejects ambiguous or rebound bindings.
+It does not copy unrelated startup statements or app registration. Mutable globals,
+closures, decorated helpers, classes, dynamic defaults/global lookup, and helpers that
+write global/nonlocal state remain outside the supported subset. Unsupported dependencies
+still diagnose/refuse before writes; explicit scaffold permission does not bypass them.
+Conflicting support bindings and collisions with generated public names are refused.
+This is bounded source recovery, not purity analysis or arbitrary Python equivalence.
+Live `App` serving/ejection is unchanged; recovery currently applies to existing framework
+applications inspected by the CLI, API, and MCP inspectors.
+
+Run `uv run python examples/helper_recovery.py` to exercise the helper chain returning 21
+through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
+a refusal control using a dynamically initialized module value rather than a recoverable
+literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
 
 ## Architecture
 
@@ -621,152 +767,6 @@ If intpot removes a duplicate interface from your project, consider
 [starring the repository](https://github.com/tugrulguner/intpot). Stars help other Python
 developers find the project, while issues and pull requests make it better.
 
-
-## Conversion assessment before output
-
-<p align="center">
-  <a href="docs/assets/intpot-assessment.png"><img src="docs/assets/intpot-assessment.png" alt="Intpot inspects an application, checks bindings per target, and either generates supported standalone code or reports a missing name before any output writes" width="960" height="662"></a>
-</p>
-
-This supplementary diagram describes the public converter, not the live `App` path or a
-literal execution trace. Conversion uses `ApplicationSchema` with `ToolSchema` records.
-Target-specific assessment checks body bindings, eager definition expressions, and supported
-string/postponed annotations. Inspection stays available when a known missing binding
-prevents conversion; scaffold permission cannot bypass that refusal. These bounded checks
-do not evaluate types, recover arbitrary classes or certify Python equivalence. Detection
-imports trusted source code and is not a sandbox.
-
-The [runnable example](examples/definition_bindings.py) requests a working original HTTP
-API, then reports a missing `Model` in the generated CLI annotations and refuses before
-creating output. [Open the full-size assessment diagram](docs/assets/intpot-assessment.png).
-
-## Actionable binding context (unreleased)
-
-**Availability:** source checkout containing this change only; these additive fields are
-not included in the published v0.12.0 package.
-
-`loaded.assess()` and `intpot inspect app.py --json` expose `references`,
-`suggested_action`, and `source_location` on `missing_binding`,
-`missing_definition_binding`, and `missing_annotation_binding` diagnostics. Existing
-codes, tool/target identity, names, messages and refusal exceptions remain unchanged.
-Each reference pairs a missing `name` with its `generated_definition`, including owned
-helpers and generated wrappers/implementations. These are emitted Python identifiers,
-not original-source coordinates. References are sorted by generated definition then name.
-Suggestions name the missing bindings; eager definition dependencies must exist before
-those definitions, while body and deferred-annotation dependencies must exist before use.
-
-`source_location` is currently always `null` (`None` in Python): this schema does not
-retain verified original callable/helper coordinates. An application `source_path` is
-not sufficient provenance. No generated AST position is presented as an original line.
-Source-location capture remains separate future work. Diagnostics are observations of
-bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
-Scaffold permission cannot bypass refusal, and inspection still imports trusted code.
-
-Run [the diagnostic-context example](https://github.com/tugrulguner/intpot/blob/main/examples/diagnostic_context.py)
-from the source checkout. It checks the original API via TestClient, prints real JSON
-context, and verifies that CLI/MCP refusal leaves output directories absent.
-
-## Missing body bindings (v0.11)
-
-Public conversion now raises `intpot.MissingBindingError` before output writes when a
-retained implementation refers to globals absent from the generated target module.
-`app.assess()` and conditional `intpot inspect --json` assessment include per-target
-`missing_binding` diagnostics with `tool`, `target`, and sorted `names`. Existing
-`body_recovery_complete` and `missing_function_body` fields retain their meaning:
-recovering a body does not mean its dependencies are available.
-
-Analysis reuses Python scope-aware binding analysis against statically rendered target
-implementations, accounting for locals, nested scopes, comprehensions, retained imports,
-builtins and generated self-recursion bindings. It renders but does not execute generated
-code. Binding availability assumes a normally file-loaded Python module, including
-loader-provided `__file__`, `__cached__`, and other standard module globals. Their values
-belong to the generated file; this does not preserve the original path, resources, or
-package environment. Custom `exec` namespaces must provide their own module globals.
-Targets blocked by existing rendering guards report `reference_analysis_unavailable`
-in assessment instead of implying a successful binding check. Inspection still imports
-trusted source code and is not a sandbox.
-
-This first slice checks retained body bindings, not complete annotations/defaults,
-import availability, conditional binding initialization, runtime state, validation parity,
-or arbitrary Python equivalence. Recovery of the bounded subset is described below. Callback and
-FastAPI dependency refusal remain authoritative; `allow_scaffold=True` / `--allow-scaffold`
-does not bypass missing-binding refusal. Live `App` serving/ejection and direct low-level
-generator compatibility are unchanged. See `examples/missing_binding.py` for an original
-helper-based implementation with a dynamically initialized dependency that returns 21 and is explicitly refused.
-
-## Definition-evaluation binding diagnostics
-
-**Availability:** requires v0.11.1 or a source checkout containing this change. Repository documentation can precede package publication.
-
-Run `uv run --all-extras --with httpx python examples/definition_bindings.py` from a source checkout for a working original HTTP API whose MCP export reports the eager missing `Model` annotation and whose CLI export reports the v0.12.0 postponed-annotation diagnostic described below. Both refuse before output, even with scaffold opt-in. The consumer check requires `httpx`.
-
-Public converter assessment also reports `missing_definition_binding` when generated
-function decorators, defaults, or non-postponed annotation expressions refer to an absent
-or later module binding. Diagnostics retain `tool`, `target`, sorted `names`, and an
-actionable message; provide the required import/definition before the affected function,
-or adapt the source to the supported subset. Checks include generated wrappers and the
-ordered support functions owned by each tool, without executing generated code.
-
-Projection, conversion, and writes raise `MissingBindingError` for these diagnostics,
-including `--dry-run` and `--allow-scaffold`; mixed-directory conversion writes nothing.
-Inspection remains available, and body-recovery fields still describe bodies only.
-
-This is a bounded ordered binding check, not full annotation/default readiness. Later
-framework resolution, called initializer behavior, arbitrary conditional initialization,
-import availability, and Python equivalence are not certified. Lambda bodies and generator
-bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
-low-level generators are unchanged.
-
-## String/postponed annotation bindings (v0.12.0)
-
-**Availability:** requires v0.12.0 or newer. Older versions, including v0.11.1, do not
-include `missing_annotation_binding`. Until v0.12.0 is available from your package index,
-use a source checkout containing this change.
-
-Public assessment reports `missing_annotation_binding` for missing global roots in parsed
-string annotations and annotations postponed by an emitted future import. It checks the
-actual generated implementations, wrappers and owned support functions against bindings
-in the completed emitted module, not just those preceding a function. Names are sorted
-and deduplicated per tool/target. Annotation-only declarations do not create bindings.
-Projection and writes refuse before output, including dry-run and scaffold opt-in;
-inspection and body-recovery fields remain unchanged.
-
-Type-position strings are parsed inside nested quotes, unions and recognized builtin/typing
-generics. Unknown/custom subscriptions and assignment aliases keep strings as values;
-their type-argument semantics are not certified. Imported
-`typing`/`typing_extensions` aliases for `Literal` and `Annotated` preserve value strings:
-`Literal["red"]` and `Annotated[int, "label"]` do not invent type dependencies. Strings in
-call arguments are values, not recursively parsed types. Analysis never evaluates the
-annotation expression; source detection still imports trusted user code and is not a sandbox.
-
-This is name availability, not type resolution, alias-value validation or class recovery.
-Late framework registration/resolution, imported attributes, dynamic aliases, malformed or
-excessively nested annotation syntax and arbitrary expression behavior remain uncertified.
-An empty diagnostic list is not a guarantee that `get_type_hints()` or a framework succeeds.
-
-## Bounded helper recovery (v0.11)
-
-Converters recover required undecorated functions and immutable literal constants from
-an inspected callable's owning module, including transitive helpers, ordinary imports,
-and recursive helper calls. Ordered `support_definitions` is separate from
-`source_imports`, immutable in `ToolSchema`, and detached in `ToolInfo` compatibility views.
-Generated output remains ordinary framework Python with no intpot runtime bridge.
-
-Recovery reads the actual callable's globals and source file, verifies helper code and
-literal defaults against the live function, and rejects ambiguous or rebound bindings.
-It does not copy unrelated startup statements or app registration. Mutable globals,
-closures, decorated helpers, classes, dynamic defaults/global lookup, and helpers that
-write global/nonlocal state remain outside the supported subset. Unsupported dependencies
-still diagnose/refuse before writes; explicit scaffold permission does not bypass them.
-Conflicting support bindings and collisions with generated public names are refused.
-This is bounded source recovery, not purity analysis or arbitrary Python equivalence.
-Live `App` serving/ejection is unchanged; recovery currently applies to existing framework
-applications inspected by the CLI, API, and MCP inspectors.
-
-Run `uv run python examples/helper_recovery.py` to exercise the helper chain returning 21
-through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
-a refusal control using a dynamically initialized module value rather than a recoverable
-literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
 
 ## License
 

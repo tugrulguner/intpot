@@ -1,0 +1,1 @@
+The README places its conversion-assessment diagram beside the existing-app conversion workflow and groups binding/recovery diagnostics under conversion guarantees, before architecture, community and roadmap sections.
