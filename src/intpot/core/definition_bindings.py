@@ -135,6 +135,8 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
     available = set(dir(builtins)) | MODULE_BINDINGS
     typing_names: dict[str, str] = {}
     typing_modules: set[str] = set()
+    collections_abc_names: set[str] = set()
+    collections_abc_modules: dict[str, str] = {}
     builtin_generics = {"list", "dict", "tuple", "set", "frozenset", "type"}
     for statement in module.body:
         bound: set[str] = set()
@@ -171,6 +173,9 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
         for name in bound:
             typing_names.pop(name, None)
         typing_modules.difference_update(bound)
+        collections_abc_names.difference_update(bound)
+        for name in bound:
+            collections_abc_modules.pop(name, None)
         builtin_generics.difference_update(bound)
         if isinstance(statement, ast.ImportFrom) and statement.module in (
             "typing",
@@ -184,6 +189,20 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
                 alias.asname or alias.name
                 for alias in statement.names
                 if alias.name in ("typing", "typing_extensions")
+            )
+            for alias in statement.names:
+                if alias.name == "collections.abc":
+                    collections_abc_modules[alias.asname or "collections"] = (
+                        "abc" if alias.asname else "collections"
+                    )
+        elif (
+            isinstance(statement, ast.ImportFrom)
+            and statement.module == "collections.abc"
+        ):
+            collections_abc_names.update(
+                alias.asname or alias.name
+                for alias in statement.names
+                if alias.name == "Callable"
             )
 
     def collect(
@@ -208,14 +227,27 @@ def annotation_missing(module: ast.Module) -> dict[str, list[str]]:
             special = None
             if isinstance(root, ast.Name):
                 special = typing_names.get(root.id)
+                if special is None and root.id in collections_abc_names:
+                    special = "Callable"
                 if special is None and root.id in builtin_generics:
                     special = "generic"
-            elif (
-                isinstance(root, ast.Attribute)
-                and isinstance(root.value, ast.Name)
-                and root.value.id in typing_modules
-            ):
-                special = root.attr
+            elif isinstance(root, ast.Attribute):
+                if isinstance(root.value, ast.Name) and root.value.id in typing_modules:
+                    special = root.attr
+                elif (
+                    isinstance(root.value, ast.Name)
+                    and collections_abc_modules.get(root.value.id) == "abc"
+                ):
+                    special = root.attr if root.attr == "Callable" else None
+                elif root.attr == "Callable" and isinstance(root.value, ast.Attribute):
+                    module = root.value
+                    if (
+                        module.attr == "abc"
+                        and isinstance(module.value, ast.Name)
+                        and collections_abc_modules.get(module.value.id)
+                        == "collections"
+                    ):
+                        special = "Callable"
             if special is None:
                 # An assignment/custom subscription can interpret strings as data.
                 # Check real expression loads, but do not guess its type grammar.
