@@ -308,6 +308,37 @@ def test_non_api_dependency_metadata_does_not_trigger_fastapi_refusal(tmp_source
     )
 
 
+def test_blocked_target_does_not_skip_other_target_binding_analysis(tmp_source):
+    loaded = intpot.load(tmp_source(MISSING))
+    tool = loaded.schema.tools[0]
+    schema = replace(
+        loaded.schema,
+        source_type=intpot.SourceType.MCP,
+        tools=(
+            replace(
+                tool,
+                parameters=(
+                    replace(tool.parameters[0], unsupported_callback=True),
+                    *tool.parameters[1:],
+                ),
+            ),
+        ),
+    )
+    diagnostics = intpot.converter.assess_schema(schema)["diagnostics"]
+    assert any(
+        item["code"] == "unsupported_cli_parameter_callback" and item["target"] == "api"
+        for item in diagnostics
+    )
+    assert any(
+        item["code"] == "missing_binding" and item["target"] == "cli"
+        for item in diagnostics
+    )
+    assert not any(
+        item["code"] == "missing_binding" and item["target"] == "api"
+        for item in diagnostics
+    )
+
+
 def test_conversion_refusals_example_executes(capsys):
     import runpy
 
