@@ -102,6 +102,44 @@ def test_postponed_annotation_data_strings_are_not_type_references(annotation, i
 @pytest.mark.parametrize(
     "source, expected",
     [
+        (
+            'from collections.abc import Callable\ndef f(x: Callable[["Missing"], int]): pass',
+            {"f": ["Missing"]},
+        ),
+        (
+            'from collections.abc import Callable as C\ndef f(x: C[["Missing"], int]): pass',
+            {"f": ["Missing"]},
+        ),
+        (
+            'import collections.abc as cabc\ndef f(x: cabc.Callable[["Missing"], int]): pass',
+            {"f": ["Missing"]},
+        ),
+        (
+            'import collections.abc\ndef f(x: collections.abc.Callable[["Missing"], int]): pass',
+            {"f": ["Missing"]},
+        ),
+        (
+            'from collections.abc import Callable\ndef f(x: Callable[["int"], int]): pass',
+            {},
+        ),
+        ('def f(x: Weird[["Missing"], int]): pass', {"f": ["Weird"]}),
+        ('from typing import Literal\ndef f(x: Literal["Missing"]): pass', {}),
+    ],
+)
+def test_callable_forward_references_are_checked_only_for_known_callable_forms(
+    source, expected
+):
+    from intpot.core.definition_bindings import annotation_missing
+
+    assert (
+        annotation_missing(ast.parse("from __future__ import annotations\n" + source))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "source, expected",
+    [
         ('def f(x: Weird["Missing"]): pass', {"f": ["Weird"]}),
         (
             'from typing import Optional as O\ndef f(x: O["Missing"]): pass',
@@ -205,6 +243,8 @@ def test_supported_annotation_strings_execute_generated_consumers(target):
                 support_definitions=[
                     "from typing import Annotated as Tagged, Literal as Choice",
                     "def scale(x: Tagged['int', 'label']) -> 'int':\n    return x * 2",
+                    "from collections.abc import Callable as C",
+                    "def apply(fn: C[['int'], int], x: int) -> int:\n    return fn(x)",
                     "ChoiceValues = Choice",
                     "def label(x: ChoiceValues['red', 'blue']) -> 'str':\n    return x",
                 ],
@@ -227,6 +267,9 @@ def test_supported_annotation_strings_execute_generated_consumers(target):
     )
     hints = get_type_hints(namespace["scale"], globalns=namespace, include_extras=True)
     assert hints["return"] is int
+    callable_hints = get_type_hints(namespace["apply"], globalns=namespace)
+    assert get_args(callable_hints["fn"]) == ([int], int)
+    assert namespace["apply"](namespace["scale"], 3) == 6
     labels = get_type_hints(namespace["label"], globalns=namespace)
     assert get_args(labels["x"]) == ("red", "blue")
     if target == SourceType.CLI:
@@ -276,3 +319,55 @@ def test_shared_helper_diagnostic_is_attributed_only_to_its_owners():
         for target in ("cli", "mcp")
         for name in ("first", "second")
     ]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'collections = object()\ndef f(x: collections.Callable[["Missing"], int]): pass',
+        'import collections.abc\ncollections = object()\ndef f(x: collections.abc.Callable[["Missing"], int]): pass',
+        'import collections.abc as cabc\ndef f(x: cabc.abc.Callable[["Missing"], int]): pass',
+    ],
+)
+def test_callable_detection_does_not_guess_rebound_or_wrong_module_paths(source):
+    from intpot.core.definition_bindings import annotation_missing
+
+    assert (
+        annotation_missing(ast.parse("from __future__ import annotations\n" + source))
+        == {}
+    )
+
+
+def test_callable_missing_type_refuses_public_conversion(tmp_path):
+    from intpot.converter import IntpotApp
+
+    schema = ApplicationSchema.from_tools(
+        name="callable-diagnostic",
+        source_type=SourceType.API,
+        tools=[
+            ToolInfo(
+                name="double",
+                parameters=[ParameterInfo("x", "int")],
+                return_type="int",
+                function_body="return scale(x)",
+                support_definitions=[
+                    "from collections.abc import Callable as C",
+                    "def scale(x: int, fn: C[['Missing'], int] = None) -> int:\n    return x * 2",
+                ],
+            )
+        ],
+    )
+    loaded = IntpotApp(SourceType.API, None)
+    loaded.__dict__["schema"] = schema
+    diagnostics = loaded.assess()["diagnostics"]
+    assert [(d["code"], d["target"], d["names"]) for d in diagnostics] == [
+        ("missing_annotation_binding", target, ["Missing"]) for target in ("cli", "mcp")
+    ]
+    for target in (SourceType.CLI, SourceType.MCP):
+        with pytest.raises(MissingBindingError, match="Missing"):
+            project_schema(schema, target, allow_scaffold=True)
+
+        output = tmp_path / target.value / "app.py"
+        with pytest.raises(MissingBindingError, match="Missing"):
+            loaded.write(output, target, allow_scaffold=True)
+        assert not output.parent.exists()
