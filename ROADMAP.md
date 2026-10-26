@@ -33,6 +33,13 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
+The v0.13.0 release adds actionable generated-definition references and corrective
+suggestions to binding diagnostics, structured callback/dependency refusal reports,
+and standard `collections.abc.Callable` forward-reference checks. Runnable examples
+cover both source behavior and refusal before output. This is a release candidate
+until published; callback translation, dependency injection, full type resolution,
+and verified original-source coordinates remain unsupported.
+
 The v0.11.1 release introduced bounded ordered diagnostics for generated function
 decorators, defaults and eager annotation names, plus persistent installed wheel/sdist
 consumer gates. The retained-body diagnostics and bounded helper/constant recovery
@@ -81,7 +88,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.12 — Current foundation
+## v0.13 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.

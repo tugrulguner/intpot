@@ -26,7 +26,7 @@ test('README assessment belongs to conversion, before community and roadmap', as
     '## Conversion assessment before output',
     '## Give your coding agent intpot context',
     '## What conversion preserves',
-    '## Actionable binding context (unreleased)',
+    '## Actionable binding context (v0.13.0)',
     '## Missing body bindings (v0.11)',
     '## Bounded helper recovery (v0.11)',
     '## Architecture',

@@ -10,6 +10,23 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.13.0] - 2026-10-26
+
+### Added
+
+- Conversion assessments now explain callback and FastAPI dependency refusals per affected target, including skipped binding analysis and route context.
+- Missing-binding assessments include generated-definition references, named corrective suggestions, and an explicit unavailable original-source location without changing refusal-before-write behavior.
+
+### Changed
+
+- The README and website illustrate target-specific conversion checks and refusal before writes with a supplementary diagram; the existing overview retains its artwork with the canonical schema label corrected.
+
+### Fixed
+
+- Converter assessment now detects missing forward-reference types nested in standard `collections.abc.Callable` annotations, including directly imported, aliased, and module-qualified forms.
+- The README places its conversion-assessment diagram beside the existing-app conversion workflow and groups binding/recovery diagnostics under conversion guarantees, before architecture, community and roadmap sections.
+
+
 ## [0.12.0] - 2026-10-22
 
 ### Fixed

@@ -100,7 +100,8 @@ def test_diagnostic_context_docs_do_not_advertise_fields_in_published_v012(relat
     section = text.split("## Actionable binding context", 1)[1].split("\n## ", 1)[0]
     for field in ("references", "suggested_action", "source_location"):
         assert field in section
-    assert "unreleased" in section
+    assert "v0.13.0" in section
+    assert "until" in section.lower()
     assert "v0.12.0" in section
     assert "not included" in section or "does not include" in section
     assert "coordinates" in section
