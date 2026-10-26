@@ -279,3 +279,17 @@ Run `uv run python examples/helper_recovery.py` to exercise the helper chain ret
 through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
 a refusal control using a dynamically initialized module value rather than a recoverable
 literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
+
+## Callback and dependency refusal diagnostics (unreleased)
+
+In source checkouts containing this change, `app.assess()` and `intpot inspect --json`
+expose `unsupported_cli_parameter_callback` and `unsupported_fastapi_dependency`
+diagnostics. Callback entries identify `tool`, `parameter`, and `target`; dependency
+entries identify `tool`, `target`, normalized `dependencies`, and `route` context
+(`path`, `operation_id`, `name`). Each refusal includes `source_location: null`,
+`consequence`, `suggested_action`, and `reference_analysis: "skipped_due_to_refusal"`.
+This status means target binding analysis was skipped, not that bindings are known good.
+Consequences describe what would be lost without equivalent implementation; conversion
+is refused. Scaffold permission cannot bypass these guards. FastAPI dependency
+diagnostics apply only to API source schemas. This delivery is unreleased and
+unavailable in published packages until release. See `examples/conversion_refusals.py`.

@@ -31,9 +31,61 @@ class UnsupportedFastAPIDependencyError(Exception):
 
 
 def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
-    """Assess body recovery and retained bindings, not complete fidelity."""
+    """Assess known refusals, body recovery and bindings, not complete fidelity."""
     missing = [tool.name for tool in schema.tools if tool.function_body is None]
-    reference_diagnostics = _reference_diagnostics(schema)
+    refusal_diagnostics: list[dict[str, Any]] = []
+    skipped_targets: set[SourceType] = set()
+    for tool in schema.tools:
+        for parameter in tool.parameters:
+            if parameter.unsupported_callback:
+                for target in (SourceType.API, SourceType.MCP):
+                    if target == schema.source_type:
+                        continue
+                    skipped_targets.add(target)
+                    refusal_diagnostics.append(
+                        {
+                            "code": "unsupported_cli_parameter_callback",
+                            "tool": tool.name,
+                            "parameter": parameter.name,
+                            "target": target.value,
+                            "source_location": None,
+                            "message": f"CLI callback for parameter {parameter.name!r} cannot be preserved when converting to {target.value}.",
+                            "consequence": "Source validation or parameter transformation would be lost without equivalent implementation; conversion is refused.",
+                            "reference_analysis": "skipped_due_to_refusal",
+                            "suggested_action": "Reimplement the callback's validation or transformation in the target application.",
+                        }
+                    )
+        if schema.source_type == SourceType.API and tool.dependencies:
+            for target in (SourceType.CLI, SourceType.MCP):
+                if target == schema.source_type:
+                    continue
+                skipped_targets.add(target)
+                refusal_diagnostics.append(
+                    {
+                        "code": "unsupported_fastapi_dependency",
+                        "tool": tool.name,
+                        "target": target.value,
+                        "source_location": None,
+                        "route": {
+                            "path": tool.route_path,
+                            "operation_id": tool.operation_id,
+                            "name": tool.interface_name,
+                        },
+                        "dependencies": list(tool.dependencies),
+                        "message": f"FastAPI dependencies for tool {tool.name!r} cannot be represented when converting to {target.value}.",
+                        "consequence": "Dependency execution, validation, and lifecycle behavior would be lost without equivalent implementation; conversion is refused.",
+                        "reference_analysis": "skipped_due_to_refusal",
+                        "suggested_action": "Implement equivalent dependency behavior explicitly in the target application.",
+                    }
+                )
+    reference_diagnostics = _reference_diagnostics(
+        schema,
+        targets=[
+            target
+            for target in (SourceType.CLI, SourceType.API, SourceType.MCP)
+            if target != schema.source_type and target not in skipped_targets
+        ],
+    )
     return {
         "body_recovery_complete": not missing,
         "missing_function_body": missing,
@@ -45,6 +97,7 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
             }
             for name in missing
         ]
+        + refusal_diagnostics
         + reference_diagnostics,
     }
 
@@ -74,7 +127,10 @@ def _binding_context(
 
 
 def _reference_diagnostics(
-    schema: ApplicationSchema, target: SourceType | None = None
+    schema: ApplicationSchema,
+    target: SourceType | None = None,
+    *,
+    targets: list[SourceType] | None = None,
 ) -> list[dict[str, Any]]:
     """Check retained bodies against bindings actually emitted for each target."""
     from intpot.core.generators._render import SupportDefinitionError, _private_aliases
@@ -91,6 +147,8 @@ def _reference_diagnostics(
     targets = (
         [target]
         if target is not None
+        else targets
+        if targets is not None
         else [candidate for candidate in generators if candidate != schema.source_type]
     )
     diagnostics: list[dict[str, Any]] = []
@@ -477,7 +535,7 @@ class IntpotApp:
         )
 
     def assess(self) -> dict[str, Any]:
-        """Report body recovery and per-target bindings, not complete fidelity."""
+        """Report known refusals and per-target bindings, not complete fidelity."""
         return assess_schema(self.schema)
 
     @property

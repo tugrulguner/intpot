@@ -356,6 +356,23 @@ and live `App` serving/ejection is unchanged. See
 > compile the generated file, import it with its dependencies, and exercise a real CLI
 > command, API request, or MCP tool before shipping it.
 
+## Callback and dependency refusal assessment (unreleased)
+
+**Availability:** this assessment is available in source checkouts containing the
+change; it is not yet included in a published release. `app.assess()` and `intpot
+inspect --json` report `unsupported_cli_parameter_callback` per affected
+tool/parameter/target, and `unsupported_fastapi_dependency` per affected API
+tool/target. Dependency diagnostics include route context (`path`, `operation_id`,
+`name`) and normalized dependency names. Both include `source_location: null`, a
+`consequence`, `suggested_action`, and `reference_analysis: "skipped_due_to_refusal"`:
+body-binding analysis for that target was not run, so the refusal does not imply that no
+binding issues exist. The consequence describes what would be lost without equivalent
+implementation; conversion is refused, so the source behavior is not silently dropped.
+`--allow-scaffold` does not bypass either refusal. Non-API dependency metadata is not
+treated as FastAPI injection. Run `.venv/bin/python examples/conversion_refusals.py`
+from a checkout to see source behavior, structured reports, and before-write refusal.
+
+
 ## Actionable binding context (unreleased)
 
 **Availability:** source checkout containing this change only; these additive fields are

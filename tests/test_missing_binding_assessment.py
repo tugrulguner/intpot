@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -168,12 +170,214 @@ def run(x: str = typer.Option('ok', callback=validate)):
 """)
     loaded = intpot.load(path)
     diagnostics = loaded.assess()["diagnostics"]
-    assert {item["target"] for item in diagnostics} == {"api", "mcp"}
-    assert all(item["code"] == "reference_analysis_unavailable" for item in diagnostics)
+    assert not any(
+        item["code"] == "reference_analysis_unavailable" for item in diagnostics
+    )
+    assert {item["code"] for item in diagnostics} == {
+        "unsupported_cli_parameter_callback"
+    }
     result = CliRunner().invoke(app, ["inspect", str(path), "--json"])
     assert result.exit_code == 0, result.output
     with pytest.raises(intpot.UnsupportedCLIParameterCallbackError):
         loaded.to_api(allow_scaffold=True)
+
+
+def test_callback_and_dependency_refusals_are_structured_and_skip_reference_analysis(
+    tmp_source,
+):
+    callback = tmp_source("""import typer
+app = typer.Typer(add_completion=False)
+def reject(value):
+    if value == "bad": raise typer.BadParameter("rejected by source")
+    return value
+@app.command()
+def alpha(first: str = typer.Option("ok", callback=reject), second: str = typer.Option("x", callback=reject)):
+    typer.echo(first + second)
+@app.command()
+def beta(value: int):
+    typer.echo(value)
+""")
+    loaded = intpot.load(callback)
+    original = CliRunner().invoke(loaded.app, ["alpha", "--first", "bad"])
+    assert original.exit_code != 0
+    assert "rejected by source" in original.output
+    report = loaded.assess()
+    refused = [
+        item
+        for item in report["diagnostics"]
+        if item["code"] == "unsupported_cli_parameter_callback"
+    ]
+    assert {(item["tool"], item["parameter"], item["target"]) for item in refused} == {
+        ("alpha", "first", "api"),
+        ("alpha", "first", "mcp"),
+        ("alpha", "second", "api"),
+        ("alpha", "second", "mcp"),
+    }
+    assert all(
+        item["reference_analysis"] == "skipped_due_to_refusal" for item in refused
+    )
+    assert all(
+        "would be lost without equivalent implementation; conversion is refused"
+        in item["consequence"]
+        for item in refused
+    )
+    assert not any(
+        item["code"] == "reference_analysis_unavailable"
+        for item in report["diagnostics"]
+    )
+    inspected = CliRunner().invoke(app, ["inspect", str(callback), "--json"])
+    assert json.loads(inspected.stdout)[0]["assessment"] == report
+
+    api = tmp_source("""from fastapi import FastAPI, Depends
+app = FastAPI()
+def check(): return "executed"
+@app.get("/value", name="value_route")
+def value(token: str = Depends(check)):
+    return {"token": token}
+""")
+    loaded_api = intpot.load(api)
+    assert TestClient(loaded_api.app).get("/value").json() == {"token": "executed"}
+    diagnostics = loaded_api.assess()["diagnostics"]
+    assert {
+        (item["tool"], item["target"])
+        for item in diagnostics
+        if item["code"] == "unsupported_fastapi_dependency"
+    } == {("value", "cli"), ("value", "mcp")}
+    assert not any(
+        item["code"] == "reference_analysis_unavailable" for item in diagnostics
+    )
+    dep_refused = [
+        item for item in diagnostics if item["code"] == "unsupported_fastapi_dependency"
+    ]
+    assert all(
+        item["reference_analysis"] == "skipped_due_to_refusal" for item in dep_refused
+    )
+    assert all(
+        item["route"] == {"path": "/value", "operation_id": None, "name": "value_route"}
+        for item in dep_refused
+    )
+    assert all(
+        "would be lost without equivalent implementation; conversion is refused"
+        in item["consequence"]
+        for item in dep_refused
+    )
+    inspected = CliRunner().invoke(app, ["inspect", str(api), "--json"])
+    assert json.loads(inspected.stdout)[0]["assessment"] == loaded_api.assess()
+
+
+@pytest.mark.parametrize("allow_scaffold", [False, True])
+@pytest.mark.parametrize("kind", ["callback", "dependency"])
+def test_refusal_diagnostics_precede_writes_even_with_scaffold(
+    tmp_source, tmp_path, kind, allow_scaffold
+):
+    text = (
+        "import typer\napp = typer.Typer()\ndef check(v): return v\n"
+        "@app.command()\ndef run(v: str = typer.Option('x', callback=check)): typer.echo(v)"
+        if kind == "callback"
+        else "from fastapi import FastAPI, Depends\napp = FastAPI()\ndef check(): return 'x'\n"
+        "@app.get('/x')\ndef run(v: str = Depends(check)): return {'v': v}"
+    )
+    loaded = intpot.load(tmp_source(text))
+    output = tmp_path / "out.py"
+    error = (
+        intpot.UnsupportedCLIParameterCallbackError
+        if kind == "callback"
+        else intpot.UnsupportedFastAPIDependencyError
+    )
+    with pytest.raises(error):
+        loaded.write(
+            output,
+            "api" if kind == "callback" else "cli",
+            allow_scaffold=allow_scaffold,
+        )
+    assert not output.exists()
+
+
+def test_non_api_dependency_metadata_does_not_trigger_fastapi_refusal(tmp_source):
+    path = tmp_source(MISSING)
+    loaded = intpot.load(path)
+    schema = replace(
+        loaded.schema,
+        source_type=intpot.SourceType.CLI,
+        tools=(replace(loaded.schema.tools[0], dependencies=("metadata_only",)),),
+    )
+    report = intpot.converter.assess_schema(schema)
+    assert not any(
+        item["code"] == "unsupported_fastapi_dependency"
+        for item in report["diagnostics"]
+    )
+
+
+def test_blocked_target_does_not_skip_other_target_binding_analysis(tmp_source):
+    loaded = intpot.load(tmp_source(MISSING))
+    tool = loaded.schema.tools[0]
+    schema = replace(
+        loaded.schema,
+        source_type=intpot.SourceType.MCP,
+        tools=(
+            replace(
+                tool,
+                parameters=(
+                    replace(tool.parameters[0], unsupported_callback=True),
+                    *tool.parameters[1:],
+                ),
+            ),
+        ),
+    )
+    diagnostics = intpot.converter.assess_schema(schema)["diagnostics"]
+    assert any(
+        item["code"] == "unsupported_cli_parameter_callback" and item["target"] == "api"
+        for item in diagnostics
+    )
+    assert any(
+        item["code"] == "missing_binding" and item["target"] == "cli"
+        for item in diagnostics
+    )
+    assert not any(
+        item["code"] == "missing_binding" and item["target"] == "api"
+        for item in diagnostics
+    )
+
+
+def test_conversion_refusals_example_executes(capsys):
+    import runpy
+
+    example = (
+        Path(__file__).resolve().parents[1] / "examples" / "conversion_refusals.py"
+    )
+    runpy.run_path(str(example), run_name="__main__")
+    output = capsys.readouterr().out
+    assert "unsupported_cli_parameter_callback" in output
+    assert "unsupported_fastapi_dependency" in output
+    assert "both conversions refused before output" in output
+
+
+def test_directory_inspection_json_matches_each_source_assessment(tmp_source, tmp_path):
+    first = tmp_source("""import typer
+app = typer.Typer()
+def check(v): return v
+@app.command()
+def run(v: str = typer.Option('x', callback=check)): typer.echo(v)
+""")
+    second = tmp_source("""from fastapi import FastAPI, Depends
+app = FastAPI()
+def check(): return 'x'
+@app.get('/x')
+def run(v: str = Depends(check)): return {'v': v}
+""")
+    sources = tmp_path / "sources"
+    sources.mkdir()
+    (sources / "alpha.py").write_text(first.read_text())
+    (sources / "beta.py").write_text(second.read_text())
+    inspected = CliRunner().invoke(app, ["inspect", str(sources), "--json"])
+    assert inspected.exit_code == 0, inspected.output
+    payload = json.loads(inspected.stdout)
+    assert [Path(item["source"]).name for item in payload] == ["alpha.py", "beta.py"]
+    for item in payload:
+        source = sources / Path(item["source"]).name
+        loaded = intpot.load(source)
+        assert item["tools"] == loaded.schema.to_dict()["tools"]
+        assert item["assessment"] == loaded.assess()
 
 
 @pytest.mark.parametrize(
