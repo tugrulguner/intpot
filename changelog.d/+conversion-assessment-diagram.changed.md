@@ -1,1 +1,0 @@
-The README and website illustrate target-specific conversion checks and refusal before writes with a supplementary diagram; the existing overview retains its artwork with the canonical schema label corrected.

@@ -216,10 +216,11 @@ import availability, and Python equivalence are not certified. Lambda bodies and
 bodies are deferred; comprehension locals are not module dependencies. Live `App` and direct
 low-level generators are unchanged.
 
-## Actionable binding context (unreleased source only)
+## Actionable binding context (v0.13.0)
 
-The published v0.12.0 does not include these additional fields. In a source checkout
-containing this change, the three missing-binding diagnostic codes expose `references`
+Requires v0.13.0 or newer; until publication, use a source checkout containing this
+change. v0.12.0 does not include these additional fields. The three missing-binding
+diagnostic codes expose `references`
 (each missing `name` and its `generated_definition`), `suggested_action`, and
 `source_location`. Generated names identify owned helpers, wrappers and implementations;
 they are not source locations. `source_location` is currently always `None`/JSON `null`
@@ -280,9 +281,10 @@ through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py
 a refusal control using a dynamically initialized module value rather than a recoverable
 literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
 
-## Callback and dependency refusal diagnostics (unreleased)
+## Callback and dependency refusal diagnostics (v0.13.0)
 
-In source checkouts containing this change, `app.assess()` and `intpot inspect --json`
+Requires v0.13.0 or newer; until publication, use a source checkout containing this
+change. `app.assess()` and `intpot inspect --json`
 expose `unsupported_cli_parameter_callback` and `unsupported_fastapi_dependency`
 diagnostics. Callback entries identify `tool`, `parameter`, and `target`; dependency
 entries identify `tool`, `target`, normalized `dependencies`, and `route` context
@@ -291,5 +293,4 @@ entries identify `tool`, `target`, normalized `dependencies`, and `route` contex
 This status means target binding analysis was skipped, not that bindings are known good.
 Consequences describe what would be lost without equivalent implementation; conversion
 is refused. Scaffold permission cannot bypass these guards. FastAPI dependency
-diagnostics apply only to API source schemas. This delivery is unreleased and
-unavailable in published packages until release. See `examples/conversion_refusals.py`.
+diagnostics apply only to API source schemas. See `examples/conversion_refusals.py`.

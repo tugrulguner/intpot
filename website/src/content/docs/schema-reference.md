@@ -40,10 +40,10 @@ The frozen schema is the normalized boundary between inspection/registration and
 
 `ApplicationSchema.from_tools(...)` compiles compatibility `ToolInfo` instances; `.to_tools()` returns detached mutable records; `.to_dict()` yields a JSON-compatible representation. `compile_app(source_type, app_instance, source_path=...)` compiles a live app. `load(path_or_instance)` detects a source and returns `IntpotApp`; its cached `.schema`, detached `.tools`, `.project(target)`, `.to_cli()`, `.to_api()`, `.to_mcp()`, and `.write(path, target)` provide the Python conversion API. Passing the same source target to `.project()` is rejected.
 
-## Actionable binding context (unreleased)
+## Actionable binding context (v0.13.0)
 
-**Availability:** source checkout containing this change only; these additive fields are
-not included in the published v0.12.0 package.
+**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a source
+checkout containing this change; v0.12.0 does not include these additive fields.
 
 `loaded.assess()` and `intpot inspect app.py --json` expose `references`,
 `suggested_action`, and `source_location` on `missing_binding`,

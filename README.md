@@ -356,10 +356,10 @@ and live `App` serving/ejection is unchanged. See
 > compile the generated file, import it with its dependencies, and exercise a real CLI
 > command, API request, or MCP tool before shipping it.
 
-## Callback and dependency refusal assessment (unreleased)
+## Callback and dependency refusal assessment (v0.13.0)
 
-**Availability:** this assessment is available in source checkouts containing the
-change; it is not yet included in a published release. `app.assess()` and `intpot
+**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a
+source checkout containing this change. `app.assess()` and `intpot
 inspect --json` report `unsupported_cli_parameter_callback` per affected
 tool/parameter/target, and `unsupported_fastapi_dependency` per affected API
 tool/target. Dependency diagnostics include route context (`path`, `operation_id`,
@@ -373,10 +373,10 @@ treated as FastAPI injection. Run `.venv/bin/python examples/conversion_refusals
 from a checkout to see source behavior, structured reports, and before-write refusal.
 
 
-## Actionable binding context (unreleased)
+## Actionable binding context (v0.13.0)
 
-**Availability:** source checkout containing this change only; these additive fields are
-not included in the published v0.12.0 package.
+**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a source
+checkout containing this change; v0.12.0 does not include these additive fields.
 
 `loaded.assess()` and `intpot inspect app.py --json` expose `references`,
 `suggested_action`, and `source_location` on `missing_binding`,

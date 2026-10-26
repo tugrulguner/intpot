@@ -98,10 +98,10 @@ helper-based implementation with a dynamically initialized dependency that retur
 
 The original HTTP API can work while the generated CLI lacks its `Model` annotation binding. The diagram illustrates that supported refusal case, not full conversion readiness or Python equivalence. Source inspection imports trusted code; this is not a sandbox. Live `App` and direct low-level generators are separate paths.
 
-## Actionable binding context (unreleased)
+## Actionable binding context (v0.13.0)
 
-**Availability:** source checkout containing this change only; these additive fields are
-not included in the published v0.12.0 package.
+**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a source
+checkout containing this change; v0.12.0 does not include these additive fields.
 
 `loaded.assess()` and `intpot inspect app.py --json` expose `references`,
 `suggested_action`, and `source_location` on `missing_binding`,

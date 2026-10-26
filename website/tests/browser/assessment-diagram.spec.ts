@@ -33,7 +33,7 @@ for (const width of [390, 1280]) {
         for (const section of [
           'convert-an-existing-app', 'conversion-assessment-before-output', 'assessment-image',
           'give-your-coding-agent-intpot-context', 'what-conversion-preserves',
-          'actionable-binding-context-unreleased', 'missing-body-bindings-v011',
+          'actionable-binding-context-v0130', 'missing-body-bindings-v011',
           'bounded-helper-recovery-v011', 'architecture', 'community', 'roadmap', 'support-intpot', 'license',
         ]) {
           const position = order.indexOf(section);
