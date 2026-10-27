@@ -41,7 +41,11 @@ def main() -> None:
         assert len(diagnostics) == 2
         for item in diagnostics:
             assert item["tool"] == "value" and item["names"] == ["Model"]
-            assert item["source_location"] is None
+            assert item["source_location"] == {
+                "path": str(source.resolve()),
+                "line": SOURCE.splitlines().index("def value(x: Model) -> int:") + 1,
+                "end_line": len(SOURCE.splitlines()),
+            }
             assert item["references"]
             assert "Model" in item["suggested_action"]
             for scaffold in (False, True):

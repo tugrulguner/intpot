@@ -1,5 +1,10 @@
 # Examples
 
+`source_provenance.py` (unreleased source checkout) executes an original HTTP API
+with TestClient, verifies tool/helper definition coordinates, compares Python and
+CLI JSON assessments, and preserves refusal before writes. Dynamic/synthetic
+metadata stays unavailable; definition bounds are not exact missing-name positions.
+
 This directory contains example source files and their generated conversions.
 
 ## Source Files

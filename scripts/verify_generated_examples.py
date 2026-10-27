@@ -181,7 +181,10 @@ def verify_definition_bindings() -> None:
         "missing_definition_binding",
     }
     assert all(
-        item["source_location"] is None
+        item["source_location"] is not None
+        and Path(item["source_location"]["path"]).name == "original.py"
+        and item["source_location"]["line"] == 10
+        and item["source_location"]["end_line"] == 11
         and item["references"]
         and "Model" in item["suggested_action"]
         for item in diagnostics

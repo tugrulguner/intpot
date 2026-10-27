@@ -30,8 +30,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --all-extras --locked
-      - run: uv run ruff check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
-      - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
+      - run: uv run ruff check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
+      - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
 
   typecheck:
     name: typecheck
@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --all-extras --locked
-      - run: uv run pyright src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
+      - run: uv run pyright src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
 
   test:
     name: test (${{ matrix.python-version }})

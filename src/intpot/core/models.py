@@ -798,6 +798,10 @@ class ToolInfo:
     route_tags: list[str] = field(default_factory=list)
     route_deprecated: bool | None = None
     support_definitions: list[str] = field(default_factory=list)
+    source_location: tuple[str, int, int] | None = None
+    support_source_locations: dict[str, tuple[str, int, int]] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         canonical_name = sanitize_identifier(self.name)
@@ -976,8 +980,49 @@ class ToolSchema:
     route_tags: tuple[str, ...] = ()
     route_deprecated: bool | None = None
     support_definitions: tuple[str, ...] = ()
+    source_location: tuple[str, int, int] | None = None
+    support_source_locations: tuple[tuple[str, tuple[str, int, int]], ...] = ()
 
     def __post_init__(self) -> None:
+        def validate(location: Any) -> tuple[str, int, int]:
+            if not isinstance(location, (tuple, list)) or len(location) != 3:
+                raise ValueError(
+                    "source location must contain path, line, and end_line"
+                )
+            path, line, end_line = location
+            if (
+                not isinstance(path, str)
+                or not path
+                or type(line) is not int
+                or type(end_line) is not int
+                or line < 1
+                or end_line < line
+            ):
+                raise ValueError("invalid source location metadata")
+            return path, line, end_line
+
+        if self.source_location is not None:
+            object.__setattr__(self, "source_location", validate(self.source_location))
+        raw = (
+            self.support_source_locations.items()
+            if isinstance(self.support_source_locations, Mapping)
+            else self.support_source_locations
+        )
+        normalized_locations = tuple(
+            (name, validate(location)) for name, location in raw
+        )
+        if any(
+            not isinstance(name, str)
+            or not name.isidentifier()
+            or keyword.iskeyword(name)
+            for name, _ in normalized_locations
+        ) or len({name for name, _ in normalized_locations}) != len(
+            normalized_locations
+        ):
+            raise ValueError("invalid support source location names")
+        object.__setattr__(
+            self, "support_source_locations", tuple(sorted(normalized_locations))
+        )
         canonical_name = sanitize_identifier(self.name)
         if self.interface_name is None and canonical_name != self.name:
             object.__setattr__(self, "interface_name", self.name)
@@ -1022,6 +1067,10 @@ class ToolSchema:
             dependencies=tuple(tool.dependencies),
             source_imports=tuple(tool.source_imports),
             support_definitions=tuple(tool.support_definitions),
+            source_location=tool.source_location,
+            support_source_locations=tuple(
+                sorted(tool.support_source_locations.items())
+            ),
             interface_name=tool.interface_name,
         )
 
@@ -1044,6 +1093,8 @@ class ToolSchema:
             dependencies=list(self.dependencies),
             source_imports=list(self.source_imports),
             support_definitions=list(self.support_definitions),
+            source_location=self.source_location,
+            support_source_locations=dict(self.support_source_locations),
             interface_name=self.interface_name,
         )
 
@@ -1071,6 +1122,27 @@ class ToolSchema:
                 else {}
             ),
             "interface_name": self.interface_name,
+            **(
+                {
+                    "support_source_locations": {
+                        name: {"path": loc[0], "line": loc[1], "end_line": loc[2]}
+                        for name, loc in self.support_source_locations
+                    }
+                }
+                if self.support_source_locations
+                else {}
+            ),
+            **(
+                {
+                    "source_location": {
+                        "path": self.source_location[0],
+                        "line": self.source_location[1],
+                        "end_line": self.source_location[2],
+                    }
+                }
+                if self.source_location is not None
+                else {}
+            ),
         }
 
 

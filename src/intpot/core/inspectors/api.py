@@ -12,12 +12,12 @@ from typing import Annotated, Any, cast, get_args, get_origin
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
-    extract_support_definitions,
     python_return_type_name,
     python_type_name,
 )
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ParamSource, ToolInfo
+from intpot.core.provenance import inspected_callable_metadata
 
 _PATH_PARAM_RE = re.compile(r"\{(\w+)\}")
 
@@ -270,7 +270,7 @@ class APIInspector(BaseInspector):
                     http_method=http_method,
                     function_body=extract_function_body(endpoint),
                     source_imports=extract_source_imports(endpoint),
-                    support_definitions=extract_support_definitions(endpoint),
+                    **inspected_callable_metadata(endpoint),
                     is_async=asyncio.iscoroutinefunction(endpoint),
                     route_path=route_path,
                     operation_id=getattr(route, "operation_id", None),

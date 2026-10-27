@@ -75,7 +75,11 @@ def test_inspect_json_exposes_the_same_context_as_python_without_source_guessing
     assert json.loads(result.stdout)[0]["assessment"] == assessment
     assert len(assessment["diagnostics"]) == 2
     for item in assessment["diagnostics"]:
-        assert item["source_location"] is None
+        assert item["source_location"] == {
+            "path": str(source.resolve()),
+            "line": 7,
+            "end_line": 8,
+        }
         assert item["references"]
         assert {ref["name"] for ref in item["references"]} == {"Model"}
         assert "Model" in item["suggested_action"]
