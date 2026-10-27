@@ -132,3 +132,14 @@ def test_provenance_docs_pin_v014_availability_without_relabelling_v013(relative
         assert field in section
     assert "inspection snapshot" in section
     assert "synthetic" in section.lower()
+
+
+@pytest.mark.parametrize("filename", ["diagnostic_context.py", "source_provenance.py"])
+def test_location_asserting_examples_state_v014_requirement(filename):
+    import ast
+
+    source = Path(__file__).parents[1] / "examples" / filename
+    doc = ast.get_docstring(ast.parse(source.read_text()))
+    assert doc is not None
+    assert "requires v0.14.0 or newer" in doc
+    assert "unreleased source checkout only" not in doc

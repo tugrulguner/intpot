@@ -1,4 +1,4 @@
-"""Inspect actionable missing-binding context (unreleased source checkout only).
+"""Inspect actionable missing-binding context (requires v0.14.0 or newer).
 
 Run: uv run --all-extras --with httpx python examples/diagnostic_context.py
 The HTTP assertion uses TestClient, not a network server. All files are temporary.
