@@ -218,10 +218,11 @@ low-level generators are unchanged.
 
 
 
-## Bounded definition provenance (unreleased)
+## Bounded definition provenance (v0.14.0)
 
-**Availability:** source checkout containing this change only; v0.13.0 does not
-include captured definition coordinates.
+**Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a
+source checkout containing this change. v0.13.0 does not include captured definition
+coordinates.
 
 Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
 and `support_source_locations`. JSON locations have `path`, `line`, and `end_line`:
@@ -253,13 +254,12 @@ for source behavior, helper coordinates, Python/CLI report parity and refusal ch
 
 ## Actionable binding context (v0.13.0)
 
-Requires v0.13.0 or newer; until publication, use a source checkout containing this
-change. v0.12.0 does not include these additional fields. The three missing-binding
+Requires v0.13.0 or newer. v0.12.0 does not include these additional fields. The three missing-binding
 diagnostic codes expose `references`
 (each missing `name` and its `generated_definition`), `suggested_action`, and
 `source_location`. Generated names identify owned helpers, wrappers and implementations;
-they are not source locations. Published v0.13.0 uses `None`/JSON `null`; unreleased
-source checkouts support the bounded definition provenance described below. Never
+they are not source locations. Published v0.13.0 uses `None`/JSON `null`; v0.14.0
+adds bounded definition provenance (until publication, use its source checkout). Never
 infer original coordinates from `source_path`. Existing codes, tool/target/names/message fields and refusal exceptions
 stay unchanged. Suggestions distinguish eager before-definition ordering from body and
 postponed-annotation availability before use. Inspection remains available; scaffold
@@ -318,8 +318,7 @@ literal. These capabilities are included in v0.11.0; the documented unsupported 
 
 ## Callback and dependency refusal diagnostics (v0.13.0)
 
-Requires v0.13.0 or newer; until publication, use a source checkout containing this
-change. `app.assess()` and `intpot inspect --json`
+Requires v0.13.0 or newer. `app.assess()` and `intpot inspect --json`
 expose `unsupported_cli_parameter_callback` and `unsupported_fastapi_dependency`
 diagnostics. Callback entries identify `tool`, `parameter`, and `target`; dependency
 entries identify `tool`, `target`, normalized `dependencies`, and `route` context

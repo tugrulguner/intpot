@@ -33,18 +33,19 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-The next source slice adds bounded original definition provenance (unreleased):
+The v0.14.0 release candidate adds bounded original definition provenance:
 verified owning-file paths and definition line ranges for tools and recovered
 helpers, preserved through schema adapters, projections and JSON diagnostics.
 Synthetic wrapper coordinates, exact missing-name occurrence locations and broader
 dependency-edge analysis remain unavailable. This does not change conversion policy.
+Until v0.14.0 is published, use a source checkout containing this change.
 
 The v0.13.0 release adds actionable generated-definition references and corrective
 suggestions to binding diagnostics, structured callback/dependency refusal reports,
 and standard `collections.abc.Callable` forward-reference checks. Runnable examples
-cover both source behavior and refusal before output. This is a release candidate
-until published; callback translation, dependency injection, full type resolution,
-and verified original-source coordinates remain unsupported.
+cover both source behavior and refusal before output. Callback translation, dependency
+injection and full type resolution remain unsupported. Definition coordinates arrive
+separately in v0.14.0; they are not included in v0.13.0.
 
 The v0.11.1 release introduced bounded ordered diagnostics for generated function
 decorators, defaults and eager annotation names, plus persistent installed wheel/sdist
@@ -152,7 +153,7 @@ or generated-code execution as a prerequisite for live serving.
 - [ ] Extend dependency diagnostics to complete annotation/default evaluation and ordering.
       Retained-body analysis alone is not full conversion readiness.
 - [x] Capture bounded tool/helper definition provenance alongside the existing schema
-      (unreleased source slice). Record verified file and definition bounds; keep
+      (v0.14.0 release candidate). Record verified file and definition bounds; keep
       dynamic, wrapped, missing-file and changed-code cases explicitly unavailable.
       Preserve generated-owner references without inventing synthetic wrapper locations.
 - [ ] Extend provenance to richer binding dependency edges and exact reference occurrences.

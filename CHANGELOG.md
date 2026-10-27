@@ -10,6 +10,13 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.14.0] - 2026-10-27
+
+### Added
+
+- Conversion diagnostics retain bounded verified tool/helper definition locations through schema adapters and JSON, while keeping unavailable and synthetic origins explicit and preserving refusal before writes.
+
+
 ## [0.13.0] - 2026-10-26
 
 ### Added
