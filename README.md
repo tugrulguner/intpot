@@ -358,8 +358,7 @@ and live `App` serving/ejection is unchanged. See
 
 ## Callback and dependency refusal assessment (v0.13.0)
 
-**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a
-source checkout containing this change. `app.assess()` and `intpot
+**Availability:** requires v0.13.0 or newer. `app.assess()` and `intpot
 inspect --json` report `unsupported_cli_parameter_callback` per affected
 tool/parameter/target, and `unsupported_fastapi_dependency` per affected API
 tool/target. Dependency diagnostics include route context (`path`, `operation_id`,
@@ -375,10 +374,11 @@ from a checkout to see source behavior, structured reports, and before-write ref
 
 
 
-## Bounded definition provenance (unreleased)
+## Bounded definition provenance (v0.14.0)
 
-**Availability:** source checkout containing this change only; v0.13.0 does not
-include captured definition coordinates.
+**Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a
+source checkout containing this change. v0.13.0 does not include captured definition
+coordinates.
 
 Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
 and `support_source_locations`. JSON locations have `path`, `line`, and `end_line`:
@@ -410,8 +410,8 @@ for source behavior, helper coordinates, Python/CLI report parity and refusal ch
 
 ## Actionable binding context (v0.13.0)
 
-**Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a source
-checkout containing this change; v0.12.0 does not include these additive fields.
+**Availability:** requires v0.13.0 or newer; v0.12.0 does not include these
+additive fields.
 
 `loaded.assess()` and `intpot inspect app.py --json` expose `references`,
 `suggested_action`, and `source_location` on `missing_binding`,
@@ -424,7 +424,8 @@ Suggestions name the missing bindings; eager definition dependencies must exist 
 those definitions, while body and deferred-annotation dependencies must exist before use.
 
 In published v0.13.0, `source_location` is always `null` (`None` in Python).
-Unreleased source checkouts add bounded definition provenance as described below.
+v0.14.0 adds bounded definition provenance as described above; until publication,
+use a source checkout containing this change.
 An application `source_path` is not sufficient provenance, and no generated AST
 position is presented as an original line. Diagnostics are observations of
 bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.

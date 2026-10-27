@@ -109,3 +109,37 @@ def test_diagnostic_context_docs_do_not_advertise_fields_in_published_v012(relat
     assert "v0.12.0" in section
     assert "not included" in section or "does not include" in section
     assert "coordinates" in section
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "README.md",
+        "website/src/content/docs/conversion-boundaries.md",
+        "website/src/content/docs/schema-reference.md",
+        "src/intpot/templates/skills/intpot-cli.md",
+        "src/intpot/templates/skills/intpot-python.md",
+    ],
+)
+def test_provenance_docs_pin_v014_availability_without_relabelling_v013(relative):
+    text = (Path(__file__).parents[1] / relative).read_text()
+    section = text.split("## Bounded definition provenance", 1)[1].split("\n## ", 1)[0]
+    assert section.startswith(" (v0.14.0)")
+    assert "requires v0.14.0 or newer" in section
+    assert "until v0.14.0 is published" in section
+    assert "v0.13.0 does not" in section
+    for field in ("source_location", "support_source_locations", "end_line"):
+        assert field in section
+    assert "inspection snapshot" in section
+    assert "synthetic" in section.lower()
+
+
+@pytest.mark.parametrize("filename", ["diagnostic_context.py", "source_provenance.py"])
+def test_location_asserting_examples_state_v014_requirement(filename):
+    import ast
+
+    source = Path(__file__).parents[1] / "examples" / filename
+    doc = ast.get_docstring(ast.parse(source.read_text()))
+    assert doc is not None
+    assert "requires v0.14.0 or newer" in doc
+    assert "unreleased source checkout only" not in doc

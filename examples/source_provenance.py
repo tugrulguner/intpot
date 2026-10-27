@@ -1,4 +1,4 @@
-"""Exercise bounded source-definition provenance (unreleased source checkout).
+"""Exercise bounded source-definition provenance (requires v0.14.0 or newer).
 
 Run: uv run --all-extras --with httpx python examples/source_provenance.py
 The original HTTP check uses TestClient. Inspection imports trusted source.
