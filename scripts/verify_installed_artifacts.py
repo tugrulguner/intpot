@@ -138,13 +138,26 @@ def main() -> None:
             )
             assert len(diagnostics) == 2
             assert all(
-                item["source_location"] is None
+                item["source_location"] is not None
+                and Path(item["source_location"]["path"]).name == "original.py"
+                and item["source_location"]["line"] == 10
+                and item["source_location"]["end_line"] == 11
                 and item["references"]
                 and "Model" in item["suggested_action"]
                 for item in diagnostics
             )
+            provenance = json.loads(
+                run(
+                    [str(python), str(ROOT / "examples" / "source_provenance.py")],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert provenance["original_result"] == 21
+            assert provenance["cli_json_parity"] and provenance["refused_before_write"]
+            assert provenance["unavailable_location"] is None
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance"
             )
 
 

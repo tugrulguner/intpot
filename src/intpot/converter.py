@@ -24,6 +24,7 @@ from intpot.core.projections import (
     project_parameter_placement,
     project_tool_names,
 )
+from intpot.core.provenance import location_dict
 
 
 class UnsupportedFastAPIDependencyError(Exception):
@@ -48,7 +49,7 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
                             "tool": tool.name,
                             "parameter": parameter.name,
                             "target": target.value,
-                            "source_location": None,
+                            "source_location": location_dict(tool.source_location),
                             "message": f"CLI callback for parameter {parameter.name!r} cannot be preserved when converting to {target.value}.",
                             "consequence": "Source validation or parameter transformation would be lost without equivalent implementation; conversion is refused.",
                             "reference_analysis": "skipped_due_to_refusal",
@@ -65,7 +66,7 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
                         "code": "unsupported_fastapi_dependency",
                         "tool": tool.name,
                         "target": target.value,
-                        "source_location": None,
+                        "source_location": location_dict(tool.source_location),
                         "route": {
                             "path": tool.route_path,
                             "operation_id": tool.operation_id,
@@ -103,11 +104,24 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
 
 
 def _binding_context(
-    bindings: dict[str, list[str]], owners: set[str], *, before_definition: bool
+    bindings: dict[str, list[str]],
+    owners: set[str],
+    *,
+    before_definition: bool,
+    source_location: tuple[str, int, int] | None = None,
+    definition_locations: dict[str, tuple[str, int, int] | None] | None = None,
 ) -> dict[str, Any]:
     """Describe emitted owners without inventing original-source coordinates."""
     references = [
-        {"name": name, "generated_definition": owner}
+        {
+            "name": name,
+            "generated_definition": owner,
+            **(
+                {"source_location": location_dict(definition_locations.get(owner))}
+                if definition_locations is not None
+                else {}
+            ),
+        }
         for owner in sorted(owners)
         for name in sorted(bindings.get(owner, []))
     ]
@@ -118,7 +132,7 @@ def _binding_context(
         else "in the generated module before use"
     )
     return {
-        "source_location": None,
+        "source_location": location_dict(source_location),
         "references": references,
         "suggested_action": (
             f"Import or define {names} {timing}, or adapt the source to the supported subset."
@@ -235,6 +249,12 @@ def _reference_diagnostics(
                 support = ast.parse(definition).body[0]
                 if isinstance(support, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     owned_definitions.add(support.name)
+            definition_locations = None
+            if tool.source_location is not None or tool.support_source_locations:
+                definition_locations = {
+                    aliases.get(f"impl:{tool.name}", ""): tool.source_location,
+                    **dict(tool.support_source_locations),
+                }
             definition_names = sorted(
                 {
                     name
@@ -253,6 +273,8 @@ def _reference_diagnostics(
                             definition_missing,
                             owned_definitions,
                             before_definition=True,
+                            source_location=tool.source_location,
+                            definition_locations=definition_locations,
                         ),
                         "message": (
                             "Generated definition evaluates names before their bindings exist; "
@@ -279,6 +301,8 @@ def _reference_diagnostics(
                             annotation_bindings,
                             owned_definitions,
                             before_definition=False,
+                            source_location=tool.source_location,
+                            definition_locations=definition_locations,
                         ),
                         "message": (
                             "Generated annotation refers to bindings absent from the emitted module; "
@@ -327,7 +351,11 @@ def _reference_diagnostics(
                         "target": candidate.value,
                         "names": names,
                         **_binding_context(
-                            body_bindings, owned_definitions, before_definition=False
+                            body_bindings,
+                            owned_definitions,
+                            before_definition=False,
+                            source_location=tool.source_location,
+                            definition_locations=definition_locations,
                         ),
                         "message": "Retained implementation refers to bindings absent from generated output.",
                     }

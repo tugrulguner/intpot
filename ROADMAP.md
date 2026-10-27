@@ -33,6 +33,12 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
+The next source slice adds bounded original definition provenance (unreleased):
+verified owning-file paths and definition line ranges for tools and recovered
+helpers, preserved through schema adapters, projections and JSON diagnostics.
+Synthetic wrapper coordinates, exact missing-name occurrence locations and broader
+dependency-edge analysis remain unavailable. This does not change conversion policy.
+
 The v0.13.0 release adds actionable generated-definition references and corrective
 suggestions to binding diagnostics, structured callback/dependency refusal reports,
 and standard `collections.abc.Callable` forward-reference checks. Runnable examples
@@ -145,10 +151,12 @@ or generated-code execution as a prerequisite for live serving.
       ([#202](https://github.com/tugrulguner/intpot/pull/202)).
 - [ ] Extend dependency diagnostics to complete annotation/default evaluation and ordering.
       Retained-body analysis alone is not full conversion readiness.
-- [ ] Record bounded source-binding provenance and dependency edges alongside the existing
-      schema. Report the affected tool/binding, stable diagnostic code, consequence, and
-      suggested action; include source locations where available. Keep dynamic/ambiguous
-      cases explicitly unresolved rather than treating absence of evidence as safety.
+- [x] Capture bounded tool/helper definition provenance alongside the existing schema
+      (unreleased source slice). Record verified file and definition bounds; keep
+      dynamic, wrapped, missing-file and changed-code cases explicitly unavailable.
+      Preserve generated-owner references without inventing synthetic wrapper locations.
+- [ ] Extend provenance to richer binding dependency edges and exact reference occurrences.
+      Keep ambiguous cases unresolved rather than treating absence of evidence as safety.
 - [x] Refuse demonstrated missing body bindings before any output writes, including mixed
       directories, while retaining inspection and existing callback/dependency guards.
 - [ ] Extend the diagnostic view incrementally to target-aware callback, dependency, and

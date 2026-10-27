@@ -40,6 +40,41 @@ The frozen schema is the normalized boundary between inspection/registration and
 
 `ApplicationSchema.from_tools(...)` compiles compatibility `ToolInfo` instances; `.to_tools()` returns detached mutable records; `.to_dict()` yields a JSON-compatible representation. `compile_app(source_type, app_instance, source_path=...)` compiles a live app. `load(path_or_instance)` detects a source and returns `IntpotApp`; its cached `.schema`, detached `.tools`, `.project(target)`, `.to_cli()`, `.to_api()`, `.to_mcp()`, and `.write(path, target)` provide the Python conversion API. Passing the same source target to `.project()` is rejected.
 
+
+
+## Bounded definition provenance (unreleased)
+
+**Availability:** source checkout containing this change only; v0.13.0 does not
+include captured definition coordinates.
+
+Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
+and `support_source_locations`. JSON locations have `path`, `line`, and `end_line`:
+an absolute owning-file path and inclusive, 1-based definition bounds. The first
+line is the `def`/`async def`, not its decorators. Helper locations are keyed by
+recovered helper name. Schema adapters and projections preserve these snapshots.
+
+Capture reads and compiles the owning file without executing it, then requires a
+matching existing function code object. Where existing inspector recovery unwraps
+a callable, provenance describes the recovered original, not wrapper execution.
+Dynamic functions, closures and otherwise unverifiable callables have no captured
+location. Missing, unreadable or
+changed function bodies also yield no location. This is bounded code/definition
+provenance at inspection time, not proof that annotations/default values or the
+whole application are unchanged. Manually supplied schema metadata is caller-owned.
+
+A diagnostic's top-level `source_location` identifies the affected tool definition,
+including callback/dependency refusals; it does not locate the callback, dependency,
+or exact missing-name occurrence. When provenance is available, binding references
+also carry the originating implementation/helper definition location. Synthetic
+public wrappers have `source_location: null`. Without provenance, reference shapes
+remain compatible and top-level locations stay `null`. Cached schemas retain their
+inspection snapshot; they do not continuously track filesystem edits.
+
+Conversion policy, code-string return types, exception precedence and refusal
+before writes are unchanged. Inspection still imports trusted source code and is
+not a sandbox. Run `uv run --all-extras --with httpx python examples/source_provenance.py`
+for source behavior, helper coordinates, Python/CLI report parity and refusal checks.
+
 ## Actionable binding context (v0.13.0)
 
 **Availability:** requires v0.13.0 or newer. Until v0.13.0 is published, use a source
@@ -55,10 +90,10 @@ not original-source coordinates. References are sorted by generated definition t
 Suggestions name the missing bindings; eager definition dependencies must exist before
 those definitions, while body and deferred-annotation dependencies must exist before use.
 
-`source_location` is currently always `null` (`None` in Python): this schema does not
-retain verified original callable/helper coordinates. An application `source_path` is
-not sufficient provenance. No generated AST position is presented as an original line.
-Source-location capture remains separate future work. Diagnostics are observations of
+In published v0.13.0, `source_location` is always `null` (`None` in Python).
+Unreleased source checkouts add bounded definition provenance as described below.
+An application `source_path` is not sufficient provenance, and no generated AST
+position is presented as an original line. Diagnostics are observations of
 bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
 Scaffold permission cannot bypass refusal, and inspection still imports trusted code.
 

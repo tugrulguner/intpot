@@ -9,11 +9,11 @@ from typing import Annotated, Any, get_args, get_origin
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
-    extract_support_definitions,
     python_type_name,
 )
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.provenance import inspected_callable_metadata
 
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
 # are not instances of anything in the standalone `click` package and its
@@ -232,7 +232,7 @@ class CLIInspector(BaseInspector):
                     function_body=extract_function_body(callback),
                     is_async=inspect.iscoroutinefunction(callback),
                     source_imports=extract_source_imports(callback),
-                    support_definitions=extract_support_definitions(callback),
+                    **inspected_callable_metadata(callback),
                 )
             )
 
@@ -349,8 +349,6 @@ class CLIInspector(BaseInspector):
                 function_body=fn_body,
                 is_async=is_async,
                 source_imports=src_imports,
-                support_definitions=extract_support_definitions(callback)
-                if callback
-                else [],
+                **inspected_callable_metadata(callback) if callback else {},
             )
         )
