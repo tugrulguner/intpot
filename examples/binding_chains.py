@@ -1,6 +1,7 @@
-"""Explain bounded binding paths (unreleased source checkout).
+"""Explain bounded binding paths (requires v0.15.0 or newer).
 
 Run: uv run --all-extras --with httpx python examples/binding_chains.py
+Until v0.15.0 is published, run from a source checkout containing this change.
 The multi-helper missing-name case is an explicitly caller-authored schema,
 not a claim that source inspection recovers unresolved helper globals.
 """

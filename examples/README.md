@@ -1,6 +1,7 @@
 # Examples
 
-`binding_chains.py` requires an unreleased source checkout. It runs a helper-backed
+`binding_chains.py` requires v0.15.0 or newer; until publication, use a source
+checkout containing this change. It runs a helper-backed
 original HTTP API and generated CLI, then explains an explicitly caller-authored
 incomplete schema. A separate real-source refusal verifies CLI/Python report parity
 and no output writes; the synthetic fixture does not expand source recovery.
