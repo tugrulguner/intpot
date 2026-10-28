@@ -10,6 +10,15 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.15.0] - 2026-10-28
+
+### Added
+
+- Missing-binding diagnostic references include deterministic bounded dependency chains through emitted owned definitions, with unavailable paths kept explicit and conversion/refusal behavior unchanged.
+
+  The release interval also updates the development lock to Authlib 1.9.1 and dnspython 2.9.0 for security fixes. These lock-only changes do not raise declared dependency minimums or automatically upgrade existing consumer locks.
+
+
 ## [0.14.0] - 2026-10-27
 
 ### Added

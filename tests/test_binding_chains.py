@@ -253,13 +253,14 @@ def test_runnable_binding_chain_example(tmp_path):
         "src/intpot/templates/skills/intpot-python.md",
     ],
 )
-def test_chain_contract_is_explicitly_unreleased_and_static(relative):
+def test_chain_contract_requires_v015_and_remains_static(relative):
     from pathlib import Path
 
     text = (Path(__file__).parents[1] / relative).read_text()
-    section = text.split("## Bounded binding chains (unreleased)", 1)[1].split(
-        "\n## ", 1
-    )[0]
+    section = text.split("## Bounded binding chains (v0.15.0)", 1)[1].split("\n## ", 1)[
+        0
+    ]
+    assert "requires v0.15.0 or newer" in section
     assert "dependency_chain" in section and "v0.14.0 does not include" in section
     assert "shortest" in section and "null" in section
     assert "not an execution trace" in section

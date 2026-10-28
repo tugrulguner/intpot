@@ -100,9 +100,10 @@ The original HTTP API can work while the generated CLI lacks its `Model` annotat
 
 
 
-## Bounded binding chains (unreleased)
+## Bounded binding chains (v0.15.0)
 
-**Availability:** source checkout containing this change only; v0.14.0 does not include
+**Availability:** requires v0.15.0 or newer. Until v0.15.0 is published, use a source
+checkout containing this change; v0.14.0 does not include
 `references[*].dependency_chain`.
 
 For `missing_binding`, `missing_definition_binding` and `missing_annotation_binding`,
