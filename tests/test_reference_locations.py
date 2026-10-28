@@ -33,6 +33,49 @@ def test_body_spans_are_original_positions_in_stable_source(tmp_path, expression
     ]
 
 
+@pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029", "\x0b", "\x0c"])
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_public_ranges_use_python_physical_lines_with_unicode_comment_separators(
+    tmp_path, separator, newline
+):
+    import json
+
+    from typer.testing import CliRunner
+
+    import intpot
+    from intpot.cli import app
+
+    text = (
+        "from fastapi import FastAPI\n"
+        "from types import SimpleNamespace\n"
+        "settings = SimpleNamespace(factor=7)\n"
+        "app = FastAPI()\n"
+        f"# separator {separator} outside the function\n"
+        "@app.get('/calc')\n"
+        "def calc(x: int) -> int:\n"
+        "    return x * settings.factor + settings.factor\n"
+    )
+    path = tmp_path / "separators.py"
+    path.write_bytes(text.replace("\n", newline).encode("utf-8"))
+    report = intpot.load(path).assess()
+    assert len(report["diagnostics"]) == 2
+    line = text.split("\n")[7]
+    expected_columns = [line.index("settings") + 1, line.rindex("settings") + 1]
+    for diagnostic in report["diagnostics"]:
+        reference = diagnostic["references"][0]
+        assert reference["name"] == "settings"
+        spans = reference["reference_locations"]
+        assert spans is not None and len(spans) == 2
+        assert [span["column"] for span in spans] == expected_columns
+        for span in spans:
+            assert span["line"] == span["end_line"] == 8
+            assert span["end_column"] == span["column"] + len("settings")
+            assert line[span["column"] - 1 : span["end_column"] - 1] == "settings"
+    result = CliRunner().invoke(app, ["inspect", str(path), "--json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)[0]["assessment"] == report
+
+
 def test_columns_count_unicode_characters_instead_of_utf8_bytes(tmp_path):
     from intpot.core.reference_locations import body_reference_locations
 

@@ -90,7 +90,9 @@ def body_reference_locations(
         ):
             return None
         result: dict[str, list[dict[str, Any]]] = {}
-        lines = source.splitlines()
+        # tokenize.open normalizes physical CR/CRLF newlines to LF. Python's
+        # parser does not count Unicode separators inside comments as newlines.
+        lines = source.split("\n")
 
         def column(line: int, offset: int) -> int:
             return len(lines[line - 1].encode("utf-8")[:offset].decode("utf-8")) + 1
