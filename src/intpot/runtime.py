@@ -24,7 +24,7 @@ from intpot.core.models import (
     ToolInfo,
     sanitize_identifier,
 )
-from intpot.core.provenance import callable_source_location
+from intpot.core.provenance import callable_source_metadata
 from intpot.core.transforms import bind_global_name
 
 
@@ -77,6 +77,8 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
         source_imports=list(info.source_imports),
         source_location=info.source_location,
         support_source_locations=dict(info.support_source_locations),
+        source_digest=info.source_digest,
+        support_source_digests=dict(info.support_source_digests),
         interface_name=info.interface_name,
     )
 
@@ -311,7 +313,7 @@ def _build_tool_info(
         is_async=is_async,
         function_body=function_body,
         source_imports=source_imports,
-        source_location=callable_source_location(func),
+        **callable_source_metadata(func),
     )
 
 

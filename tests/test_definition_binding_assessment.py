@@ -51,6 +51,7 @@ def test_helper_default_requires_binding_before_definition(target):
             {
                 "name": "LATER",
                 "generated_definition": "scale",
+                "reference_locations": None,
                 "dependency_chain": ["calc", "_calc_impl", "scale"],
             }
         ]

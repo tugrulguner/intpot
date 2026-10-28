@@ -37,6 +37,7 @@ def test_string_helper_annotation_reports_missing_binding_before_projection():
                 {
                     "name": "AbsentType",
                     "generated_definition": "scale",
+                    "reference_locations": None,
                     "dependency_chain": ["double", "_double_impl", "scale"],
                 }
             ],

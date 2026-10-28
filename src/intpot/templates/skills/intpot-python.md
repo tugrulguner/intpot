@@ -164,7 +164,8 @@ for tool in app.tools:
 `ToolInfo` fields: `name`, `description`, `parameters`, `return_type`, `http_method`,
 `function_body`, `is_async`, `route_path`, `dependencies`, `source_imports`,
 `interface_name`, `operation_id`, `route_summary`, `route_description`, `route_tags`,
-`route_deprecated`, `support_definitions`, `source_location`, `support_source_locations`. `name` is a Python-safe binding; `interface_name` preserves an explicit
+`route_deprecated`, `support_definitions`, `source_location`, `support_source_locations`,
+`source_digest`, `support_source_digests`. `name` is a Python-safe binding; `interface_name` preserves an explicit
 framework-visible spelling such as `send-email` when it differs.
 
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
@@ -272,6 +273,43 @@ bodies are deferred; comprehension locals are not module dependencies. Live `App
 low-level generators are unchanged.
 
 
+
+## Exact body-reference locations (unreleased)
+
+**Availability:** source checkout containing this change only; v0.15.0 does not include
+`references[*].reference_locations`, `source_digest` or `support_source_digests`.
+
+Each binding reference adds `reference_locations`: a source-ordered list of original
+identifier ranges, or `null` when exact attribution is unavailable. Each range has
+`path`, `line`, `column`, `end_line` and `end_column`. Lines and Unicode character
+columns are 1-based; the end position is exclusive. These are identifier occurrences,
+not whole-definition bounds, runtime traces or proof that a branch executes.
+
+The first slice maps only body-global name loads in a plain function body. Definition
+headers, defaults, decorators, string/forward annotations, generated wrappers, nested
+scopes (including comprehensions and lambdas), global/nonlocal rebinding and unmatched
+transforms remain unavailable. Local variable annotations are not treated as executed
+body loads. At most 64 occurrences per name are reported; exceeding that bound declines
+the owner's occurrence mapping rather than returning a misleading partial list.
+
+Inspected `ToolInfo`/immutable `ToolSchema` add optional `source_digest` and
+`support_source_digests`. They contain lowercase SHA-256 fingerprints of decoded source
+text encoded as UTF-8, captured from the same code-verified source used for definition
+provenance. Helper mappings are detached/sorted immutable tuples in the canonical schema
+and objects in JSON. Absent digest metadata is omitted from tool JSON.
+
+Assessment rereads the owning file without executing it, requires the captured fingerprint
+and definition bounds to match, and compares the complete retained body with both the
+original body and an emitted suffix after generator argument guards. Docstrings are
+excluded from that comparison. Missing, changed or unmatched source yields `null`.
+Existing cached definition locations and dependency chains are unchanged. Schema-provided
+metadata remains caller-owned, not authenticated provenance; an application path alone
+never establishes an occurrence location.
+
+Python `assess()` and CLI `inspect --json` carry the same ranges. No recovery or conversion
+policy is broadened, no generated code is executed for assessment, and existing exception,
+scaffold and before-write refusal behavior remains intact. Run the real-source example:
+`uv run --all-extras --with httpx python examples/reference_locations.py`.
 
 ## Bounded binding chains (v0.15.0)
 

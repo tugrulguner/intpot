@@ -33,6 +33,11 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
+Current source work (unreleased) adds exact identifier occurrence ranges for verified
+unchanged plain-body references. It rereads only captured owning source with matching
+fingerprints, leaves transformed/nested/header cases unavailable and preserves existing
+definition coordinates, binding chains and refusals. No recovery capability is added.
+
 The v0.15.0 release candidate adds bounded static binding paths per diagnostic
 reference: one deterministic shortest path through an emitted wrapper, implementation
 and already retained helpers. Unreachable/rebound/unanalyzable owners stay unavailable.
@@ -167,7 +172,9 @@ or generated-code execution as a prerequisite for live serving.
       Preserve generated-owner references without inventing synthetic wrapper locations.
 - [x] Explain existing missing-binding references with bounded deterministic paths through
       emitted owned definitions (v0.15.0 release candidate). Keep unknown paths explicit.
-- [ ] Extend provenance to richer evaluation-order dependency edges and exact reference occurrences.
+- [x] Map bounded unchanged plain-body identifier occurrences to verified original
+      line/column ranges (unreleased); leave ambiguous and transformed cases unavailable.
+- [ ] Extend provenance to richer evaluation-order dependency edges and other reference occurrences.
       Keep ambiguous cases unresolved rather than treating absence of evidence as safety.
 - [x] Refuse demonstrated missing body bindings before any output writes, including mixed
       directories, while retaining inspection and existing callback/dependency guards.

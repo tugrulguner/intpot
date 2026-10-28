@@ -42,11 +42,13 @@ def test_body_context_names_each_emitted_owner_without_inventing_source_location
         {
             "name": "MISSING",
             "generated_definition": "_calc_impl",
+            "reference_locations": None,
             "dependency_chain": ["calc", "_calc_impl"],
         },
         {
             "name": "MISSING",
             "generated_definition": "scale",
+            "reference_locations": None,
             "dependency_chain": ["calc", "_calc_impl", "scale"],
         },
     ]

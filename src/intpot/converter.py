@@ -26,6 +26,7 @@ from intpot.core.projections import (
     project_tool_names,
 )
 from intpot.core.provenance import location_dict
+from intpot.core.reference_locations import body_reference_locations
 
 
 class UnsupportedFastAPIDependencyError(Exception):
@@ -112,12 +113,16 @@ def _binding_context(
     source_location: tuple[str, int, int] | None = None,
     definition_locations: dict[str, tuple[str, int, int] | None] | None = None,
     dependency_paths: dict[str, list[str]] | None = None,
+    body_locations: dict[str, dict[str, list[dict[str, Any]]] | None] | None = None,
 ) -> dict[str, Any]:
     """Describe emitted owners without inventing original-source coordinates."""
     references = [
         {
             "name": name,
             "generated_definition": owner,
+            "reference_locations": (body_locations.get(owner) or {}).get(name)
+            if body_locations is not None
+            else None,
             "dependency_chain": dependency_paths.get(owner)
             if dependency_paths is not None
             else None,
@@ -354,6 +359,20 @@ def _reference_diagnostics(
                 missing_names.update(helper_missing)
             names = sorted(missing_names)
             if names:
+                digests = {
+                    implementation.name: tool.source_digest,
+                    **dict(tool.support_source_digests),
+                }
+                body_locations = {
+                    owner: body_reference_locations(
+                        functions[owner],
+                        (definition_locations or {}).get(owner),
+                        digests.get(owner),
+                        tool.function_body if owner == implementation.name else None,
+                    )
+                    for owner in body_bindings
+                    if body_bindings[owner] and owner in functions
+                }
                 diagnostics.append(
                     {
                         "code": "missing_binding",
@@ -363,6 +382,7 @@ def _reference_diagnostics(
                         **_binding_context(
                             body_bindings,
                             owned_definitions,
+                            body_locations=body_locations,
                             before_definition=False,
                             source_location=tool.source_location,
                             definition_locations=definition_locations,
