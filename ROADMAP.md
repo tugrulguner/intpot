@@ -33,7 +33,13 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-The v0.14.0 release candidate adds bounded original definition provenance:
+The next source slice (unreleased) adds bounded static binding paths per diagnostic
+reference: one deterministic shortest path through an emitted wrapper, implementation
+and already retained helpers. Unreachable/rebound/unanalyzable owners stay unavailable.
+This explains existing missing-binding reports without expanding recovery or conversion
+policy; richer evaluation-order dependency edges remain separate.
+
+The v0.14.0 release adds bounded original definition provenance:
 verified owning-file paths and definition line ranges for tools and recovered
 helpers, preserved through schema adapters, projections and JSON diagnostics.
 Synthetic wrapper coordinates, exact missing-name occurrence locations and broader
@@ -95,7 +101,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.13 — Current foundation
+## v0.14 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.
@@ -153,10 +159,12 @@ or generated-code execution as a prerequisite for live serving.
 - [ ] Extend dependency diagnostics to complete annotation/default evaluation and ordering.
       Retained-body analysis alone is not full conversion readiness.
 - [x] Capture bounded tool/helper definition provenance alongside the existing schema
-      (v0.14.0 release candidate). Record verified file and definition bounds; keep
+      (v0.14.0). Record verified file and definition bounds; keep
       dynamic, wrapped, missing-file and changed-code cases explicitly unavailable.
       Preserve generated-owner references without inventing synthetic wrapper locations.
-- [ ] Extend provenance to richer binding dependency edges and exact reference occurrences.
+- [x] Explain existing missing-binding references with bounded deterministic paths through
+      emitted owned definitions (unreleased). Keep unknown paths explicit.
+- [ ] Extend provenance to richer evaluation-order dependency edges and exact reference occurrences.
       Keep ambiguous cases unresolved rather than treating absence of evidence as safety.
 - [x] Refuse demonstrated missing body bindings before any output writes, including mixed
       directories, while retaining inspection and existing callback/dependency guards.

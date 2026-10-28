@@ -1,5 +1,10 @@
 # Examples
 
+`binding_chains.py` requires an unreleased source checkout. It runs a helper-backed
+original HTTP API and generated CLI, then explains an explicitly caller-authored
+incomplete schema. A separate real-source refusal verifies CLI/Python report parity
+and no output writes; the synthetic fixture does not expand source recovery.
+
 `source_provenance.py` (requires v0.14.0 or newer) executes an original HTTP API
 with TestClient, verifies tool/helper definition coordinates, compares Python and
 CLI JSON assessments, and preserves refusal before writes. Dynamic/synthetic

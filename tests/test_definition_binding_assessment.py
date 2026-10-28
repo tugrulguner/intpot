@@ -46,7 +46,14 @@ def test_helper_default_requires_binding_before_definition(target):
         and item["source_location"] is None
         and "import or define" in item["suggested_action"].lower()
         and "LATER" in item["suggested_action"]
-        and item["references"] == [{"name": "LATER", "generated_definition": "scale"}]
+        and item["references"]
+        == [
+            {
+                "name": "LATER",
+                "generated_definition": "scale",
+                "dependency_chain": ["calc", "_calc_impl", "scale"],
+            }
+        ]
         for item in diagnostics
     )
     with pytest.raises(MissingBindingError, match="LATER"):
