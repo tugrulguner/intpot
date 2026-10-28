@@ -802,8 +802,24 @@ class ToolInfo:
     support_source_locations: dict[str, tuple[str, int, int]] = field(
         default_factory=dict
     )
+    source_digest: str | None = None
+    support_source_digests: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.source_digest is not None and (
+            not isinstance(self.source_digest, str)
+            or re.fullmatch(r"[0-9a-f]{64}", self.source_digest) is None
+        ):
+            raise ValueError("invalid source digest metadata")
+        for name, digest in self.support_source_digests.items():
+            if (
+                not isinstance(name, str)
+                or not name.isidentifier()
+                or keyword.iskeyword(name)
+                or not isinstance(digest, str)
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+            ):
+                raise ValueError("invalid support source digest metadata")
         canonical_name = sanitize_identifier(self.name)
         if self.interface_name is None and canonical_name != self.name:
             self.interface_name = self.name
@@ -982,8 +998,23 @@ class ToolSchema:
     support_definitions: tuple[str, ...] = ()
     source_location: tuple[str, int, int] | None = None
     support_source_locations: tuple[tuple[str, tuple[str, int, int]], ...] = ()
+    source_digest: str | None = None
+    support_source_digests: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
+        def validate_digest(digest: Any) -> str:
+            if (
+                not isinstance(digest, str)
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+            ):
+                raise ValueError("invalid source digest metadata")
+            return digest
+
+        if self.source_digest is not None:
+            object.__setattr__(
+                self, "source_digest", validate_digest(self.source_digest)
+            )
+
         def validate(location: Any) -> tuple[str, int, int]:
             if not isinstance(location, (tuple, list)) or len(location) != 3:
                 raise ValueError(
@@ -1022,6 +1053,24 @@ class ToolSchema:
             raise ValueError("invalid support source location names")
         object.__setattr__(
             self, "support_source_locations", tuple(sorted(normalized_locations))
+        )
+        raw_digests = (
+            self.support_source_digests.items()
+            if isinstance(self.support_source_digests, Mapping)
+            else self.support_source_digests
+        )
+        normalized_digests = tuple(
+            (name, validate_digest(digest)) for name, digest in raw_digests
+        )
+        if any(
+            not isinstance(name, str)
+            or not name.isidentifier()
+            or keyword.iskeyword(name)
+            for name, _ in normalized_digests
+        ) or len({name for name, _ in normalized_digests}) != len(normalized_digests):
+            raise ValueError("invalid support source digest names")
+        object.__setattr__(
+            self, "support_source_digests", tuple(sorted(normalized_digests))
         )
         canonical_name = sanitize_identifier(self.name)
         if self.interface_name is None and canonical_name != self.name:
@@ -1071,6 +1120,8 @@ class ToolSchema:
             support_source_locations=tuple(
                 sorted(tool.support_source_locations.items())
             ),
+            source_digest=tool.source_digest,
+            support_source_digests=tuple(sorted(tool.support_source_digests.items())),
             interface_name=tool.interface_name,
         )
 
@@ -1095,6 +1146,8 @@ class ToolSchema:
             support_definitions=list(self.support_definitions),
             source_location=self.source_location,
             support_source_locations=dict(self.support_source_locations),
+            source_digest=self.source_digest,
+            support_source_digests=dict(self.support_source_digests),
             interface_name=self.interface_name,
         )
 
@@ -1141,6 +1194,16 @@ class ToolSchema:
                     }
                 }
                 if self.source_location is not None
+                else {}
+            ),
+            **(
+                {"source_digest": self.source_digest}
+                if self.source_digest is not None
+                else {}
+            ),
+            **(
+                {"support_source_digests": dict(self.support_source_digests)}
+                if self.support_source_digests
                 else {}
             ),
         }

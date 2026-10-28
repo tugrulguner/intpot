@@ -173,8 +173,22 @@ def main() -> None:
                 for item in chains["fixture_diagnostics"]
                 for ref in item["references"]
             )
+            occurrences = json.loads(
+                run(
+                    [str(python), str(ROOT / "examples" / "reference_locations.py")],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert occurrences["original_result"] == 21
+            assert (
+                occurrences["cli_json_parity"]
+                and occurrences["refused_before_write"]
+                and occurrences["unavailable_after_change"]
+            )
+            assert occurrences["diagnostics"][0]["references"][0]["reference_locations"]
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences"
             )
 
 

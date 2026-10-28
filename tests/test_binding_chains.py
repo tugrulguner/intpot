@@ -34,6 +34,7 @@ def test_body_reference_explains_tool_to_helper_dependency_chain():
             {
                 "name": "MISSING",
                 "generated_definition": "scale",
+                "reference_locations": None,
                 "dependency_chain": ["calc", "_calc_impl", "scale"],
             }
         ]
@@ -104,6 +105,7 @@ def test_transitive_recursive_paths_choose_one_shortest_lexically_sorted_route()
             {
                 "name": "MISSING",
                 "generated_definition": "leaf",
+                "reference_locations": None,
                 "dependency_chain": ["calc", "_calc_impl", "alpha", "leaf"],
             }
         ]
