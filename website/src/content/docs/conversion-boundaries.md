@@ -100,6 +100,38 @@ The original HTTP API can work while the generated CLI lacks its `Model` annotat
 
 
 
+## Bounded binding chains (unreleased)
+
+**Availability:** source checkout containing this change only; v0.14.0 does not include
+`references[*].dependency_chain`.
+
+For `missing_binding`, `missing_definition_binding` and `missing_annotation_binding`,
+each reference adds `dependency_chain`: one shortest list of emitted Python definition
+names from the target's public wrapper to that reference's owning definition. The
+missing binding remains `reference.name`, separate from the list. For example,
+`["calc", "_calc_impl", "scale", "leaf"]` ends at the helper using the missing name.
+Equal-length paths use lexically sorted edges, and cycles are visited once.
+
+This is a static binding-reference explanation, not an execution trace, call graph,
+proof of reachability, or evaluation-order guarantee. Edges use the existing scope-aware
+body-global analysis and only that tool's emitted implementation, wrapper and retained
+helpers. Local/parameter shadowing does not create a global helper edge. Global
+rebinding or an unanalyzable owner makes its path unavailable; an unconnected helper
+keeps `dependency_chain: null`. Attribute calls, dynamic dispatch, imports and arbitrary
+alias/type/default evaluation are not resolved into additional edges.
+
+Existing codes, missing names, suggestions, source-definition locations and ordering
+remain intact. Generated wrapper origins remain unavailable. Paths add no recovery
+capability, change no conversion policy and do not bypass before-write refusal or
+scaffold restrictions. Python `assess()` and CLI `inspect --json` expose the same paths;
+source-code output and string-returning conversion APIs are unchanged.
+
+Run `uv run --all-extras --with httpx python examples/binding_chains.py` from the
+source checkout. It executes an original helper-backed HTTP API and its generated CLI,
+uses an explicitly caller-authored incomplete schema for the transitive missing-name
+fixture, and separately checks real source-loading CLI/Python parity and refusal before
+writes. Source inspection does not gain unresolved-helper recovery from that fixture.
+
 ## Bounded definition provenance (v0.14.0)
 
 **Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a

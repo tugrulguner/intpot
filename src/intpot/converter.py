@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from intpot.core.binding_chains import definition_dependency_paths
 from intpot.core.callbacks import (
     UnsupportedCLIParameterCallbackError as UnsupportedCLIParameterCallbackError,
 )
@@ -110,12 +111,16 @@ def _binding_context(
     before_definition: bool,
     source_location: tuple[str, int, int] | None = None,
     definition_locations: dict[str, tuple[str, int, int] | None] | None = None,
+    dependency_paths: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Describe emitted owners without inventing original-source coordinates."""
     references = [
         {
             "name": name,
             "generated_definition": owner,
+            "dependency_chain": dependency_paths.get(owner)
+            if dependency_paths is not None
+            else None,
             **(
                 {"source_location": location_dict(definition_locations.get(owner))}
                 if definition_locations is not None
@@ -249,6 +254,9 @@ def _reference_diagnostics(
                 support = ast.parse(definition).body[0]
                 if isinstance(support, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     owned_definitions.add(support.name)
+            dependency_paths = definition_dependency_paths(
+                functions, owned_definitions, tool.name, tool
+            )
             definition_locations = None
             if tool.source_location is not None or tool.support_source_locations:
                 definition_locations = {
@@ -275,6 +283,7 @@ def _reference_diagnostics(
                             before_definition=True,
                             source_location=tool.source_location,
                             definition_locations=definition_locations,
+                            dependency_paths=dependency_paths,
                         ),
                         "message": (
                             "Generated definition evaluates names before their bindings exist; "
@@ -303,6 +312,7 @@ def _reference_diagnostics(
                             before_definition=False,
                             source_location=tool.source_location,
                             definition_locations=definition_locations,
+                            dependency_paths=dependency_paths,
                         ),
                         "message": (
                             "Generated annotation refers to bindings absent from the emitted module; "
@@ -356,6 +366,7 @@ def _reference_diagnostics(
                             before_definition=False,
                             source_location=tool.source_location,
                             definition_locations=definition_locations,
+                            dependency_paths=dependency_paths,
                         ),
                         "message": "Retained implementation refers to bindings absent from generated output.",
                     }

@@ -39,8 +39,16 @@ def test_body_context_names_each_emitted_owner_without_inventing_source_location
     assert diagnostic["names"] == ["MISSING"]
     assert diagnostic["source_location"] is None
     assert diagnostic["references"] == [
-        {"name": "MISSING", "generated_definition": "_calc_impl"},
-        {"name": "MISSING", "generated_definition": "scale"},
+        {
+            "name": "MISSING",
+            "generated_definition": "_calc_impl",
+            "dependency_chain": ["calc", "_calc_impl"],
+        },
+        {
+            "name": "MISSING",
+            "generated_definition": "scale",
+            "dependency_chain": ["calc", "_calc_impl", "scale"],
+        },
     ]
     assert diagnostic["suggested_action"] == (
         "Import or define MISSING in the generated module before use, "

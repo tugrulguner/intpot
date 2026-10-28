@@ -156,8 +156,25 @@ def main() -> None:
             assert provenance["original_result"] == 21
             assert provenance["cli_json_parity"] and provenance["refused_before_write"]
             assert provenance["unavailable_location"] is None
+            chains = json.loads(
+                run(
+                    [str(python), str(ROOT / "examples" / "binding_chains.py")],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert (
+                chains["original_http_result"] == chains["generated_cli_result"] == 21
+            )
+            assert chains["fixture_kind"] == "caller-authored incomplete schema"
+            assert chains["cli_json_parity"] and chains["refused_before_write"]
+            assert all(
+                ref["dependency_chain"] == ["calc", "_calc_impl", "scale", "leaf"]
+                for item in chains["fixture_diagnostics"]
+                for ref in item["references"]
+            )
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains"
             )
 
 
