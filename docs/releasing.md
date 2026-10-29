@@ -15,6 +15,16 @@ uv version 0.5.1          # or: uv version --bump patch|minor|major
 
 That single command rewrites `pyproject.toml` and re-locks `uv.lock`.
 
+## v0.16.0 availability checks
+
+The occurrence-location release adds `reference_locations`, `source_digest` and
+`support_source_digests`; public v0.15.0 does not contain these fields. Keep the
+README, conversion boundaries, schema reference, shipped CLI/Python skills,
+`examples/reference_locations.py`, examples README and roadmap aligned on v0.16.0.
+Until publication, document the source-checkout path rather than implying the
+package index already serves the candidate. Preserve null/unavailable attribution
+limits, unchanged refusals and the older definition/binding-chain version history.
+
 ## Steps
 
 1. `make changelog` — towncrier assembles every fragment in `changelog.d/` into a dated

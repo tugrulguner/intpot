@@ -10,6 +10,13 @@ release assembles them here — run `make changelog-draft` to preview them.
 
 <!-- towncrier release notes start -->
 
+## [0.16.0] - 2026-10-29
+
+### Added
+
+- Missing-body-binding references can identify exact original identifier ranges when captured source fingerprints and retained bodies still match, while uncertain ranges remain unavailable and conversion refusals stay unchanged.
+
+
 ## [0.15.0] - 2026-10-28
 
 ### Added

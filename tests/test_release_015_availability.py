@@ -20,7 +20,7 @@ def test_chain_example_minimum_version_is_explicit(relative):
 
 def test_roadmap_distinguishes_binding_paths_from_richer_graphs():
     text = (ROOT / "ROADMAP.md").read_text()
-    assert "## v0.15 — Current foundation" in text
-    assert "The v0.15.0 release candidate adds bounded static binding paths" in text
+    assert "## v0.16 — Current foundation" in text
+    assert "The v0.15.0 release adds bounded static binding paths" in text
     assert "richer evaluation-order dependency edges remain separate" in text
     assert "The next source slice (unreleased)" not in text

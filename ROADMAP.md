@@ -33,17 +33,18 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
-Current source work (unreleased) adds exact identifier occurrence ranges for verified
+The v0.16.0 release candidate adds exact identifier occurrence ranges for verified
 unchanged plain-body references. It rereads only captured owning source with matching
 fingerprints, leaves transformed/nested/header cases unavailable and preserves existing
 definition coordinates, binding chains and refusals. No recovery capability is added.
+This requires v0.16.0 or newer; until publication, use a source checkout.
 
-The v0.15.0 release candidate adds bounded static binding paths per diagnostic
+The v0.15.0 release adds bounded static binding paths per diagnostic
 reference: one deterministic shortest path through an emitted wrapper, implementation
 and already retained helpers. Unreachable/rebound/unanalyzable owners stay unavailable.
 This explains existing missing-binding reports without expanding recovery or conversion
 policy; richer evaluation-order dependency edges remain separate.
-This requires v0.15.0 or newer; until publication, use a source checkout.
+This requires v0.15.0 or newer.
 The release interval also contains Authlib/dnspython development-lock security
 updates; older consumer locks need their own dependency upgrades. No declared
 dependency minimum changed.
@@ -109,7 +110,7 @@ The phases below express maintainer priority, not promised release dates. Contri
 issues remain an independent backlog; they do not gate this sequence. Each phase delivers
 small useful slices with executable acceptance gates.
 
-## v0.15 — Current foundation
+## v0.16 — Current foundation
 
 - **One definition, three live interfaces:** registered Python functions can run through
   Typer, FastAPI, or FastMCP, or be ejected as framework source.
@@ -171,9 +172,9 @@ or generated-code execution as a prerequisite for live serving.
       dynamic, wrapped, missing-file and changed-code cases explicitly unavailable.
       Preserve generated-owner references without inventing synthetic wrapper locations.
 - [x] Explain existing missing-binding references with bounded deterministic paths through
-      emitted owned definitions (v0.15.0 release candidate). Keep unknown paths explicit.
+      emitted owned definitions (v0.15.0). Keep unknown paths explicit.
 - [x] Map bounded unchanged plain-body identifier occurrences to verified original
-      line/column ranges (unreleased); leave ambiguous and transformed cases unavailable.
+      line/column ranges (v0.16.0 release candidate); leave ambiguous and transformed cases unavailable.
 - [ ] Extend provenance to richer evaluation-order dependency edges and other reference occurrences.
       Keep ambiguous cases unresolved rather than treating absence of evidence as safety.
 - [x] Refuse demonstrated missing body bindings before any output writes, including mixed
