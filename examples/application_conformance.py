@@ -76,7 +76,8 @@ async def verify() -> dict[str, Any]:
     with TemporaryDirectory(prefix="intpot-order-conformance-") as directory:
         root = Path(directory)
         async with Client(namespaces["mcp"]["mcp"]) as mcp:
-            tools = await mcp.list_tools()
+            tool_result = await mcp.list_tools()
+            tools = getattr(tool_result, "tools", tool_result)
             assert [tool.name for tool in tools] == ["quote"]
             for interface in ("source_cli", "generated_cli", "api", "mcp"):
                 values: list[int] = []
@@ -131,7 +132,9 @@ async def verify() -> dict[str, Any]:
                         except ToolError as error:
                             rejections[name] = type(error).__name__
                         else:
-                            assert getattr(result, "is_error", False), result
+                            assert getattr(
+                                result, "is_error", getattr(result, "isError", False)
+                            ), result
                             rejections[name] = "tool_error"
                     assert not receipt.exists(), (interface, name)
                 output[interface] = {
