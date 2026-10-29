@@ -31,7 +31,7 @@ def quote(
     total = quote_total(quantity, discount)
     if receipt:
         Path(receipt).write_text(str(total), encoding="utf-8")
-    typer.echo(str(total))
+    typer.echo(total)
 
 
 if __name__ == "__main__":

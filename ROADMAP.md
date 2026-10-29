@@ -51,6 +51,19 @@ header/default/decorator occurrence coordinates as deferred supporting work rath
 a prerequisite for expanding practical coverage. Do not replace the existing schema with
 a second generalized assessment engine or broaden arbitrary source recovery.
 
+### Release cadence
+
+Accumulate independently useful conversion fixes and application conformance on main.
+Do not cut a package release for every bounded improvement. Prepare a release when a
+coherent capability bundle warrants upgrading, with representative application evidence;
+critical correctness/security fixes can justify an earlier release. Merged, documented
+source capability remains explicitly unreleased until publication is separately approved.
+
+The next unreleased slice removes the batch-order example's manual string-formatting
+workaround: plain terminal numeric echoes must pass the MCP client's declared text-output
+schema without disabling validation. Keep API scalar results unchanged and verify
+single evaluation and source-variable collisions alongside native consumer success.
+
 ### Released diagnostic foundation
 
 The v0.16.0 release candidate adds exact identifier occurrence ranges for verified

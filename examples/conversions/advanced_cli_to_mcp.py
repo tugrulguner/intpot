@@ -19,7 +19,9 @@ def _create_impl(
         raise TypeError('Missing required argument: title')
     tag_list = [t.strip() for t in tags.split(',') if t.strip()]
     task = {'title': title, 'priority': priority, 'tags': tag_list}
-    return json.dumps(task, indent=2)
+    import builtins as _intpot_echo_builtins
+    _intpot_echo_value = json.dumps(task, indent=2)
+    return '' if _intpot_echo_value is None else _intpot_echo_builtins.str(_intpot_echo_value)
 
 
 @mcp.tool(name='create')
@@ -43,7 +45,9 @@ def _search_impl(
     results = [{'title': f'Match: {query}', 'done': False}, {'title': f'Another: {query}', 'done': True}]
     if not include_done:
         results = [r for r in results if not r['done']]
-    return json.dumps(results[:limit], indent=2)
+    import builtins as _intpot_echo_builtins
+    _intpot_echo_value = json.dumps(results[:limit], indent=2)
+    return '' if _intpot_echo_value is None else _intpot_echo_builtins.str(_intpot_echo_value)
 
 
 @mcp.tool(name='search')
@@ -60,7 +64,9 @@ def _stats_impl(
 ) -> str:
     """Show task statistics."""
     summary = {'total': 42, 'done': 15, 'pending': 27}
-    return json.dumps(summary)
+    import builtins as _intpot_echo_builtins
+    _intpot_echo_value = json.dumps(summary)
+    return '' if _intpot_echo_value is None else _intpot_echo_builtins.str(_intpot_echo_value)
 
 
 @mcp.tool(name='stats')

@@ -124,7 +124,12 @@ def transform_tools(
         t = copy.deepcopy(tool)
 
         if t.function_body:
-            t.function_body = _transform_body(t.function_body, source, target)
+            t.function_body = _transform_body(
+                t.function_body,
+                source,
+                target,
+                tuple(p.binding_name or p.name for p in t.parameters),
+            )
             if (
                 target == SourceType.API
                 and source != target
@@ -148,7 +153,12 @@ def transform_schema(
     for tool in schema.tools:
         function_body = tool.function_body
         if function_body:
-            function_body = _transform_body(function_body, schema.source_type, target)
+            function_body = _transform_body(
+                function_body,
+                schema.source_type,
+                target,
+                tuple(p.binding_name or p.name for p in tool.parameters),
+            )
             if (
                 target is SourceType.API
                 and schema.source_type is not target
@@ -202,13 +212,18 @@ def _target_return_type(
     return tool.return_type
 
 
-def _transform_body(body: str, source: SourceType, target: SourceType) -> str:
+def _transform_body(
+    body: str,
+    source: SourceType,
+    target: SourceType,
+    parameter_names: Sequence[str] = (),
+) -> str:
     """Transform function body between framework conventions."""
     if source == target:
         return body
 
     if source == SourceType.CLI:
-        return _from_cli(body, target)
+        return _from_cli(body, target, parameter_names)
     if source == SourceType.MCP:
         return _from_mcp(body, target)
     if source == SourceType.API:
@@ -247,7 +262,38 @@ def _returns_the_last_thing_it_prints(tree: ast.Module) -> bool:
     return bool(tree.body) and tree.body[-1] is echoes[0]
 
 
-def _from_cli(body: str, target: SourceType) -> str:
+def _mcp_terminal_echo(tree: ast.Module, parameter_names: Sequence[str]) -> ast.Module:
+    """Keep the plain terminal echo's text consistent with its MCP str schema."""
+    statement = tree.body[-1]
+    assert isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call)
+    call = statement.value
+    occupied = set(parameter_names)
+    occupied.update(node.id for node in ast.walk(tree) if isinstance(node, ast.Name))
+    occupied.update(node.arg for node in ast.walk(tree) if isinstance(node, ast.arg))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Global, ast.Nonlocal)):
+            occupied.update(node.names)
+    aliases = []
+    for base in ("_intpot_echo_builtins", "_intpot_echo_value"):
+        while base in occupied:
+            base += "_"
+        occupied.add(base)
+        aliases.append(base)
+    module, value = aliases
+    replacement = ast.parse(
+        f"import builtins as {module}\n{value} = None\n"
+        f"return '' if {value} is None else {module}.str({value})"
+    ).body
+    assignment = replacement[1]
+    assert isinstance(assignment, ast.Assign)
+    assignment.value = call.args[0] if call.args else ast.Constant(value="")
+    tree.body[-1:] = replacement
+    return tree
+
+
+def _from_cli(
+    body: str, target: SourceType, parameter_names: Sequence[str] = ()
+) -> str:
     """Transform CLI body: typer.echo(X) → return X (MCP/API)."""
     try:
         tree = ast.parse(body)
@@ -256,6 +302,8 @@ def _from_cli(body: str, target: SourceType) -> str:
 
     if _echo_statements(tree) and not _returns_the_last_thing_it_prints(tree):
         new_tree = _accumulate_echoes(tree)
+    elif target == SourceType.MCP and _returns_the_last_thing_it_prints(tree):
+        new_tree = _mcp_terminal_echo(tree, parameter_names)
     else:
         transformer = _TyperEchoToReturn()
         new_tree = transformer.visit(tree)

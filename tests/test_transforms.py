@@ -263,17 +263,29 @@ def test_a_bare_return_still_exits_early_and_returns_what_was_printed() -> None:
     assert _run_as_mcp(tool, ["a", "b"]) == "a\nb"
 
 
-def test_a_single_trailing_echo_still_returns_its_value_directly() -> None:
-    """The common case keeps its clean shape — and its type.
+def test_a_single_trailing_echo_matches_the_mcp_text_annotation() -> None:
+    """Returning raw 5 under a str schema fails a real MCP client call."""
+    import textwrap
 
-    Accumulating unconditionally would turn `add` into a function returning
-    "5" instead of 5.
-    """
     tool = transform_tools(
         [_add_tool("typer.echo(a + b)")], SourceType.CLI, SourceType.MCP
     )[0]
+    namespace: dict[str, Any] = {}
+    exec(
+        "def add(a, b):\n" + textwrap.indent(tool.function_body or "", "    "),
+        namespace,
+    )
+    assert tool.return_type == "str"
+    assert namespace["add"](2, 3) == "5"
 
-    assert tool.function_body == "return a + b"
+    api_tool = transform_tools(
+        [_add_tool("typer.echo(a + b)")], SourceType.CLI, SourceType.API
+    )[0]
+    exec(
+        "def add(a, b):\n" + textwrap.indent(api_tool.function_body or "", "    "),
+        namespace,
+    )
+    assert namespace["add"](2, 3) == {"result": 5}
 
 
 def test_returns_inside_a_nested_function_are_still_left_alone() -> None:
