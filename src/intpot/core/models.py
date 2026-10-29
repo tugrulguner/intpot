@@ -722,6 +722,36 @@ def _allocate_identifier(name: str, occupied: set[str]) -> str:
     return candidate
 
 
+def _validate_numeric_bounds(
+    type_annotation: str, minimum: Any, maximum: Any, default: Any
+) -> None:
+    for bound in (minimum, maximum):
+        if bound is not None and (
+            isinstance(bound, bool)
+            or not isinstance(bound, (int, float))
+            or (isinstance(bound, float) and not math.isfinite(bound))
+        ):
+            raise ValueError("numeric bounds must be finite numbers")
+    if minimum is not None or maximum is not None:
+        if type_annotation not in ("int", "float"):
+            raise ValueError("numeric bounds require int or float parameters")
+        if minimum is not None and maximum is not None and minimum > maximum:
+            raise ValueError("minimum must not exceed maximum")
+        if (
+            default is not _SENTINEL
+            and default is not None
+            and (
+                isinstance(default, bool)
+                or not isinstance(default, (int, float))
+                or (type_annotation == "int" and not isinstance(default, int))
+                or (isinstance(default, float) and not math.isfinite(default))
+                or (minimum is not None and default < minimum)
+                or (maximum is not None and default > maximum)
+            )
+        ):
+            raise ValueError("numeric default must satisfy its bounds")
+
+
 @dataclass
 class ParameterInfo:
     _source_binding_name: ClassVar[str | None] = None
@@ -736,8 +766,14 @@ class ParameterInfo:
     interface_name: str | None = None
     aliases: list[str] = field(default_factory=list)
     unsupported_callback: bool = False
+    minimum: int | float | None = None
+    maximum: int | float | None = None
+    unsupported_numeric_range: bool = False
 
     def __post_init__(self) -> None:
+        _validate_numeric_bounds(
+            self.type_annotation, self.minimum, self.maximum, self.default
+        )
         source_name = self.name
         if self.binding_name is not None:
             _validate_binding_name(self.binding_name)
@@ -859,8 +895,14 @@ class ParameterSchema:
     interface_name: str | None = None
     aliases: tuple[str, ...] = ()
     unsupported_callback: bool = False
+    minimum: int | float | None = None
+    maximum: int | float | None = None
+    unsupported_numeric_range: bool = False
 
     def __post_init__(self) -> None:
+        _validate_numeric_bounds(
+            self.type_annotation, self.minimum, self.maximum, self.default
+        )
         source_name = self.name
         canonical_name = sanitize_identifier(source_name)
         if self.binding_name is not None:
@@ -890,6 +932,9 @@ class ParameterSchema:
             self.interface_name,
             self.aliases,
             self.unsupported_callback,
+            self.minimum,
+            self.maximum,
+            self.unsupported_numeric_range,
         ) == (
             other.name,
             other.type_annotation,
@@ -901,6 +946,9 @@ class ParameterSchema:
             other.interface_name,
             other.aliases,
             other.unsupported_callback,
+            other.minimum,
+            other.maximum,
+            other.unsupported_numeric_range,
         )
 
     def __hash__(self) -> int:
@@ -916,6 +964,9 @@ class ParameterSchema:
                 self.interface_name,
                 self.aliases,
                 self.unsupported_callback,
+                self.minimum,
+                self.maximum,
+                self.unsupported_numeric_range,
             )
         )
 
@@ -932,6 +983,9 @@ class ParameterSchema:
             interface_name=parameter.interface_name,
             aliases=tuple(parameter.aliases),
             unsupported_callback=parameter.unsupported_callback,
+            minimum=parameter.minimum,
+            maximum=parameter.maximum,
+            unsupported_numeric_range=parameter.unsupported_numeric_range,
         )
 
     @property
@@ -951,6 +1005,9 @@ class ParameterSchema:
             interface_name=self.interface_name,
             aliases=list(self.aliases),
             unsupported_callback=self.unsupported_callback,
+            minimum=self.minimum,
+            maximum=self.maximum,
+            unsupported_numeric_range=self.unsupported_numeric_range,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -970,6 +1027,12 @@ class ParameterSchema:
             data["aliases"] = list(self.aliases)
         if self.unsupported_callback:
             data["unsupported_callback"] = True
+        if self.minimum is not None:
+            data["minimum"] = self.minimum
+        if self.maximum is not None:
+            data["maximum"] = self.maximum
+        if self.unsupported_numeric_range:
+            data["unsupported_numeric_range"] = True
         if not self.required:
             data["default"] = _json_default(self.default)
         return data

@@ -149,7 +149,7 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     }
     for framework, names in {
         "cli": ("asyncio", "inspect", "typer"),
-        "mcp": ("FastMCP",),
+        "mcp": ("FastMCP", "Field"),
         "api": ("uvicorn",),
     }.items():
         for name in names:
@@ -1034,6 +1034,11 @@ def render_template(template_name: str, **kwargs: object) -> str:
         kwargs = dict(
             kwargs,
             generated_aliases=aliases,
+            has_numeric_ranges=any(
+                p.minimum is not None or p.maximum is not None
+                for t in tools
+                for p in t.parameters
+            ),
             support_definitions=_collect_support_definitions(tools),
         )
 

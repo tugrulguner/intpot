@@ -42,6 +42,39 @@ The frozen schema is the normalized boundary between inspection/registration and
 
 
 
+## Bounded numeric-range conversion (unreleased)
+
+**Availability:** source checkout containing this change only; public v0.16.0 does not
+provide this numeric-validation guarantee.
+
+A Typer CLI can declare inclusive numeric bounds with `typer.Option(min=..., max=...)`
+or `typer.Argument(min=..., max=...)`. The bounded conversion slice preserves ordinary
+integer/floating types and finite inclusive bounds, including one-sided ranges, through
+the canonical parameter schema and generated CLI, HTTP API and MCP interfaces. Generated
+targets enforce their native validation before calling the retained business body.
+
+Parameters append optional `minimum` and `maximum` bounds and an
+`unsupported_numeric_range` marker. Absent bounds/false markers are omitted from JSON.
+`unsupported_cli_numeric_range` assessment diagnostics explain refusals;
+`intpot.UnsupportedCLINumericRangeError` preserves the Python exception boundary.
+
+Clamping, exclusive endpoints, unsupported range shapes and non-native or out-of-range
+defaults remain explicitly refused;
+scaffold permission must not bypass that refusal. Custom callbacks remain unsupported.
+This initial capture capability is for CLI source ranges, not general recovery of API/MCP
+constraints or arbitrary annotation metadata. Native input coercion and transport/error
+formats remain framework-specific. The conformance example compares a finite shared input
+domain rather than claiming arbitrary Python equivalence.
+
+Run `uv run --all-extras --with httpx python examples/application_conformance.py`.
+It loads the real `examples/batch_quote.py` CLI, executes the source and generated CLI,
+HTTP and MCP consumers, compares business totals and omitted defaults, checks rejected
+inputs and business errors, and verifies receipts are written only after successful
+validation. Public same-source conversion remains refused; the generated CLI check
+uses the existing low-level schema renderer. The source formats echo results as text
+for the existing CLI-to-MCP result contract. Arbitrary echo-result equivalence is not
+certified. This is executable application evidence, not a generated-text snapshot.
+
 ## Exact body-reference locations (v0.16.0)
 
 **Availability:** requires v0.16.0 or newer. Until publication, use a source checkout

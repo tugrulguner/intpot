@@ -187,8 +187,28 @@ def main() -> None:
                 and occurrences["unavailable_after_change"]
             )
             assert occurrences["diagnostics"][0]["references"][0]["reference_locations"]
+            conformance = json.loads(
+                run(
+                    [
+                        str(python),
+                        str(ROOT / "examples" / "application_conformance.py"),
+                    ],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert set(conformance["interfaces"]) == {
+                "source_cli",
+                "generated_cli",
+                "api",
+                "mcp",
+            }
+            assert all(
+                item["valid_results"] == [25, 75, 225] and item["receipts_verified"]
+                for item in conformance["interfaces"].values()
+            )
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences, bounded order conformance"
             )
 
 

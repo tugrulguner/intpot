@@ -60,6 +60,9 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 binding_name=parameter.binding_name,
                 interface_name=parameter.interface_name,
                 aliases=list(parameter.aliases),
+                minimum=parameter.minimum,
+                maximum=parameter.maximum,
+                unsupported_numeric_range=parameter.unsupported_numeric_range,
             )
             for parameter in info.parameters
         ],

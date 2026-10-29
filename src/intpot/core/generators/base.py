@@ -7,6 +7,7 @@ from collections.abc import Sequence
 
 from intpot.core.callbacks import guard_cli_parameter_callbacks
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo, ToolSchema
+from intpot.core.numeric_ranges import guard_cli_numeric_ranges
 from intpot.core.projections import (
     project_parameter_aliases,
     project_parameter_placement,
@@ -33,6 +34,7 @@ def generation_context(
             tools=source,
         )
     guard_cli_parameter_callbacks(schema.tools, target)
+    guard_cli_numeric_ranges(schema.tools)
     return project_tool_names(
         project_parameter_aliases(project_parameter_placement(schema, target), target),
         target,

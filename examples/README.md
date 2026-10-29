@@ -1,5 +1,11 @@
 # Examples
 
+`batch_quote.py` is a real bounded-order Typer CLI with same-module helpers, defaults
+and receipt side effects. `application_conformance.py` executes the original and
+generated CLI/API/MCP consumers and verifies valid totals, rejected inputs and failures
+before receipt writes. Numeric-range conversion requires the unreleased source slice;
+public v0.16.0 does not provide this guarantee.
+
 `reference_locations.py` requires v0.16.0 or newer; until publication, run from a
 source checkout containing this change. It runs an original
 HTTP API with a dynamic binding, checks exact original identifier ranges and Python/CLI
