@@ -1,6 +1,7 @@
 # Examples
 
-`reference_locations.py` is source-checkout-only (unreleased). It runs an original
+`reference_locations.py` requires v0.16.0 or newer; until publication, run from a
+source checkout containing this change. It runs an original
 HTTP API with a dynamic binding, checks exact original identifier ranges and Python/CLI
 JSON parity, then proves unchanged refusal before writes and unavailable ranges after
 a source change.

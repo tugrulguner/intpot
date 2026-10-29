@@ -335,13 +335,15 @@ def test_mutable_tool_digest_rejects_non_strings_consistently(value):
         "src/intpot/templates/skills/intpot-python.md",
     ],
 )
-def test_occurrence_docs_label_the_unreleased_bounded_contract(relative):
+def test_occurrence_docs_label_the_versioned_bounded_contract(relative):
     from pathlib import Path
 
     text = (Path(__file__).parents[1] / relative).read_text()
-    section = text.split("## Exact body-reference locations (unreleased)", 1)[1].split(
+    section = text.split("## Exact body-reference locations (v0.16.0)", 1)[1].split(
         "\n## ", 1
     )[0]
+    assert "requires v0.16.0 or newer" in section
+    assert "Until publication" in section
     assert "v0.15.0 does not include" in section
     assert all(
         field in section

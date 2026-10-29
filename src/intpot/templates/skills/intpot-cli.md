@@ -218,9 +218,10 @@ low-level generators are unchanged.
 
 
 
-## Exact body-reference locations (unreleased)
+## Exact body-reference locations (v0.16.0)
 
-**Availability:** source checkout containing this change only; v0.15.0 does not include
+**Availability:** requires v0.16.0 or newer. Until publication, use a source checkout
+containing this change; v0.15.0 does not include
 `references[*].reference_locations`, `source_digest` or `support_source_digests`.
 
 Each binding reference adds `reference_locations`: a source-ordered list of original
