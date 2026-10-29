@@ -7,7 +7,8 @@
 {% if typing_imports %}
 from typing import {{ typing_imports | join(", ") }}
 {%- endif %}
-from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
+{% if has_numeric_ranges %}from pydantic import Field as {{ generated_aliases["mcp:Field"] }}
+{% endif %}from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
 
 {% for definition in support_definitions %}{{ definition }}
 
@@ -39,7 +40,8 @@ from fastmcp import FastMCP as {{ generated_aliases["mcp:FastMCP"] }}
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- for param in tool.parameters %}
     {{ param.name }}: {{ param.type_annotation }}
-{%- if not param.required %} = {{ param.default | source_default }}
+{%- if param.minimum is not none or param.maximum is not none %} = {{ generated_aliases["mcp:Field"] }}({% if param.required %}...{% else %}{{ param.default | source_default }}{% endif %}{% if param.minimum is not none %}, ge={{ param.minimum | repr }}{% endif %}{% if param.maximum is not none %}, le={{ param.maximum | repr }}{% endif %})
+{%- elif not param.required %} = {{ param.default | source_default }}
 {%- endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:

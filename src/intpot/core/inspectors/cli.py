@@ -13,6 +13,7 @@ from intpot.core.inspectors._utils import (
 )
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
 from intpot.core.provenance import inspected_callable_metadata
 
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
@@ -35,6 +36,8 @@ _PARAM_TYPE_NAMES = {
 
 def _click_type_to_str(param_type: Any) -> str:
     """Map a Click/Typer parameter type to a Python type name."""
+    if type(param_type).__name__ in ("IntRange", "FloatRange"):
+        return "int" if type(param_type).__name__ == "IntRange" else "float"
     name = getattr(param_type, "name", None)
     if isinstance(name, str) and name.lower() in _PARAM_TYPE_NAMES:
         return _PARAM_TYPE_NAMES[name.lower()]
@@ -88,7 +91,7 @@ def _primary_option_name(aliases: list[str]) -> str | None:
 
 def _registered_parameter_details(
     annotation: Any, signature_default: Any
-) -> tuple[Any, Any, str, str | None, list[str], bool]:
+) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     metadata = signature_default
     if get_origin(annotation) is Annotated:
@@ -123,6 +126,14 @@ def _registered_parameter_details(
     )
     help_text = getattr(metadata, "help", "")
     description = help_text if isinstance(help_text, str) else ""
+    numeric_range = (
+        {"unsupported_numeric_range": True}
+        if getattr(metadata, "click_type", None) is not None
+        else cli_numeric_range(metadata, constructed=False)
+    )
+    numeric_range, default = cli_range_default(
+        numeric_range, python_type_name(annotation), default
+    )
     return (
         annotation,
         default,
@@ -130,6 +141,7 @@ def _registered_parameter_details(
         _primary_option_name(declared_aliases),
         declared_aliases,
         callable(getattr(metadata, "callback", None)),
+        numeric_range,
     )
 
 
@@ -207,6 +219,7 @@ class CLIInspector(BaseInspector):
                     parameter_interface_name,
                     aliases,
                     unsupported_callback,
+                    numeric_range,
                 ) = _registered_parameter_details(
                     annotations.get(param.name, param.annotation), param.default
                 )
@@ -219,6 +232,7 @@ class CLIInspector(BaseInspector):
                         interface_name=parameter_interface_name,
                         aliases=aliases,
                         unsupported_callback=unsupported_callback,
+                        **numeric_range,
                     )
                 )
 
@@ -310,6 +324,9 @@ class CLIInspector(BaseInspector):
             if not getattr(param, "required", False):
                 default = param.default
 
+            numeric_range, default = cli_range_default(
+                cli_numeric_range(param.type, constructed=True), type_str, default
+            )
             desc = ""
             if hasattr(param, "help") and param.help:
                 desc = param.help
@@ -331,6 +348,7 @@ class CLIInspector(BaseInspector):
                     interface_name=_primary_option_name(aliases),
                     aliases=aliases,
                     unsupported_callback=callable(getattr(param, "callback", None)),
+                    **numeric_range,
                 )
             )
 

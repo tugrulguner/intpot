@@ -33,6 +33,26 @@ small: `App.tool()`, `App.serve()`, `App.eject()`, and `load(...).to_cli()/to_ap
 
 ### The next milestone
 
+**Application-led conformance and capability growth.** Start with a runnable application,
+compare its original and generated interfaces, and remove one demonstrated practical
+blocker per slice. Preserve successful results, rejected inputs, defaults, business errors
+and relevant side effects over the documented shared input domain. Native CLI, HTTP and
+MCP response/error formats can differ; test and explain those adaptations explicitly.
+
+The first source slice is a bounded batch-order CLI with same-module helpers/constants
+and numeric option validation. Preserve ordinary finite inclusive non-clamping integer
+and floating ranges through generated interfaces, with explicit refusal for range
+semantics that cannot be retained. This work is unreleased; public v0.16.0 does not
+provide this guarantee. A capability slice must make a previously broken useful case
+execute successfully, not merely improve the explanation of its refusal.
+
+Grow a persistent source-versus-target conformance corpus with the application. Keep
+header/default/decorator occurrence coordinates as deferred supporting work rather than
+a prerequisite for expanding practical coverage. Do not replace the existing schema with
+a second generalized assessment engine or broaden arbitrary source recovery.
+
+### Released diagnostic foundation
+
 The v0.16.0 release candidate adds exact identifier occurrence ranges for verified
 unchanged plain-body references. It rereads only captured owning source with matching
 fingerprints, leaves transformed/nested/header cases unavailable and preserves existing

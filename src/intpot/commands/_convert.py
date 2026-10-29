@@ -10,6 +10,7 @@ import typer
 from intpot.converter import (
     MissingBindingError,
     MissingFunctionBodyError,
+    UnsupportedCLINumericRangeError,
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
     compile_app,
@@ -35,6 +36,7 @@ def _schema_or_exit(
         TypeError,
         UnsupportedFastAPIDependencyError,
         UnsupportedCLIParameterCallbackError,
+        UnsupportedCLINumericRangeError,
         MissingFunctionBodyError,
         MissingBindingError,
     ) as exc:
