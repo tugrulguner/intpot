@@ -6,7 +6,7 @@ import math
 from collections.abc import Iterable
 from typing import Any
 
-from intpot.core.models import _SENTINEL, ToolInfo, ToolSchema
+from intpot.core.models import _SENTINEL, ToolInfo, ToolSchema, _validate_numeric_bounds
 
 
 class UnsupportedCLINumericRangeError(Exception):
@@ -66,6 +66,59 @@ def cli_range_default(
     ):
         return {"unsupported_numeric_range": True}, default
     return details, float(default) if type_name == "float" else default
+
+
+def api_numeric_range(field_info: Any, type_name: str, default: Any) -> dict[str, Any]:
+    """Recover ordinary finite inclusive bounds on primitive API parameters."""
+    if type_name not in ("int", "float") or field_info is None:
+        return {}
+    refused = {"unsupported_api_numeric_range": True}
+    if any(
+        getattr(field_info, key, None) is not None
+        for key in ("gt", "lt", "multiple_of", "allow_inf_nan")
+    ) or getattr(field_info, "strict", False):
+        return refused
+    bounds = {}
+    for attribute, key in (("ge", "minimum"), ("le", "maximum")):
+        value = getattr(field_info, attribute, None)
+        if value is not None:
+            bounds[key] = value
+    for metadata in getattr(field_info, "metadata", ()):
+        if type(metadata).__module__ == "annotated_types":
+            if type(metadata).__name__ == "Ge":
+                bounds["minimum"] = metadata.ge
+            elif type(metadata).__name__ == "Le":
+                bounds["maximum"] = metadata.le
+            else:
+                return refused
+        elif not isinstance(metadata, (str, int, float, bool, type(None))):
+            return refused
+    try:
+        _validate_numeric_bounds(
+            type_name, bounds.get("minimum"), bounds.get("maximum"), default
+        )
+    except ValueError:
+        return refused
+    return bounds
+
+
+class UnsupportedAPINumericRangeError(Exception):
+    """API numeric validation cannot be retained in generated interfaces."""
+
+
+def guard_api_numeric_ranges(tools: Iterable[ToolInfo | ToolSchema]) -> None:
+    affected = [
+        f"{tool.interface_name or tool.name}.{parameter.binding_name or parameter.name}"
+        for tool in tools
+        for parameter in tool.parameters
+        if parameter.unsupported_api_numeric_range
+    ]
+    if affected:
+        raise UnsupportedAPINumericRangeError(
+            f"Cannot preserve API numeric validation for {', '.join(affected)}: "
+            "only ordinary finite inclusive bounds with supported defaults are retained; "
+            "exclusive bounds, additional validators/constraints and unsupported defaults require explicit implementation."
+        )
 
 
 def guard_cli_numeric_ranges(tools: Iterable[ToolInfo | ToolSchema]) -> None:

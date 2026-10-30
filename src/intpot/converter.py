@@ -21,9 +21,15 @@ from intpot.core.detector import SourceImportError, detect_instance, detect_sour
 from intpot.core.generators._render import _body_global_names
 from intpot.core.models import ApplicationSchema, SourceType, ToolInfo
 from intpot.core.numeric_ranges import (
+    UnsupportedAPINumericRangeError as UnsupportedAPINumericRangeError,
+)
+from intpot.core.numeric_ranges import (
     UnsupportedCLINumericRangeError as UnsupportedCLINumericRangeError,
 )
-from intpot.core.numeric_ranges import guard_cli_numeric_ranges
+from intpot.core.numeric_ranges import (
+    guard_api_numeric_ranges,
+    guard_cli_numeric_ranges,
+)
 from intpot.core.projections import (
     project_parameter_aliases,
     project_parameter_placement,
@@ -78,6 +84,24 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
                             "consequence": "Source validation or clamping would be lost; conversion is refused.",
                             "reference_analysis": "skipped_due_to_refusal",
                             "suggested_action": "Implement equivalent validation/transformation explicitly or use finite inclusive non-clamping bounds.",
+                        }
+                    )
+            if parameter.unsupported_api_numeric_range:
+                for target in (SourceType.CLI, SourceType.API, SourceType.MCP):
+                    if target == schema.source_type:
+                        continue
+                    skipped_targets.add(target)
+                    refusal_diagnostics.append(
+                        {
+                            "code": "unsupported_api_numeric_range",
+                            "tool": tool.name,
+                            "parameter": parameter.name,
+                            "target": target.value,
+                            "source_location": location_dict(tool.source_location),
+                            "message": f"API numeric validation for parameter {parameter.name!r} cannot be preserved when converting to {target.value}.",
+                            "consequence": "Source validation would be lost; conversion is refused.",
+                            "reference_analysis": "skipped_due_to_refusal",
+                            "suggested_action": "Implement equivalent validation explicitly or use ordinary finite inclusive bounds with supported defaults.",
                         }
                     )
         if schema.source_type == SourceType.API and tool.dependencies:
@@ -535,6 +559,7 @@ def project_schema(
         _guard_fastapi_dependencies(schema.to_tools())
     guard_cli_parameter_callbacks(schema.tools, target)
     guard_cli_numeric_ranges(schema.tools)
+    guard_api_numeric_ranges(schema.tools)
     missing = [tool.name for tool in schema.tools if tool.function_body is None]
     if missing and not allow_scaffold:
         raise MissingFunctionBodyError(

@@ -769,6 +769,7 @@ class ParameterInfo:
     minimum: int | float | None = None
     maximum: int | float | None = None
     unsupported_numeric_range: bool = False
+    unsupported_api_numeric_range: bool = False
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -898,6 +899,7 @@ class ParameterSchema:
     minimum: int | float | None = None
     maximum: int | float | None = None
     unsupported_numeric_range: bool = False
+    unsupported_api_numeric_range: bool = False
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -935,6 +937,7 @@ class ParameterSchema:
             self.minimum,
             self.maximum,
             self.unsupported_numeric_range,
+            self.unsupported_api_numeric_range,
         ) == (
             other.name,
             other.type_annotation,
@@ -949,6 +952,7 @@ class ParameterSchema:
             other.minimum,
             other.maximum,
             other.unsupported_numeric_range,
+            other.unsupported_api_numeric_range,
         )
 
     def __hash__(self) -> int:
@@ -967,6 +971,7 @@ class ParameterSchema:
                 self.minimum,
                 self.maximum,
                 self.unsupported_numeric_range,
+                self.unsupported_api_numeric_range,
             )
         )
 
@@ -986,6 +991,7 @@ class ParameterSchema:
             minimum=parameter.minimum,
             maximum=parameter.maximum,
             unsupported_numeric_range=parameter.unsupported_numeric_range,
+            unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
         )
 
     @property
@@ -1008,6 +1014,7 @@ class ParameterSchema:
             minimum=self.minimum,
             maximum=self.maximum,
             unsupported_numeric_range=self.unsupported_numeric_range,
+            unsupported_api_numeric_range=self.unsupported_api_numeric_range,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1033,6 +1040,8 @@ class ParameterSchema:
             data["maximum"] = self.maximum
         if self.unsupported_numeric_range:
             data["unsupported_numeric_range"] = True
+        if self.unsupported_api_numeric_range:
+            data["unsupported_api_numeric_range"] = True
         if not self.required:
             data["default"] = _json_default(self.default)
         return data

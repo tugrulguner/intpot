@@ -1,5 +1,10 @@
 # Examples
 
+`storage_quote.py` is an HTTP storage-cost service with typed inclusive bounds, defaults,
+ordinary helpers and receipt side effects. Run `api_application_conformance.py` to compare
+its original HTTP and generated CLI/MCP consumers. This API-source numeric-validation
+capability is unreleased; it is not part of public v0.16.0.
+
 `batch_quote.py` is a real bounded-order Typer CLI with same-module helpers, defaults
 and receipt side effects. `application_conformance.py` executes the original and
 generated CLI/API/MCP consumers and verifies valid totals, rejected inputs and failures

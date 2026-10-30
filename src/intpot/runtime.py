@@ -63,6 +63,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 minimum=parameter.minimum,
                 maximum=parameter.maximum,
                 unsupported_numeric_range=parameter.unsupported_numeric_range,
+                unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
             )
             for parameter in info.parameters
         ],
