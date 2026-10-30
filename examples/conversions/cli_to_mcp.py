@@ -16,7 +16,9 @@ def _add_impl(
         raise TypeError('Missing required argument: a')
     if b is _intpot_required:
         raise TypeError('Missing required argument: b')
-    return a + b
+    import builtins as _intpot_echo_builtins
+    _intpot_echo_value = a + b
+    return '' if _intpot_echo_value is None else _intpot_echo_builtins.str(_intpot_echo_value)
 
 
 @mcp.tool(name='add')
@@ -35,7 +37,9 @@ def _greet_impl(
     """Greet someone by name."""
     if name is _intpot_required:
         raise TypeError('Missing required argument: name')
-    return f'{greeting}, {name}!'
+    import builtins as _intpot_echo_builtins
+    _intpot_echo_value = f'{greeting}, {name}!'
+    return '' if _intpot_echo_value is None else _intpot_echo_builtins.str(_intpot_echo_value)
 
 
 @mcp.tool(name='greet')

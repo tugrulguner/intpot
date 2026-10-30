@@ -129,9 +129,13 @@ It loads the real `examples/batch_quote.py` CLI, executes the source and generat
 HTTP and MCP consumers, compares business totals and omitted defaults, checks rejected
 inputs and business errors, and verifies receipts are written only after successful
 validation. Public same-source conversion remains refused; the generated CLI check
-uses the existing low-level schema renderer. The source formats echo results as text
-for the existing CLI-to-MCP result contract. Arbitrary echo-result equivalence is not
-certified. This is executable application evidence, not a generated-text snapshot.
+uses the existing low-level schema renderer. The source now uses plain terminal numeric
+`typer.echo(total)`: the unreleased CLI-to-MCP fix evaluates that expression once and
+returns text matching the MCP `str` output schema. Plain numeric/text/None terminal echoes
+are covered; API scalar result types are unchanged. This is not general terminal capture:
+output options, binary streams, arbitrary explicit returns and all echo/control-flow
+forms are not certified. The MCP client still validates results against the output schema.
+This is executable application evidence, not a generated-text snapshot.
 
 ## Exact body-reference locations (v0.16.0)
 
