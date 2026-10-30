@@ -17,6 +17,7 @@ from intpot.core.inspectors._utils import (
 )
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ParamSource, ToolInfo
+from intpot.core.numeric_ranges import api_numeric_range
 from intpot.core.provenance import inspected_callable_metadata
 
 _PATH_PARAM_RE = re.compile(r"\{(\w+)\}")
@@ -249,6 +250,7 @@ class APIInspector(BaseInspector):
                         default=default,
                         description=desc,
                         param_source=param_source,
+                        **api_numeric_range(field_info, type_str, default),
                         interface_name=(
                             parameter_interface_name
                             if isinstance(parameter_interface_name, str)

@@ -207,6 +207,21 @@ def main() -> None:
                 item["valid_results"] == [25, 75, 225] and item["receipts_verified"]
                 for item in conformance["interfaces"].values()
             )
+            api_conformance = json.loads(
+                run(
+                    [
+                        str(python),
+                        str(ROOT / "examples" / "api_application_conformance.py"),
+                    ],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert set(api_conformance["interfaces"]) == {"source_api", "cli", "mcp"}
+            assert all(
+                item["receipts_verified"]
+                for item in api_conformance["interfaces"].values()
+            )
             print(
                 f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences, bounded order conformance"
             )

@@ -64,6 +64,12 @@ workaround: plain terminal numeric echoes must pass the MCP client's declared te
 schema without disabling validation. Keep API scalar results unchanged and verify
 single evaluation and source-variable collisions alongside native consumer success.
 
+A second application-led slice starts from `examples/storage_quote.py`, a typed HTTP
+storage-cost service with ordinary helpers, capacity policy and receipt side effects.
+Recover ordinary inclusive API numeric bounds into the existing schema, compare native
+CLI/MCP behavior and explicitly refuse numeric validation that cannot be preserved.
+This extends source-direction coverage without promising arbitrary Pydantic conversion.
+
 ### Released diagnostic foundation
 
 The v0.16.0 release candidate adds exact identifier occurrence ranges for verified

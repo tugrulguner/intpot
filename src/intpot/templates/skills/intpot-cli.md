@@ -218,6 +218,31 @@ low-level generators are unchanged.
 
 
 
+## API-source numeric validation (unreleased)
+
+The storage-cost service in `examples/storage_quote.py` is a second application-led
+conformance case, with an HTTP API as its source. Run
+`uv run --all-extras --with httpx python examples/api_application_conformance.py`.
+It compares original HTTP, generated CLI and native MCP results, omitted defaults,
+rejected/missing inputs, a helper's capacity error and receipts written only on success.
+
+Ordinary primitive `int`/`float` FastAPI parameters retain finite inclusive `ge`/`le`
+bounds in the existing `minimum`/`maximum` schema fields. Default-style and Annotated
+Query/Body/Header/Path metadata use normalized FastAPI fields; ordinary required
+parameters and supported defaults retain their existing interface placement.
+Generated CLI/MCP adapters enforce their native bounds before the business body.
+
+Exclusive bounds, multiple-of/strict/custom numeric validation, unknown validation
+metadata and unsupported constrained defaults are not silently stripped. Inspection
+retains `unsupported_api_numeric_range`; assessment reports that code per target, and
+`intpot.UnsupportedAPINumericRangeError` refuses projection/generation before writing,
+even with scaffold permission. Existing dependency/callback refusal precedence remains.
+The marker is preserved through immutable schemas, adapters, hashes and detached JSON;
+false is omitted. This is a bounded numeric contract, not general Pydantic model or
+validator conversion. String constraints and arbitrary annotation metadata are not
+certified; input coercion and error/response formats remain target-native. Public
+v0.16.0 does not include this source capability. No package release is implied.
+
 ## Bounded numeric-range conversion (unreleased)
 
 **Availability:** source checkout containing this change only; public v0.16.0 does not
@@ -237,8 +262,9 @@ Parameters append optional `minimum` and `maximum` bounds and an
 Clamping, exclusive endpoints, unsupported range shapes and non-native or out-of-range
 defaults remain explicitly refused;
 scaffold permission must not bypass that refusal. Custom callbacks remain unsupported.
-This initial capture capability is for CLI source ranges, not general recovery of API/MCP
-constraints or arbitrary annotation metadata. Native input coercion and transport/error
+This CLI-source capture is complemented by the separately documented API-source
+inclusive-bound slice; general MCP/Pydantic constraint or arbitrary metadata recovery
+is not certified. Native input coercion and transport/error
 formats remain framework-specific. The conformance example compares a finite shared input
 domain rather than claiming arbitrary Python equivalence.
 
