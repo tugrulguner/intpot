@@ -102,6 +102,66 @@ def api_numeric_range(field_info: Any, type_name: str, default: Any) -> dict[str
     return bounds
 
 
+def mcp_numeric_range(
+    annotation: Any, type_name: str, default: Any
+) -> tuple[dict[str, Any], Any]:
+    """Normalize primitive MCP Field/Annotated bounds without invoking factories."""
+    if type_name not in ("int", "float"):
+        return {}, default
+    # MCP requires Pydantic; keep optional dependencies out of base-package imports.
+    from pydantic.fields import FieldInfo
+    from pydantic_core import PydanticUndefined
+
+    field = (
+        FieldInfo.from_annotation(annotation)
+        if default is _SENTINEL
+        else FieldInfo.from_annotated_attribute(annotation, default)
+    )
+    default = _SENTINEL if field.default is PydanticUndefined else field.default
+    if field.default_factory is not None:
+        return {"unsupported_mcp_numeric_range": True}, default
+    if (
+        default is not _SENTINEL
+        and default is not None
+        and (
+            isinstance(default, bool)
+            or not isinstance(default, (int, float))
+            or (type_name == "int" and not isinstance(default, int))
+            or (isinstance(default, float) and not math.isfinite(default))
+        )
+    ):
+        return {"unsupported_mcp_numeric_range": True}, default
+    details = api_numeric_range(field, type_name, default)
+    if details.pop("unsupported_api_numeric_range", False) or (
+        default is None
+        and (
+            field.validate_default
+            or any(value is not None for value in details.values())
+        )
+    ):
+        return {"unsupported_mcp_numeric_range": True}, default
+    return details, default
+
+
+class UnsupportedMCPNumericRangeError(Exception):
+    """MCP numeric validation cannot be retained in generated interfaces."""
+
+
+def guard_mcp_numeric_ranges(tools: Iterable[ToolInfo | ToolSchema]) -> None:
+    affected = [
+        f"{tool.interface_name or tool.name}.{parameter.binding_name or parameter.name}"
+        for tool in tools
+        for parameter in tool.parameters
+        if parameter.unsupported_mcp_numeric_range
+    ]
+    if affected:
+        raise UnsupportedMCPNumericRangeError(
+            f"Cannot preserve MCP numeric validation for {', '.join(affected)}: "
+            "only ordinary finite inclusive bounds with supported defaults are retained; "
+            "additional validators, exclusive bounds, factories and unsupported defaults require explicit implementation."
+        )
+
+
 class UnsupportedAPINumericRangeError(Exception):
     """API numeric validation cannot be retained in generated interfaces."""
 

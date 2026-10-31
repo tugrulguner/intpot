@@ -14,6 +14,7 @@ from intpot.converter import (
     UnsupportedCLINumericRangeError,
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
+    UnsupportedMCPNumericRangeError,
     compile_app,
     project_schema,
 )
@@ -39,6 +40,7 @@ def _schema_or_exit(
         UnsupportedCLIParameterCallbackError,
         UnsupportedCLINumericRangeError,
         UnsupportedAPINumericRangeError,
+        UnsupportedMCPNumericRangeError,
         MissingFunctionBodyError,
         MissingBindingError,
     ) as exc:

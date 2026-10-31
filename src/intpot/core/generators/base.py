@@ -10,6 +10,7 @@ from intpot.core.models import ApplicationSchema, SourceType, ToolInfo, ToolSche
 from intpot.core.numeric_ranges import (
     guard_api_numeric_ranges,
     guard_cli_numeric_ranges,
+    guard_mcp_numeric_ranges,
 )
 from intpot.core.projections import (
     project_parameter_aliases,
@@ -39,6 +40,7 @@ def generation_context(
     guard_cli_parameter_callbacks(schema.tools, target)
     guard_cli_numeric_ranges(schema.tools)
     guard_api_numeric_ranges(schema.tools)
+    guard_mcp_numeric_ranges(schema.tools)
     return project_tool_names(
         project_parameter_aliases(project_parameter_placement(schema, target), target),
         target,
