@@ -70,6 +70,12 @@ Recover ordinary inclusive API numeric bounds into the existing schema, compare 
 CLI/MCP behavior and explicitly refuse numeric validation that cannot be preserved.
 This extends source-direction coverage without promising arbitrary Pydantic conversion.
 
+A third application-led slice starts from `examples/inventory_reservation.py`, an
+MCP inventory reservation service. Compare original MCP with generated CLI/HTTP consumers,
+preserve bounded numeric validation and defaults, and retain stock-limit errors and
+receipt effects without pretending to translate mutable transactions or MCP contexts.
+Keep all three source-direction gains unreleased until a coherent bundle is approved.
+
 ### Released diagnostic foundation
 
 The v0.16.0 release candidate adds exact identifier occurrence ranges for verified

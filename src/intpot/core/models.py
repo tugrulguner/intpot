@@ -770,6 +770,7 @@ class ParameterInfo:
     maximum: int | float | None = None
     unsupported_numeric_range: bool = False
     unsupported_api_numeric_range: bool = False
+    unsupported_mcp_numeric_range: bool = False
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -900,6 +901,7 @@ class ParameterSchema:
     maximum: int | float | None = None
     unsupported_numeric_range: bool = False
     unsupported_api_numeric_range: bool = False
+    unsupported_mcp_numeric_range: bool = False
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -938,6 +940,7 @@ class ParameterSchema:
             self.maximum,
             self.unsupported_numeric_range,
             self.unsupported_api_numeric_range,
+            self.unsupported_mcp_numeric_range,
         ) == (
             other.name,
             other.type_annotation,
@@ -953,6 +956,7 @@ class ParameterSchema:
             other.maximum,
             other.unsupported_numeric_range,
             other.unsupported_api_numeric_range,
+            other.unsupported_mcp_numeric_range,
         )
 
     def __hash__(self) -> int:
@@ -972,6 +976,7 @@ class ParameterSchema:
                 self.maximum,
                 self.unsupported_numeric_range,
                 self.unsupported_api_numeric_range,
+                self.unsupported_mcp_numeric_range,
             )
         )
 
@@ -992,6 +997,7 @@ class ParameterSchema:
             maximum=parameter.maximum,
             unsupported_numeric_range=parameter.unsupported_numeric_range,
             unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
+            unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
         )
 
     @property
@@ -1015,6 +1021,7 @@ class ParameterSchema:
             maximum=self.maximum,
             unsupported_numeric_range=self.unsupported_numeric_range,
             unsupported_api_numeric_range=self.unsupported_api_numeric_range,
+            unsupported_mcp_numeric_range=self.unsupported_mcp_numeric_range,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1042,6 +1049,8 @@ class ParameterSchema:
             data["unsupported_numeric_range"] = True
         if self.unsupported_api_numeric_range:
             data["unsupported_api_numeric_range"] = True
+        if self.unsupported_mcp_numeric_range:
+            data["unsupported_mcp_numeric_range"] = True
         if not self.required:
             data["default"] = _json_default(self.default)
         return data

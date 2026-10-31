@@ -222,8 +222,23 @@ def main() -> None:
                 item["receipts_verified"]
                 for item in api_conformance["interfaces"].values()
             )
+            mcp_conformance = json.loads(
+                run(
+                    [
+                        str(python),
+                        str(ROOT / "examples" / "mcp_application_conformance.py"),
+                    ],
+                    cwd=base,
+                    env=env,
+                )
+            )
+            assert set(mcp_conformance["interfaces"]) == {"source_mcp", "cli", "api"}
+            assert all(
+                item["receipts_verified"]
+                for item in mcp_conformance["interfaces"].values()
+            )
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences, bounded order conformance"
+                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences, bounded order/storage/inventory conformance"
             )
 
 

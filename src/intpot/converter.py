@@ -27,8 +27,12 @@ from intpot.core.numeric_ranges import (
     UnsupportedCLINumericRangeError as UnsupportedCLINumericRangeError,
 )
 from intpot.core.numeric_ranges import (
+    UnsupportedMCPNumericRangeError as UnsupportedMCPNumericRangeError,
+)
+from intpot.core.numeric_ranges import (
     guard_api_numeric_ranges,
     guard_cli_numeric_ranges,
+    guard_mcp_numeric_ranges,
 )
 from intpot.core.projections import (
     project_parameter_aliases,
@@ -102,6 +106,24 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
                             "consequence": "Source validation would be lost; conversion is refused.",
                             "reference_analysis": "skipped_due_to_refusal",
                             "suggested_action": "Implement equivalent validation explicitly or use ordinary finite inclusive bounds with supported defaults.",
+                        }
+                    )
+            if parameter.unsupported_mcp_numeric_range:
+                for target in (SourceType.CLI, SourceType.API, SourceType.MCP):
+                    if target == schema.source_type:
+                        continue
+                    skipped_targets.add(target)
+                    refusal_diagnostics.append(
+                        {
+                            "code": "unsupported_mcp_numeric_range",
+                            "tool": tool.name,
+                            "parameter": parameter.name,
+                            "target": target.value,
+                            "source_location": location_dict(tool.source_location),
+                            "message": f"MCP numeric validation for parameter {parameter.name!r} cannot be preserved when converting to {target.value}.",
+                            "consequence": "Source validation would be lost; conversion is refused.",
+                            "reference_analysis": "skipped_due_to_refusal",
+                            "suggested_action": "Use ordinary finite inclusive bounds and supported defaults or implement equivalent validation explicitly.",
                         }
                     )
         if schema.source_type == SourceType.API and tool.dependencies:
@@ -560,6 +582,7 @@ def project_schema(
     guard_cli_parameter_callbacks(schema.tools, target)
     guard_cli_numeric_ranges(schema.tools)
     guard_api_numeric_ranges(schema.tools)
+    guard_mcp_numeric_ranges(schema.tools)
     missing = [tool.name for tool in schema.tools if tool.function_body is None]
     if missing and not allow_scaffold:
         raise MissingFunctionBodyError(

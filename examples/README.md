@@ -1,5 +1,9 @@
 # Examples
 
+`inventory_reservation.py` starts from MCP: numeric validation, defaults, stock-limit
+policy and receipt effects. Run `mcp_application_conformance.py` for original native MCP
+and generated CLI/HTTP comparison (unreleased; not public v0.16.0).
+
 `storage_quote.py` is an HTTP storage-cost service with typed inclusive bounds, defaults,
 ordinary helpers and receipt side effects. Run `api_application_conformance.py` to compare
 its original HTTP and generated CLI/MCP consumers. This API-source numeric-validation

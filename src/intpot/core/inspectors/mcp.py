@@ -16,6 +16,7 @@ from intpot.core.inspectors._utils import (
 )
 from intpot.core.inspectors.base import BaseInspector, InspectionError
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
+from intpot.core.numeric_ranges import mcp_numeric_range
 from intpot.core.provenance import inspected_callable_metadata
 
 
@@ -115,9 +116,8 @@ class MCPInspector(BaseInspector):
 
             params: list[ParameterInfo] = []
             for param_name, param in sig.parameters.items():
-                annotation = _base_annotation(
-                    type_hints.get(param_name, param.annotation)
-                )
+                declared_annotation = type_hints.get(param_name, param.annotation)
+                annotation = _base_annotation(declared_annotation)
                 if _is_mcp_context(annotation):
                     continue
                 type_str = python_type_name(annotation)
@@ -126,11 +126,15 @@ class MCPInspector(BaseInspector):
                 if param.default is not inspect.Parameter.empty:
                     default = param.default
 
+                bounds, default = mcp_numeric_range(
+                    declared_annotation, type_str, default
+                )
                 params.append(
                     ParameterInfo(
                         name=param_name,
                         type_annotation=type_str,
                         default=default,
+                        **bounds,
                         description=schema_properties.get(param_name, {}).get(
                             "description", ""
                         )

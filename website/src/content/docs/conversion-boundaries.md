@@ -100,6 +100,26 @@ The original HTTP API can work while the generated CLI lacks its `Model` annotat
 
 
 
+## MCP-source numeric validation (unreleased)
+
+`examples/inventory_reservation.py` is an MCP inventory reservation service with
+bounded quantities and packs, defaults, a helper's stock-limit error and optional
+receipts. Run `uv run --all-extras --with httpx python examples/mcp_application_conformance.py`
+to compare its native MCP client with generated CLI and HTTP consumers. Required
+quantity becomes a positional CLI argument; the HTTP adapter uses its projected route
+and JSON request body. Valid calls write receipts; rejected inputs and stock-limit
+failures do not. No mutable stock state or transaction semantics are claimed.
+
+Ordinary primitive int/float inclusive finite Field/Annotated constraints retain the
+existing minimum/maximum fields. Additional numeric validators, exclusive/multiple-of/
+strict constraints, unsupported defaults and factories are not silently discarded:
+`unsupported_mcp_numeric_range` remains inspectable, assessment reports that code, and
+`intpot.UnsupportedMCPNumericRangeError` refuses generation before writes, even with
+scaffold permission. This is not general Pydantic, context, dependency, structured-model
+or arbitrary MCP behavior conversion. Inputs are a documented shared numeric domain;
+coercion, responses and errors remain framework-native. This capability is unreleased
+and is not included in public v0.16.0.
+
 ## API-source numeric validation (unreleased)
 
 The storage-cost service in `examples/storage_quote.py` is a second application-led
