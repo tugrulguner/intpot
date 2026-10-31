@@ -120,6 +120,17 @@ def mcp_numeric_range(
     default = _SENTINEL if field.default is PydanticUndefined else field.default
     if field.default_factory is not None:
         return {"unsupported_mcp_numeric_range": True}, default
+    if (
+        default is not _SENTINEL
+        and default is not None
+        and (
+            isinstance(default, bool)
+            or not isinstance(default, (int, float))
+            or (type_name == "int" and not isinstance(default, int))
+            or (isinstance(default, float) and not math.isfinite(default))
+        )
+    ):
+        return {"unsupported_mcp_numeric_range": True}, default
     details = api_numeric_range(field, type_name, default)
     if details.pop("unsupported_api_numeric_range", False) or (
         default is None

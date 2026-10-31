@@ -68,6 +68,8 @@ def test_mcp_source_unsupported_constraints_refuse_before_scaffold(tmp_path):
         ("n: int = Field(2, ge=1, le=5)", 3, 0),
         ("n: float = Field(..., ge=0.5)", 0.75, 0.25),
         ("n: Annotated[float, Field(le=1.5)] = 1.0", 1.25, 1.75),
+        ("n: int = Field(0)", 3, "bad"),
+        ("n: Annotated[float, Field(default=0.0)]", 0.75, "bad"),
     ],
 )
 def test_mcp_numeric_declarations_native_consumers(
@@ -91,7 +93,10 @@ def test_mcp_numeric_declarations_native_consumers(
         asyncio.run(omitted_source())
         assert not param.required and param.default == 2
     assert not param.unsupported_mcp_numeric_range
-    assert param.minimum is not None or param.maximum is not None
+    if "ge=" in declaration or "le=" in declaration:
+        assert param.minimum is not None or param.maximum is not None
+    else:
+        assert param.minimum is None and param.maximum is None
     ns = {}
     exec(loaded.to_api(), ns)
     api = TestClient(ns["app"])
@@ -138,6 +143,11 @@ def test_mcp_numeric_declarations_native_consumers(
         "n: Annotated[int, Field(default=0, ge=1, validate_default=True)]",
         "n: Annotated[int, Field(default=None, ge=1, validate_default=True)]",
         'n: int = Field("2", ge=1, le=5)',
+        'n: int = Field("bad", validate_default=False)',
+        'n: Annotated[int, Field(default="bad", validate_default=False)]',
+        "n: int = Field(True)",
+        "n: int = Field(1.5)",
+        'n: float = Field(float("inf"))',
         "n: int = Field(default_factory=lambda: 2, ge=1)",
     ],
 )
@@ -159,6 +169,38 @@ def test_mcp_unsupported_validation_is_inspectable_and_refused_before_write(
             with pytest.raises(intpot.UnsupportedMCPNumericRangeError):
                 loaded.write(dest, target, allow_scaffold=scaffold)
             assert not dest.parent.exists()
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        'n: int = Field("bad", validate_default=False)',
+        'n: Annotated[int, Field(default="bad", validate_default=False)]',
+    ],
+)
+def test_mcp_unbounded_default_source_omission_is_not_silently_changed(
+    tmp_path, declaration
+):
+    source = tmp_path / "omission.py"
+    source.write_text(
+        f"from typing import Annotated\nfrom pydantic import Field\nfrom fastmcp import FastMCP\nmcp=FastMCP('omission')\n@mcp.tool()\ndef quote({declaration}) -> dict:\n    return {{'value': n}}\n"
+    )
+    loaded = intpot.load(source)
+
+    async def native():
+        async with Client(loaded.app) as client:
+            result = await client.call_tool("quote", {})
+            assert json.loads(result.content[0].text) == {"value": "bad"}
+
+    asyncio.run(native())
+    assert loaded.schema.tools[0].parameters[0].default == "bad"
+    assert loaded.schema.tools[0].parameters[0].unsupported_mcp_numeric_range
+    for target in ("cli", "api"):
+        for scaffold in (False, True):
+            output = tmp_path / f"{target}-{scaffold}" / "output.py"
+            with pytest.raises(intpot.UnsupportedMCPNumericRangeError):
+                loaded.write(output, target, allow_scaffold=scaffold)
+            assert not output.parent.exists()
 
 
 def test_mcp_factory_is_not_evaluated_during_inspection():
