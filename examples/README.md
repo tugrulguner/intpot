@@ -1,5 +1,12 @@
 # Examples
 
+## Existing third-party application
+
+[The csv2vcard case study](external-applications/csv2vcard.md) runs an unmodified,
+pinned contact-conversion CLI, retains real vCard artifacts, and records current
+Intpot discovery/conversion boundaries. Run it with `external_csv2vcard.py`; it
+does not claim that the full third-party application converts successfully.
+
 ## Runnable application conversions
 
 These are standalone Python applications generated from the three source examples,

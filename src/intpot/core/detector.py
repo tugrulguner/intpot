@@ -60,9 +60,11 @@ def _import_failure_message(source_path: Path, exc: BaseException) -> str:
 def _has_framework_app_ast(source_path: Path) -> bool:
     """Check if a Python file contains a framework app assignment using AST.
 
-    Looks for module-level assignments where the RHS is a Call to one of the
-    known framework constructors (FastMCP, Typer, FastAPI).
-    Returns False on syntax errors or files that don't contain such assignments.
+    Looks for assignments in module-level statements, including ordinary if/try
+    branches, where the RHS calls FastMCP, Typer or FastAPI. Function and class
+    bodies are excluded. Branch conditions are not evaluated: the later import
+    and instance inspection determine whether a candidate actually creates an app.
+    Returns False for files without candidate assignments.
     """
     try:
         source = source_path.read_text(encoding="utf-8")
@@ -77,21 +79,36 @@ def _has_framework_app_ast(source_path: Path) -> bool:
             f"Cannot parse {source_path}: {type(exc).__name__}: {exc}"
         ) from exc
 
-    for node in ast.iter_child_nodes(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        value = node.value
-        if value is None:
-            continue
-        if isinstance(value, ast.Call):
-            func = value.func
-            # Handle direct calls like FastAPI() or Typer()
-            if isinstance(func, ast.Name) and func.id in _FRAMEWORK_CONSTRUCTORS:
-                return True
-            # Handle attribute calls like fastapi.FastAPI() or typer.Typer()
-            if isinstance(func, ast.Attribute) and func.attr in _FRAMEWORK_CONSTRUCTORS:
-                return True
-    return False
+    def module_statements(statements: list[ast.stmt]) -> bool:
+        for node in statements:
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                value = node.value
+                if isinstance(value, ast.Call):
+                    func = value.func
+                    if (
+                        isinstance(func, ast.Name)
+                        and func.id in _FRAMEWORK_CONSTRUCTORS
+                    ):
+                        return True
+                    if (
+                        isinstance(func, ast.Attribute)
+                        and func.attr in _FRAMEWORK_CONSTRUCTORS
+                    ):
+                        return True
+            elif isinstance(node, ast.If):
+                if module_statements(node.body) or module_statements(node.orelse):
+                    return True
+            elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
+                if (
+                    module_statements(node.body)
+                    or any(module_statements(handler.body) for handler in node.handlers)
+                    or module_statements(node.orelse)
+                    or module_statements(node.finalbody)
+                ):
+                    return True
+        return False
+
+    return module_statements(tree.body)
 
 
 def _import_module_from_path(source_path: Path) -> Any:
