@@ -1,5 +1,79 @@
 # Examples
 
+## Runnable application conversions
+
+These are standalone Python applications generated from the three source examples,
+not test fixtures. They include the supported business helpers and numeric validation,
+and do not import intpot. Use this unreleased source checkout to generate them; public
+v0.16.0 does not include the newer conversion guarantees.
+
+```bash
+uv sync --all-extras --locked --python 3.11
+```
+
+### Storage-cost and inventory CLIs
+
+```bash
+uv run --no-sync python examples/conversions/storage_quote_to_cli.py 100 --days 30
+# {'cost': 120.0, 'size_gb': 100, 'days': 30, 'replicas': 2}
+
+uv run --no-sync python examples/conversions/inventory_reservation_to_cli.py 25 --packs 3
+# {'quantity': 25, 'packs': 3, 'cost': 900}
+```
+
+Optional `--receipt ./receipt.txt` writes a result after successful validation and
+business-policy checks. Size `0` and quantity `0` are rejected. A reservation of
+`100 --packs 2` exceeds available stock and fails without writing a receipt.
+
+### Batch-order and inventory HTTP APIs
+
+Start the batch-order API in one terminal:
+
+```bash
+uv run --no-sync python examples/conversions/batch_quote_to_api.py
+```
+
+Call it from another terminal:
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/quote \
+  -H 'Content-Type: application/json' -d '{"quantity":3}'
+# {"result":75}
+```
+
+Stop that server with Ctrl-C before starting the inventory API, which also uses port 8000:
+
+```bash
+uv run --no-sync python examples/conversions/inventory_reservation_to_api.py
+```
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/reserve_inventory \
+  -H 'Content-Type: application/json' -d '{"quantity":25,"packs":3}'
+# {"quantity":25,"packs":3,"cost":900}
+```
+
+Both servers bind only to loopback. These examples use in-process policy calculations,
+not persistent stock transactions or authenticated production services.
+
+### Batch-order and storage MCP servers
+
+`call_converted_mcp.py` starts each standalone server as a subprocess, calls its tool
+through MCP stdio, prints the returned content and closes the connection:
+
+```bash
+uv run --no-sync python examples/call_converted_mcp.py batch '{"quantity":3}'
+# 75
+
+uv run --no-sync python examples/call_converted_mcp.py storage '{"size_gb":100,"days":30}'
+# {"cost":120.0,"size_gb":100,"days":30,"replicas":2}
+```
+
+To connect another MCP client directly, configure its command as the environment's Python
+and its argument as `examples/conversions/batch_quote_to_mcp.py` or
+`examples/conversions/storage_quote_to_mcp.py` (use absolute paths outside this checkout).
+The server runs on stdio; it is not an HTTP endpoint.
+
 ## Run the current source examples
 
 The application-led conversion examples below require this source checkout. Public
@@ -97,7 +171,9 @@ The example starts no network server and removes its temporary source on exit.
 
 ## Generated Conversions
 
-The `conversions/` directory contains all conversion outputs — 6 basic + 6 advanced.
+The `conversions/` directory contains 18 standalone conversion outputs: 6 basic,
+6 advanced and 6 application conversions listed above. `bash scripts/demo.sh`
+regenerates all of them from their source applications.
 
 ### Basic
 
