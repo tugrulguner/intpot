@@ -37,6 +37,38 @@ Inspected and registered tool metadata is compiled into immutable `ApplicationSc
 
 The source-to-target transform adjusts parameter placement, names, and aliases before the target generator renders Python. For instance, FastAPI path/query/body inputs cannot all become an equivalent CLI option or MCP argument: the transformer records the source semantics and only maps shapes it supports. Do not treat two schemas with similar field names as proof of equivalent validation or wire behavior—test the generated target itself.
 
+## Explicit tool selection (unreleased)
+
+`selected = app.select("mapping")` creates an independent conversion view after
+inspection. Names are exact canonical `ToolSchema.name` values shown by schema/JSON
+inspection, not interface aliases or patterns. Empty, duplicate and unknown names fail.
+Selected tools retain source order and all normal guards; the original wrapper and
+framework application are unchanged. Selection cannot fix an uninspectable source.
+
+```python
+import intpot
+app = intpot.load("existing_cli.py")
+app.select("mapping").write("mapping_api.py", "api")
+```
+
+```sh
+intpot to api existing_cli.py --tool mapping -o mapping_api.py
+intpot to mcp existing_cli.py --tool mapping -o mapping_mcp.py
+```
+
+Repeat `--tool NAME` for several tools. Directory conversion requires every requested
+name in every source and refuses before any writes when a source lacks one. This does
+not remove parameters from selected tools or bypass their callbacks/dependencies.
+Group callbacks and application lifecycle/configuration remain separate fidelity limits.
+
+The [csv2vcard case study](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/csv2vcard.md)
+compares an unchanged CLI mapping command with generated real HTTP and MCP clients.
+The full application's parameter callback remains refused. Referenced absolute imports
+under module-level if/try branches may be retained when their live binding matches an
+already-loaded module export by identity, without evaluating conditions or importing
+candidate modules. Unmatched conditional bindings remain refused; this is not a promise
+of equivalent module startup or arbitrary dynamic import recovery.
+
 ## Preservation and explicit rejection
 
 Intpot preserves only semantics it can recover from the supported app shape: callable names, parameter annotations/defaults, descriptions, recoverable source bodies/imports, async definitions, and supported framework conventions. For FastAPI-to-CLI or FastAPI-to-MCP conversion, `Depends`/`Security` parameters, nested dependencies, and route-, router-, or app-level dependencies are explicitly rejected with `UnsupportedFastAPIDependencyError`; they cannot be safely replaced with ordinary arguments. Arbitrary middleware, startup/shutdown hooks, custom exception handlers, authentication, state, and framework configuration are not a promise of conversion equivalence.

@@ -7,11 +7,16 @@ This is a case study, not a claim that csv2vcard is fully convertible.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import importlib
 import json
+import socket
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +29,83 @@ CONTACTS = (
     "Example,Ada,ada@example.com,+12025550101\n"
     "Example,Lin,lin@example.com,+12025550102\n"
 )
+
+
+def call_http(script: Path) -> dict[str, Any]:
+    """Launch the generated server on a temporary loopback port and close it."""
+    with socket.socket() as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        port = reservation.getsockname()[1]
+    base = f"http://127.0.0.1:{port}"
+    with script.with_suffix(".log").open("w", encoding="utf-8") as log:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                f"{script.stem}:app",
+                "--app-dir",
+                str(script.parent),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
+            stdout=log,
+            stderr=log,
+        )
+        try:
+            for _ in range(150):
+                if process.poll() is not None:
+                    raise RuntimeError("Generated HTTP server exited; inspect its log")
+                try:
+                    with urllib.request.urlopen(
+                        base + "/openapi.json", timeout=0.2
+                    ) as response:
+                        routes = set(json.load(response)["paths"])
+                    break
+                except (OSError, urllib.error.URLError):
+                    time.sleep(0.1)
+            else:
+                raise TimeoutError("Generated HTTP server did not become ready")
+            if routes != {"/mapping"}:
+                raise RuntimeError(f"Unexpected generated HTTP routes: {routes}")
+            request = urllib.request.Request(
+                base + "/mapping",
+                data=b"{}",
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return {
+                    "status": response.status,
+                    "mapping": json.loads(json.load(response)["result"]),
+                }
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
+
+async def call_mcp(script: Path) -> dict[str, Any]:
+    """Use the generated standalone server through a real MCP stdio client."""
+    from fastmcp import Client
+    from fastmcp.client.transports import PythonStdioTransport
+
+    async with Client(
+        PythonStdioTransport(script, python_cmd=sys.executable)
+    ) as client:
+        listed = await client.list_tools()
+        tools = [tool.name for tool in getattr(listed, "tools", listed)]
+        if tools != ["mapping"]:
+            raise RuntimeError(f"Unexpected MCP tools: {tools}")
+        result = await client.call_tool("mapping", {})
+        texts = [item.text for item in result.content if item.type == "text"]
+        if len(texts) != 1:
+            raise RuntimeError("Expected one mapping result from MCP")
+        return {"tools": tools, "mapping": json.loads(texts[0])}
 
 
 def run(checkout: Path, output: Path) -> dict[str, Any]:
@@ -143,6 +225,31 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
             (output / f"generated_{target}.py").write_text(code, encoding="utf-8")
             conversions[target] = {"status": "generated_not_exercised"}
 
+    selected = application.select("mapping")
+    api_script = output / "mapping_api.py"
+    mcp_script = output / "mapping_mcp.py"
+    selected.write(api_script, "api")
+    selected.write(mcp_script, "mcp")
+    original_mapping = json.loads(
+        (output / "mapping.stdout").read_text(encoding="utf-8")
+    )
+    http_result = call_http(api_script)
+    mcp_result = asyncio.run(call_mcp(mcp_script))
+    if (
+        http_result["mapping"] != original_mapping
+        or mcp_result["mapping"] != original_mapping
+    ):
+        raise RuntimeError("Selected conversion changed the original mapping JSON")
+    if http_result["status"] != 200:
+        raise RuntimeError("Selected HTTP mapping call failed")
+    selected_workflow = {
+        "tools": [tool.name for tool in selected.tools],
+        "original_mapping": original_mapping,
+        "http": http_result,
+        "mcp": mcp_result,
+        "mapping_json_matches_original": True,
+    }
+
     report = {
         "repository": REPOSITORY,
         "revision": revision,
@@ -153,6 +260,7 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
         "discovered_tools": [tool.name for tool in application.tools],
         "assessment": application.assess(),
         "conversions": conversions,
+        "selected_workflow": selected_workflow,
         "full_application_conversion_verified": False,
     }
     (output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

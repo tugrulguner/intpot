@@ -289,11 +289,41 @@ app.write("output/api_app.py", "api")
 
 **`IntpotApp`** (conversion wrapper, returned by `intpot.load()`):
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
+- `.select(*tool_names)` — independent view of explicitly named source tools, retaining source order and all guards (unreleased)
 - `.schema` — immutable source `ApplicationSchema`, compiled once
 - `.project(target)` — immutable target projection used by generation
 - `.write(path, target)` — generate and write to a file in one step
 - `.tools` — detached `ToolInfo` compatibility objects; mutating them does not alter the schema
 - `.source_type` — detected framework type
+
+### Select tools explicitly (unreleased)
+
+Use canonical names from `app.schema.tools` or `intpot inspect --json`:
+
+```python
+app = intpot.load("existing_cli.py")
+selected = app.select("mapping")
+selected.write("mapping_api.py", "api")
+selected.write("mapping_mcp.py", "mcp")
+```
+
+Selection returns an independent immutable-schema view in original source order.
+It does not modify the original framework app or drop parameters from selected tools.
+Empty selections, duplicate names and unknown names fail rather than silently producing
+partial output. Selection happens after source inspection; it cannot rescue an app
+whose source cannot be inspected. Every selected tool retains normal refusal guards.
+The original wrapper still exposes and assesses the whole application.
+
+The CLI equivalent is repeatable `--tool NAME` on all three `intpot to` commands:
+
+```bash
+intpot to api existing_cli.py --tool mapping -o mapping_api.py
+intpot to mcp existing_cli.py --tool mapping -o mapping_mcp.py
+```
+
+For directory conversion every source must contain each requested canonical name;
+a missing name in any source refuses the batch before writes. There are no wildcard,
+interface-alias or automatic safe-subset matches.
 
 ## What conversion preserves
 
@@ -326,6 +356,12 @@ transformation. Assignment-style and `Annotated` declarations are detected. The 
 reports refusal on stderr with exit status 1 before writing output; `--dry-run` also
 refuses. This is a focused known-loss guard, not a general conversion assessment or
 callback transpiler. Source CLI behavior is unchanged.
+
+Referenced absolute imports inside module-level `if`/`try` branches can also be retained
+when the callable's live global binding is identical to the corresponding export of an
+already loaded module. Intpot does not evaluate conditions, import candidate modules
+to probe them, enter factory/class scopes, or certify module initialization equivalence.
+Unmatched conditional imports remain missing-binding refusals.
 
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values that the body
@@ -854,6 +890,7 @@ All three take the same arguments:
 | `source` | Path to a source Python file or directory |
 | `--output`, `-o` | Output file/directory path (prints to stdout if omitted). Missing directories are created |
 | `--dry-run` | Print what would be generated, without writing any files |
+| `--tool NAME` | Select exact canonical tool names; repeatable; all selected guards remain active (unreleased) |
 | `--allow-scaffold` | Explicitly emit failing scaffolds for unrecovered function bodies |
 | `--verbose`, `-v` | Print detection details to stderr |
 

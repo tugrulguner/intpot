@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import sys
 import textwrap
 import types
 from typing import Any, Union, get_args, get_origin
@@ -114,6 +115,26 @@ def _split_aliases(
     return split
 
 
+def _conditional_import_matches(
+    node: ast.stmt, bound_name: str, namespace: dict[str, Any]
+) -> bool:
+    """Verify a candidate against already-loaded objects, without importing code."""
+    if bound_name not in namespace:
+        return False
+    if isinstance(node, ast.Import):
+        alias = node.names[0]
+        module_name = alias.name if alias.asname else alias.name.split(".")[0]
+        module = sys.modules.get(module_name)
+        return module is not None and namespace[bound_name] is module
+    if isinstance(node, ast.ImportFrom) and not node.level and node.module:
+        module = sys.modules.get(node.module)
+        if module is not None:
+            exports = vars(module)
+            name = node.names[0].name
+            return name in exports and namespace[bound_name] is exports[name]
+    return False
+
+
 def extract_source_imports(fn: Any) -> list[str]:
     """Extract imports from the source file that are referenced in the function body.
 
@@ -137,9 +158,27 @@ def extract_source_imports(fn: Any) -> list[str]:
     # One entry per bound name, so a statement importing several names can be
     # kept for one and dropped for another.
     import_nodes: list[tuple[ast.stmt, str]] = []
-    for node in module_tree.body:
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            import_nodes.extend(_split_aliases(node))
+    namespace = getattr(fn, "__globals__", {})
+
+    def collect(statements: list[ast.stmt], conditional: bool = False) -> None:
+        for node in statements:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                for split, bound in _split_aliases(node):
+                    if not conditional or _conditional_import_matches(
+                        split, bound, namespace
+                    ):
+                        import_nodes.append((split, bound))
+            elif isinstance(node, ast.If):
+                collect(node.body, True)
+                collect(node.orelse, True)
+            elif isinstance(node, (ast.Try, ast.TryStar)):
+                collect(node.body, True)
+                for handler in node.handlers:
+                    collect(handler.body, True)
+                collect(node.orelse, True)
+                collect(node.finalbody, True)
+
+    collect(module_tree.body)
 
     if not import_nodes:
         return []

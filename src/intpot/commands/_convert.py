@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
+import typer.core
 
 from intpot.converter import (
+    IntpotApp,
     MissingBindingError,
     MissingFunctionBodyError,
     UnsupportedAPINumericRangeError,
@@ -15,11 +18,22 @@ from intpot.converter import (
     UnsupportedCLIParameterCallbackError,
     UnsupportedFastAPIDependencyError,
     UnsupportedMCPNumericRangeError,
-    compile_app,
-    project_schema,
 )
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
+
+
+def tool_selection_option() -> Any:
+    """Declare a value option across legacy and vendored Typer backends."""
+    backend = getattr(typer.core, "click", None)
+    unset = getattr(getattr(backend, "core", None), "UNSET", None)
+    options = {"flag_value": unset} if unset is not None else {}
+    return typer.Option(
+        None,
+        "--tool",
+        help="Convert only these canonical tool names (repeatable)",
+        **options,
+    )
 
 
 def _schema_or_exit(
@@ -29,13 +43,17 @@ def _schema_or_exit(
     *,
     source_path: Path,
     allow_scaffold: bool = False,
+    tools: list[str] | None = None,
 ):
     try:
-        schema = compile_app(source_type, app_instance, source_path=source_path)
-        return project_schema(schema, target, allow_scaffold=allow_scaffold)
+        application = IntpotApp(source_type, app_instance, source_path=source_path)
+        if tools is not None:
+            application = application.select(*tools)
+        return application.project(target, allow_scaffold=allow_scaffold)
     except (
         InspectionError,
         TypeError,
+        ValueError,
         UnsupportedFastAPIDependencyError,
         UnsupportedCLIParameterCallbackError,
         UnsupportedCLINumericRangeError,
@@ -111,6 +129,7 @@ def convert(
     verbose: bool = False,
     dry_run: bool = False,
     allow_scaffold: bool = False,
+    tools: list[str] | None = None,
 ) -> None:
     """Shared conversion logic for all `intpot to *` commands.
 
@@ -161,6 +180,7 @@ def convert(
                 target,
                 source_path=file_path,
                 allow_scaffold=allow_scaffold,
+                tools=tools,
             )
             planned.append((file_path, destination, generator.generate(schema)))
 
@@ -204,6 +224,7 @@ def convert(
         target,
         source_path=source,
         allow_scaffold=allow_scaffold,
+        tools=tools,
     )
     code = generator.generate(schema)
 
