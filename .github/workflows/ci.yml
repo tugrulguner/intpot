@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --all-extras --locked
       - run: uv run ruff check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py examples/binding_chains.py examples/reference_locations.py examples/batch_quote.py examples/application_conformance.py examples/storage_quote.py examples/api_application_conformance.py examples/inventory_reservation.py examples/mcp_application_conformance.py examples/external_csv2vcard.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
       - run: uv run ruff format --check src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py examples/binding_chains.py examples/reference_locations.py examples/batch_quote.py examples/application_conformance.py examples/storage_quote.py examples/api_application_conformance.py examples/inventory_reservation.py examples/mcp_application_conformance.py examples/external_csv2vcard.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --all-extras --locked
       - run: uv run pyright src/ tests/ examples/semantic_schema.py examples/definition_bindings.py examples/diagnostic_context.py examples/source_provenance.py examples/binding_chains.py examples/reference_locations.py examples/batch_quote.py examples/application_conformance.py examples/storage_quote.py examples/api_application_conformance.py examples/inventory_reservation.py examples/mcp_application_conformance.py examples/external_csv2vcard.py scripts/verify_generated_examples.py scripts/verify_installed_artifacts.py
 
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-extras --locked
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.11"
       - name: Exercise declared lower bound
@@ -147,7 +147,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.11"
       - name: Exercise latest FastMCP 2.x
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.11"
       - name: Exercise newest resolvable dependencies
@@ -181,7 +181,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv build
       - name: Exercise installed wheel and sdist consumers
         run: uv run --no-project --python 3.11 --with fastapi --with httpx --with fastmcp python scripts/verify_installed_artifacts.py
