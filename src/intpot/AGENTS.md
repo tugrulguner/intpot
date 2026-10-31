@@ -25,7 +25,10 @@ response against the return annotation, so `-> dict` over a body returning an `i
 runtime 500, not a type-checker complaint.
 
 **Detection executes user code.** `detect_source` imports the module. Anything that scans
-many files must tolerate one of them raising — see `core/discovery.py`.
+many files must tolerate one of them raising — see `core/discovery.py`. The constructor
+prefilter may inspect module-level `if`/`try` branches but must not enter function or
+class scopes or evaluate branch conditions. A candidate constructor is not proof of
+an app: inspect the imported module for an actual framework instance afterward.
 
 **Identify framework objects structurally, never with `isinstance`.** typer 0.26 vendored
 its own copy of click as `typer._click`, so a Typer app stopped being an instance of

@@ -58,3 +58,17 @@ def test_detect_unknown(tmp_source):
 def test_detect_file_not_found(tmp_path):
     with pytest.raises(DetectionError, match="File not found"):
         detect_source(tmp_path / "nonexistent.py")
+
+
+def test_detect_typer_app_in_conditional_module_block(tmp_source):
+    path = tmp_source("""
+        import typer
+        if True:
+            app = typer.Typer()
+            @app.command()
+            def hello() -> str:
+                return "hello"
+    """)
+    source_type, app = detect_source(path)
+    assert source_type == SourceType.CLI
+    assert callable(app.registered_commands[0].callback)
