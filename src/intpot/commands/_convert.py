@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
+import typer.core
 
 from intpot.converter import (
     IntpotApp,
@@ -19,6 +21,19 @@ from intpot.converter import (
 )
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
+
+
+def tool_selection_option() -> Any:
+    """Declare a value option across legacy and vendored Typer backends."""
+    backend = getattr(typer.core, "click", None)
+    unset = getattr(getattr(backend, "core", None), "UNSET", None)
+    options = {"flag_value": unset} if unset is not None else {}
+    return typer.Option(
+        None,
+        "--tool",
+        help="Convert only these canonical tool names (repeatable)",
+        **options,
+    )
 
 
 def _schema_or_exit(

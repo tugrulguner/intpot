@@ -6,7 +6,7 @@ from pathlib import Path
 
 import typer
 
-from intpot.commands._convert import convert
+from intpot.commands._convert import convert, tool_selection_option
 from intpot.core.models import SourceType
 
 
@@ -23,9 +23,7 @@ def to_cli(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview output without writing files"
     ),
-    tools: list[str] = typer.Option(
-        None, "--tool", help="Convert only these canonical tool names (repeatable)"
-    ),
+    tools: list[str] = tool_selection_option(),
     allow_scaffold: bool = typer.Option(
         False,
         "--allow-scaffold",

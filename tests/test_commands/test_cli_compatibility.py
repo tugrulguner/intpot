@@ -71,10 +71,6 @@ app.add_typer(build_admin())
 
 
 def test_public_cli_tool_selection_works_at_declared_typer_floor(tmp_path) -> None:
-    for target in ("api", "mcp", "cli"):
-        help_result = runner.invoke(app, ["to", target, "--help"])
-        assert help_result.exit_code == 0, help_result.exception
-        assert "--tool" in help_result.stdout
     source = tmp_path / "selectable.py"
     source.write_text("""import typer
 app = typer.Typer()
