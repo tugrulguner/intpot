@@ -111,6 +111,16 @@ the contracts a change has to keep.
   on only some requests.
 - MCP keeps the source annotation, except from CLI, where it becomes `str`. Plain terminal CLI echoes must return text rather than raw numeric values under that schema; evaluate the expression once, preserve None as empty text, and avoid builtin/parameter collisions.
 
+**Explicit tool selection (unreleased):** `IntpotApp.select(*tool_names)` filters an
+already-inspected immutable schema into an independent wrapper, preserving source order,
+source metadata and all selected-tool guards. Use exact canonical names; reject empty,
+duplicate and unknown selections. CLI repeatable `--tool` uses the same selection path;
+directory batches validate every source before writes. Never mutate the source framework
+app, remove a selected tool's callback parameter, or interpret selection as permission
+to bypass callback/dependency/body/binding refusal. Conditional absolute source imports
+under module-level if/try require live binding identity against already-loaded module
+exports; do not evaluate conditions, import candidates or enter function/class scopes.
+
 **CLI parameter callbacks**
 
 - `ParameterInfo` and `ParameterSchema` append the boolean `unsupported_callback`; retain

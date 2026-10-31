@@ -23,6 +23,9 @@ def to_mcp(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview output without writing files"
     ),
+    tools: list[str] = typer.Option(
+        None, "--tool", help="Convert only these canonical tool names (repeatable)"
+    ),
     allow_scaffold: bool = typer.Option(
         False,
         "--allow-scaffold",
@@ -39,4 +42,5 @@ def to_mcp(
         verbose=verbose,
         dry_run=dry_run,
         allow_scaffold=allow_scaffold,
+        tools=tools or None,
     )

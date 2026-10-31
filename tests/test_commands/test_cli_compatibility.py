@@ -68,3 +68,30 @@ app.add_typer(build_admin())
     )
     assert call.is_error is False
     assert call.structured_content == {"result": "needle:True"}
+
+
+def test_public_cli_tool_selection_works_at_declared_typer_floor(tmp_path) -> None:
+    for target in ("api", "mcp", "cli"):
+        help_result = runner.invoke(app, ["to", target, "--help"])
+        assert help_result.exit_code == 0, help_result.exception
+        assert "--tool" in help_result.stdout
+    source = tmp_path / "selectable.py"
+    source.write_text("""import typer
+app = typer.Typer()
+def validate(value):
+    return value
+@app.command()
+def mapping() -> None:
+    typer.echo("useful")
+@app.command()
+def blocked(value: str = typer.Option("", callback=validate)) -> None:
+    typer.echo(value)
+""")
+    result = runner.invoke(app, ["to", "mcp", str(source), "--tool", "mapping"])
+    assert result.exit_code == 0, result.exception
+    namespace: dict[str, Any] = {}
+    exec(result.stdout, namespace)
+    call = asyncio.run(namespace["mcp"].call_tool("mapping", {}))
+    assert call.is_error is False
+    assert call.structured_content == {"result": "useful"}
+    assert "blocked" not in namespace

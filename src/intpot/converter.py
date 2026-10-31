@@ -664,6 +664,27 @@ class IntpotApp:
             source_path=self.source_path,
         )
 
+    def select(self, *tool_names: str) -> IntpotApp:
+        """Return an independent wrapper containing only named canonical tools."""
+        if not tool_names:
+            raise ValueError("Select at least one tool")
+        if any(not isinstance(name, str) for name in tool_names):
+            raise TypeError("Tool names must be strings")
+        if len(set(tool_names)) != len(tool_names):
+            raise ValueError("Tool names must not contain duplicates")
+        requested = set(tool_names)
+        available = {tool.name for tool in self.schema.tools}
+        unknown = requested - available
+        if unknown:
+            raise ValueError(f"Unknown tool name(s): {', '.join(sorted(unknown))}")
+        schema = replace(
+            self.schema,
+            tools=tuple(tool for tool in self.schema.tools if tool.name in requested),
+        )
+        selected = IntpotApp(self.source_type, self.app, self.source_path)
+        selected.__dict__["schema"] = schema
+        return selected
+
     def assess(self) -> dict[str, Any]:
         """Report known refusals and per-target bindings, not complete fidelity."""
         return assess_schema(self.schema)

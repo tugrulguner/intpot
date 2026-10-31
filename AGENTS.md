@@ -107,6 +107,16 @@ every human reads. If your agent wants a shortcut wrapping them, keep it untrack
 (`intpot add skills` writing `.claude/skills/` into a *user's* project is the product, and
 unrelated — it emits six formats and privileges none of them.)
 
+**Explicit tool selection (unreleased):** `IntpotApp.select(*tool_names)` filters an
+already-inspected immutable schema into an independent wrapper, preserving source order,
+source metadata and all selected-tool guards. Use exact canonical names; reject empty,
+duplicate and unknown selections. CLI repeatable `--tool` uses the same selection path;
+directory batches validate every source before writes. Never mutate the source framework
+app, remove a selected tool's callback parameter, or interpret selection as permission
+to bypass callback/dependency/body/binding refusal. Conditional absolute source imports
+under module-level if/try require live binding identity against already-loaded module
+exports; do not evaluate conditions, import candidates or enter function/class scopes.
+
 **Converter missing-body assessment:** source schemas remain inspectable when function source cannot be recovered, but public conversion refuses those tools by default. `allow_scaffold=True` / `--allow-scaffold` emits a labeled `NotImplementedError`; never use successful dummy returns. Keep callback and dependency guards non-bypassable. Direct low-level generators remain backward compatible and do not guarantee converter assessment.
 
 **Missing body bindings:** public converter assessment statically renders target implementations and reuses scope-aware global analysis to diagnose absent bindings. Keep `missing_binding` per-target and do not bypass refusal with scaffold permission. Body-recovery fields remain body-only. Ordered generated function decorator/default/eager-annotation loads use `core/definition_bindings.py` and per-target `missing_definition_binding` diagnostics, including support functions and public wrappers. Use `annotation_missing()` for per-target `missing_annotation_binding` on string/postponed annotation global roots against actual completed-module bindings, excluding annotation-only declarations. Parse type-position strings without evaluating them; preserve imported Literal/Annotated aliases and their value strings. `annotation_missing()` also recognizes nested type-position strings in imported standard `collections.abc.Callable` annotations (including aliases and qualified imports), alongside the existing typing forms; unknown subscriptions and Literal metadata remain value-safe and are not interpreted as types. Keep before-write refusal and scaffold non-bypassability. This does not certify type resolution, alias values, framework registration timing, initializer behavior, imports or runtime initialization. Direct generators and live App remain separate compatibility paths.

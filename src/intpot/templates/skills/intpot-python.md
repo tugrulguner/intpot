@@ -79,6 +79,13 @@ same caution as `exec`.
 
 ### `IntpotApp`
 
+Unreleased: `selected = app.select("mapping")` returns an independent conversion view
+of exact canonical source tool names, preserving source order and immutable metadata.
+Use `selected.assess()`, `.project()`, `.write()` or `.to_*()` normally. Original source
+inspection must succeed first. Empty, duplicate and unknown selections fail; selected
+callbacks/dependencies/missing bindings still refuse and scaffold permission cannot bypass
+them. Selection does not mutate the original framework application or its wrapper.
+
 ```python
 app = intpot.load("server.py")
 
