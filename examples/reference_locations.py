@@ -1,6 +1,7 @@
 """Exact original identifier ranges; requires v0.16.0 or newer.
 
-Until publication, run from a source checkout containing this change.
+This diagnostic capability is available in v0.16.0; the newer application-led
+numeric conversion examples have their own unreleased requirements.
 
 Run: uv run --all-extras --with httpx python examples/reference_locations.py
 The source API works with dynamic state; conversion still refuses that binding.

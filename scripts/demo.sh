@@ -130,13 +130,33 @@ run "Advanced API → MCP  (user management)" \
     "uv run --no-sync intpot to mcp examples/advanced_api.py" \
     "$OUTDIR/advanced_api_to_mcp.py"
 
+# Standalone application conversions (unreleased numeric-validation capabilities).
+run "Batch order → API" \
+    "uv run --no-sync intpot to api examples/batch_quote.py" \
+    "$OUTDIR/batch_quote_to_api.py"
+run "Batch order → MCP" \
+    "uv run --no-sync intpot to mcp examples/batch_quote.py" \
+    "$OUTDIR/batch_quote_to_mcp.py"
+run "Storage cost → CLI" \
+    "uv run --no-sync intpot to cli examples/storage_quote.py" \
+    "$OUTDIR/storage_quote_to_cli.py"
+run "Storage cost → MCP" \
+    "uv run --no-sync intpot to mcp examples/storage_quote.py" \
+    "$OUTDIR/storage_quote_to_mcp.py"
+run "Inventory reservation → CLI" \
+    "uv run --no-sync intpot to cli examples/inventory_reservation.py" \
+    "$OUTDIR/inventory_reservation_to_cli.py"
+run "Inventory reservation → API" \
+    "uv run --no-sync intpot to api examples/inventory_reservation.py" \
+    "$OUTDIR/inventory_reservation_to_api.py"
+
 expect_failure "Dependency API → CLI  (Depends is rejected safely)" \
     "uv run --no-sync intpot to cli examples/dependency_api.py"
 
 expect_failure "Dependency API → MCP  (Depends is rejected safely)" \
     "uv run --no-sync intpot to mcp examples/dependency_api.py"
 
-run "Execute checked-in generated examples" \
+run "Execute generated examples and application conformance suites" \
     "uv run --no-sync python scripts/verify_generated_examples.py"
 
 # ============================================================
