@@ -60,6 +60,11 @@ def test_mcp_source_unsupported_constraints_refuse_before_scaffold(tmp_path):
     [
         ("n: Annotated[int, Field(ge=1, le=5)]", 3, 0),
         ("n: Annotated[int, Field(ge=1, le=5)] = 2", 3, 6),
+        (
+            "n: Annotated[int, Field(default=2, ge=1, le=5, validate_default=True)]",
+            3,
+            0,
+        ),
         ("n: int = Field(2, ge=1, le=5)", 3, 0),
         ("n: float = Field(..., ge=0.5)", 0.75, 0.25),
         ("n: Annotated[float, Field(le=1.5)] = 1.0", 1.25, 1.75),
@@ -76,6 +81,15 @@ def test_mcp_numeric_declarations_native_consumers(
     )
     loaded = intpot.load(source)
     param = loaded.schema.tools[0].parameters[0]
+    if "default=2" in declaration:
+
+        async def omitted_source():
+            async with Client(loaded.app) as client:
+                result = await client.call_tool("quote", {})
+                assert json.loads(result.content[0].text) == {"value": 2}
+
+        asyncio.run(omitted_source())
+        assert not param.required and param.default == 2
     assert not param.unsupported_mcp_numeric_range
     assert param.minimum is not None or param.maximum is not None
     ns = {}
@@ -121,6 +135,8 @@ def test_mcp_numeric_declarations_native_consumers(
         "n: Annotated[int, Field(ge=1), AfterValidator(abs)]",
         'n: Annotated[float, Field(ge=float("inf"))]',
         "n: Annotated[int, Field(ge=1, le=5)] = 0",
+        "n: Annotated[int, Field(default=0, ge=1, validate_default=True)]",
+        "n: Annotated[int, Field(default=None, ge=1, validate_default=True)]",
         'n: int = Field("2", ge=1, le=5)',
         "n: int = Field(default_factory=lambda: 2, ge=1)",
     ],

@@ -286,7 +286,9 @@ and JSON request body. Valid calls write receipts; rejected inputs and stock-lim
 failures do not. No mutable stock state or transaction semantics are claimed.
 
 Ordinary primitive int/float inclusive finite Field/Annotated constraints retain the
-existing minimum/maximum fields. Additional numeric validators, exclusive/multiple-of/
+existing minimum/maximum fields. Supported defaults embedded inside Annotated Field
+metadata remain defaults, not required inputs. Constrained or validated None defaults
+are explicitly refused. Additional numeric validators, exclusive/multiple-of/
 strict constraints, unsupported defaults and factories are not silently discarded:
 `unsupported_mcp_numeric_range` remains inspectable, assessment reports that code, and
 `intpot.UnsupportedMCPNumericRangeError` refuses generation before writes, even with

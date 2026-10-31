@@ -112,14 +112,22 @@ def mcp_numeric_range(
     from pydantic.fields import FieldInfo
     from pydantic_core import PydanticUndefined
 
-    field = FieldInfo.from_annotated_attribute(
-        annotation, PydanticUndefined if default is _SENTINEL else default
+    field = (
+        FieldInfo.from_annotation(annotation)
+        if default is _SENTINEL
+        else FieldInfo.from_annotated_attribute(annotation, default)
     )
     default = _SENTINEL if field.default is PydanticUndefined else field.default
     if field.default_factory is not None:
         return {"unsupported_mcp_numeric_range": True}, default
     details = api_numeric_range(field, type_name, default)
-    if details.pop("unsupported_api_numeric_range", False):
+    if details.pop("unsupported_api_numeric_range", False) or (
+        default is None
+        and (
+            field.validate_default
+            or any(value is not None for value in details.values())
+        )
+    ):
         return {"unsupported_mcp_numeric_range": True}, default
     return details, default
 
