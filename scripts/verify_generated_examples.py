@@ -192,6 +192,34 @@ def verify_definition_bindings() -> None:
     print("verified actionable diagnostic context and before-write refusal")
 
 
+def verify_application_conformance() -> None:
+    cases = (
+        (
+            "application_conformance.py",
+            "batch-order",
+            {"source_cli", "generated_cli", "api", "mcp"},
+        ),
+        (
+            "api_application_conformance.py",
+            "storage-cost",
+            {"source_api", "cli", "mcp"},
+        ),
+        (
+            "mcp_application_conformance.py",
+            "inventory-reservation",
+            {"source_mcp", "cli", "api"},
+        ),
+    )
+    for filename, label, interfaces in cases:
+        module = _load_module(
+            f"intpot_example_{label.replace('-', '_')}", ROOT / "examples" / filename
+        )
+        report = asyncio.run(module.verify())
+        assert set(report["interfaces"]) == interfaces
+        assert all(item["receipts_verified"] for item in report["interfaces"].values())
+        print(f"verified {label} source and generated interfaces")
+
+
 def main() -> None:
     verify_generated_cli()
     verify_generated_mcp()
@@ -201,6 +229,7 @@ def main() -> None:
     verify_missing_binding()
     verify_helper_recovery()
     verify_definition_bindings()
+    verify_application_conformance()
 
 
 if __name__ == "__main__":

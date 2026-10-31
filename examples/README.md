@@ -1,5 +1,34 @@
 # Examples
 
+## Run the current source examples
+
+The application-led conversion examples below require this source checkout. Public
+v0.16.0 does not include the newer numeric-validation conversion guarantees.
+
+```bash
+uv sync --all-extras --locked --python 3.11
+uv run --no-sync python scripts/verify_generated_examples.py
+```
+
+The verifier runs existing framework/diagnostic smoke tests **and all three application
+conformance drivers**. They compare results, omitted defaults, invalid/missing inputs,
+business errors and receipt effects through actual framework consumers. No network
+server is left running. Native error/response formats can differ; explicit-null coercion
+is not covered by the shared finite numeric input domain.
+
+Run an individual application comparison with:
+
+```bash
+uv run --no-sync python examples/application_conformance.py
+uv run --no-sync python examples/api_application_conformance.py
+uv run --no-sync python examples/mcp_application_conformance.py
+```
+
+Each command prints a JSON report after its assertions pass. Valid calls write temporary
+receipts; invalid inputs and business errors must not write them. Temporary files are
+removed on exit. The batch-order comparison includes a low-level generated CLI check;
+public same-source conversion remains refused.
+
 `inventory_reservation.py` starts from MCP: numeric validation, defaults, stock-limit
 policy and receipt effects. Run `mcp_application_conformance.py` for original native MCP
 and generated CLI/HTTP comparison (unreleased; not public v0.16.0).
@@ -15,14 +44,12 @@ generated CLI/API/MCP consumers and verifies valid totals, rejected inputs and f
 before receipt writes. Numeric-range conversion requires the unreleased source slice;
 public v0.16.0 does not provide this guarantee.
 
-`reference_locations.py` requires v0.16.0 or newer; until publication, run from a
-source checkout containing this change. It runs an original
+`reference_locations.py` requires v0.16.0 or newer. It runs an original
 HTTP API with a dynamic binding, checks exact original identifier ranges and Python/CLI
 JSON parity, then proves unchanged refusal before writes and unavailable ranges after
 a source change.
 
-`binding_chains.py` requires v0.15.0 or newer; until publication, use a source
-checkout containing this change. It runs a helper-backed
+`binding_chains.py` requires v0.15.0 or newer. It runs a helper-backed
 original HTTP API and generated CLI, then explains an explicitly caller-authored
 incomplete schema. A separate real-source refusal verifies CLI/Python report parity
 and no output writes; the synthetic fixture does not expand source recovery.
@@ -102,7 +129,8 @@ demo verifies both rejection paths while retaining the complete supported conver
 ## Regenerating
 
 To regenerate all conversions, verify the expected dependency rejections, and execute the
-checked-in generated CLI/MCP artifacts plus the dependency FastAPI route:
+selected checked-in generated CLI/API/MCP artifacts, the dependency FastAPI route,
+and all three application conformance suites:
 
 ```bash
 bash scripts/demo.sh

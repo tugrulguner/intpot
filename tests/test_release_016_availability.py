@@ -14,7 +14,7 @@ ROOT = Path(__file__).parents[1]
 def test_occurrence_example_minimum_release_is_explicit(relative):
     text = (ROOT / relative).read_text()
     assert "requires v0.16.0 or newer" in text
-    assert "until publication" in text.lower()
+    assert "until publication" not in text.lower()
     assert "source-checkout-only (unreleased)" not in text
     assert "unreleased source checkout only" not in text
 
