@@ -116,6 +116,9 @@ app, remove a selected tool's callback parameter, or interpret selection as perm
 to bypass callback/dependency/body/binding refusal. Conditional absolute source imports
 under module-level if/try require live binding identity against already-loaded module
 exports; do not evaluate conditions, import candidates or enter function/class scopes.
+Relative imports from an already-imported callable can become absolute only with valid
+package context and the same loaded-export identity evidence. This does not fix direct
+filesystem loading of package modules or certify root lifecycle behavior.
 
 **Converter missing-body assessment:** source schemas remain inspectable when function source cannot be recovered, but public conversion refuses those tools by default. `allow_scaffold=True` / `--allow-scaffold` emits a labeled `NotImplementedError`; never use successful dummy returns. Keep callback and dependency guards non-bypassable. Direct low-level generators remain backward compatible and do not guarantee converter assessment.
 

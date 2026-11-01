@@ -61,6 +61,14 @@ name in every source and refuses before any writes when a source lacks one. This
 not remove parameters from selected tools or bypass their callbacks/dependencies.
 Group callbacks and application lifecycle/configuration remain separate fidelity limits.
 
+The unreleased [trkit case study](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/trkit.md)
+qualifies a packaged Turkish slug workflow with required string input, default/custom
+separators, Unicode and helper errors. Normally import the package and call
+`intpot.load(imported_app).select("slug")`. Relative source imports can become absolute
+when package context and already-loaded export identity agree; candidates are never
+imported to probe them. The original package remains a runtime dependency. Direct
+package-file loading and root CLI options/lifecycle are not qualified by this case.
+
 The [csv2vcard case study](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/csv2vcard.md)
 compares an unchanged CLI mapping command with generated real HTTP and MCP clients.
 The full application's parameter callback remains refused. Referenced absolute imports

@@ -314,6 +314,12 @@ partial output. Selection happens after source inspection; it cannot rescue an a
 whose source cannot be inspected. Every selected tool retains normal refusal guards.
 The original wrapper still exposes and assesses the whole application.
 
+The unreleased [trkit case study](examples/external-applications/trkit.md) converts a
+packaged Turkish slug command with real text inputs and default/custom separators.
+Load its normally imported Typer instance; verified relative source imports become
+absolute while retaining the upstream package dependency. Direct package-file loading
+and root CLI lifecycle equivalence remain outside this case.
+
 The CLI equivalent is repeatable `--tool NAME` on all three `intpot to` commands:
 
 ```bash
