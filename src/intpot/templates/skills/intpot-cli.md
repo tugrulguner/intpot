@@ -1,5 +1,14 @@
 # intpot CLI
 
+**Regular-package file loading (unreleased):** `intpot to api|mcp path/to/pkg/cli.py`
+keeps qualified import context for regular packages with `__init__.py`. Initializers
+execute normally; matching cached modules are reused rather than re-executed. Cached
+module origins or package search paths from another source tree refuse rather than
+being replaced. Use a fresh process after edits or when changing trees. Loader-owned
+import-path changes are removed afterward; standalone source files still do not gain
+an implicit sibling-import directory. Namespace-only packages and root CLI lifecycle
+translation are not promised. Use `--tool NAME` for an explicitly selected workflow.
+
 **intpot** does two things: it lets you define tools once and serve them as a Typer CLI,
 FastAPI app, or FastMCP server, and it converts existing apps between those three
 frameworks.

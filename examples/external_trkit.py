@@ -20,8 +20,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-import intpot
-
 REVISION = "b86ef6464f514782b6643771cc73119174c7d4e1"
 REPOSITORY = "https://github.com/ardazeybek-dev/trkit"
 CASES: list[dict[str, str]] = [
@@ -214,10 +212,36 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
     )
     if missing.returncode != 2 or business.returncode != 1:
         raise RuntimeError("Original CLI did not reject missing input/business error")
-    module = importlib.import_module("trkit.cli")
-    selected = intpot.load(module.app).select("slug")
-    selected.write(str(output / "slug_api.py"), "api")
-    selected.write(str(output / "slug_mcp.py"), "mcp")
+    conversion_entrypoint = Path(sys.executable).with_name(
+        "intpot.exe" if sys.platform == "win32" else "intpot"
+    )
+    source = source_root / "cli.py"
+    for target in ("api", "mcp"):
+        conversion = subprocess.run(
+            [
+                str(conversion_entrypoint),
+                "to",
+                target,
+                str(source),
+                "--tool",
+                "slug",
+                "--output",
+                str(output / f"slug_{target}.py"),
+            ],
+            cwd=output,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        (output / f"convert-{target}.stdout").write_text(
+            conversion.stdout, encoding="utf-8"
+        )
+        (output / f"convert-{target}.stderr").write_text(
+            conversion.stderr, encoding="utf-8"
+        )
+        if conversion.returncode != 0:
+            raise RuntimeError(f"CLI {target} conversion failed: {conversion.stderr}")
     http = call_http(output / "slug_api.py")
     mcp = asyncio.run(call_mcp(output / "slug_mcp.py"))
     if http["values"] != values or mcp["values"] != values:
@@ -234,11 +258,11 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
         "http": http,
         "mcp": mcp,
         "results_match": True,
-        "input_mode": "imported framework instance",
+        "input_mode": "CLI package file path",
         "full_application_conversion_verified": False,
         "limitations": [
             "Only slug; no root lifecycle/version controls",
-            "Direct package-file loading is not qualified",
+            "Regular packages only; cached package paths must match the requested tree",
             "Original trkit package remains a runtime dependency",
             "No persistent file effects in this workflow",
         ],

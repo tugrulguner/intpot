@@ -25,7 +25,8 @@ uv pip install --python .venv/bin/python /path/to/trkit
 
 Choose a fresh output directory. The driver verifies the pinned clean checkout,
 MIT license and installed Python source bytes. It invokes the original CLI in
-subprocesses, emits two standalone server files, starts a temporary loopback HTTP
+subprocesses, invokes the actual Intpot conversion CLI on the upstream package file
+in fresh subprocesses, emits two standalone server files, starts a temporary loopback HTTP
 server and a real MCP stdio subprocess, compares outputs and closes both servers.
 It saves original stdout/stderr, generated Python, server logs and `report.json`.
 Only synthetic text is supplied. Project synchronization can remove the extra
@@ -40,7 +41,20 @@ upstream package; install it again after syncing and use `.venv/bin/python`.
 # istanbul_igdir_cay
 ```
 
-Generate without editing upstream source:
+Generate through the normal CLI without editing upstream source (unreleased):
+
+```bash
+.venv/bin/intpot to api /path/to/trkit/src/trkit/cli.py --tool slug --output slug_api.py
+.venv/bin/intpot to mcp /path/to/trkit/src/trkit/cli.py --tool slug --output slug_mcp.py
+```
+
+Regular-package loading uses the qualified module name and normal Python import caching.
+A package initializer that imports the target does not cause a second execution.
+A cached package/module from another source tree is refused, not replaced; use a fresh
+conversion process when changing trees or after edits. Loader-owned import-path changes
+are restored afterward. This is not arbitrary sibling or namespace-package loading.
+
+The imported-instance Python API remains an alternative:
 
 ```python
 import intpot
@@ -81,6 +95,13 @@ conditions, invoke dynamic module attribute hooks, or copy package startup code.
 Missing or inconsistent package/binding evidence does not certify an import.
 This is source-import recovery, not a new intermediate representation.
 
+A subsequent loading fix closes the earlier file-path gap: the detector now identifies
+regular package ancestry (`__init__.py`) and imports the requested module in that
+qualified context. Previously the normal file CLI failed before generation, because
+an isolated synthetic module had no package context. Standalone files still use the
+isolated loader and do not gain an implicit sibling-import path. Package initializers
+execute as with ordinary Python imports; detection is not a sandbox.
+
 ## Errors and limits
 
 - Missing text is rejected by the original CLI (exit 2), HTTP (422) and MCP.
@@ -94,7 +115,8 @@ This is source-import recovery, not a new intermediate representation.
   lifecycle behavior, validators, plate lookup and other commands are not converted
   by this case study. The root version callback does nothing for these default
   invocations; selection does not promise arbitrary root callback equivalence.
-- Use `intpot.load(app)` with the normally imported instance. Direct loading of
-  `src/trkit/cli.py` by filesystem path still lacks package import context and is
-  not fixed here. No upstream source edits or callback-parameter stripping are used.
+- Regular-package file paths and normally imported instances are supported. Arbitrary
+  sibling loading and namespace-only packages are not qualified. Existing conflicting
+  package caches must be avoided with a fresh process. No upstream source edits or
+  callback-parameter stripping are used.
 - This behavior is unreleased; public v0.16.0 does not include this capability.
