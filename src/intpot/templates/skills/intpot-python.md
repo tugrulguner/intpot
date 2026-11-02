@@ -4,8 +4,12 @@
 source imports relative to its callable package may be emitted absolutely only when
 the existing package context resolves to an already-loaded module/export matching the
 live global binding by identity. No candidate import or dynamic attribute hook is used.
-The package stays a runtime dependency. Use `intpot.load(imported_app)`; this does not
-fix filesystem loading of package modules or promise root CLI lifecycle equivalence.
+The package stays a runtime dependency. `intpot.load(imported_app)` remains supported.
+Regular-package file paths are also supported (unreleased) with qualified package
+context and normal import caching. Cached modules from a different source tree refuse
+rather than being overwritten; use a fresh process when changing trees or source.
+Standalone files keep isolated loading without adding their directory to sys.path.
+Root CLI lifecycle equivalence remains outside this guarantee.
 
 **intpot** exposes two APIs: `intpot.App` for defining tools once and serving them as a
 CLI, API, or MCP server, and `intpot.load()` for converting existing framework code

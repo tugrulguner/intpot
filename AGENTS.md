@@ -117,8 +117,11 @@ to bypass callback/dependency/body/binding refusal. Conditional absolute source 
 under module-level if/try require live binding identity against already-loaded module
 exports; do not evaluate conditions, import candidates or enter function/class scopes.
 Relative imports from an already-imported callable can become absolute only with valid
-package context and the same loaded-export identity evidence. This does not fix direct
-filesystem loading of package modules or certify root lifecycle behavior.
+package context and the same loaded-export identity evidence. Regular-package file
+loading preserves qualified package context and normal import caching; reject cached
+modules from another source tree rather than replacing them. Restore loader-owned
+import-path changes on errors too. Standalone files retain isolated loading without
+adding their directory to sys.path. Root lifecycle equivalence is not certified.
 
 **Converter missing-body assessment:** source schemas remain inspectable when function source cannot be recovered, but public conversion refuses those tools by default. `allow_scaffold=True` / `--allow-scaffold` emits a labeled `NotImplementedError`; never use successful dummy returns. Keep callback and dependency guards non-bypassable. Direct low-level generators remain backward compatible and do not guarantee converter assessment.
 

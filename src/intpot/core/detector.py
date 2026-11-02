@@ -5,10 +5,14 @@ from __future__ import annotations
 import ast
 import importlib.util
 import sys
+import threading
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
 from intpot.core.models import SourceType
+
+_IMPORT_LOCK = threading.RLock()
 
 _FRAMEWORK_CONSTRUCTORS = {"FastMCP", "Typer", "FastAPI"}
 
@@ -111,8 +115,106 @@ def _has_framework_app_ast(source_path: Path) -> bool:
     return module_statements(tree.body)
 
 
+def _package_import_target(source_path: Path) -> tuple[str, Path] | None:
+    """Return the qualified name and import root for a regular package file."""
+    parts = [source_path.stem] if source_path.name != "__init__.py" else []
+    directory = source_path.parent
+    package_levels = 0
+    while (directory / "__init__.py").is_file():
+        parts.insert(0, directory.name)
+        directory = directory.parent
+        package_levels += 1
+    if (
+        not package_levels
+        or not parts
+        or not all(part.isidentifier() for part in parts)
+    ):
+        return None
+    return ".".join(parts), directory
+
+
+def _cached_package_matches(name: str, source_path: Path) -> bool:
+    """Reject cached package modules from any other filesystem ancestry."""
+    names = name.split(".")
+    root = source_path.parent
+    for _ in range(len(names) - (source_path.name != "__init__.py")):
+        root = root.parent
+    package_directory = root / names[0]
+    for cached_name, cached in tuple(sys.modules.items()):
+        if not cached_name.startswith(names[0] + "."):
+            continue
+        actual = vars(cached).get("__file__") if cached is not None else None
+        if actual is None or not Path(actual).resolve().is_relative_to(
+            package_directory
+        ):
+            return False
+    for index in range(1, len(names) + 1):
+        prefix = ".".join(names[:index])
+        if prefix not in sys.modules:
+            continue
+        module = sys.modules[prefix]
+        if module is None:
+            return False
+        namespace = vars(module)
+        expected = root.joinpath(*names[:index], "__init__.py")
+        if index == len(names):
+            expected = source_path
+        actual = namespace.get("__file__")
+        if actual is None or Path(actual).resolve() != expected.resolve():
+            return False
+        if expected.name == "__init__.py":
+            paths = namespace.get("__path__")
+            if not isinstance(paths, (list, tuple)) or len(paths) != 1:
+                return False
+            if Path(paths[0]).resolve() != expected.parent.resolve():
+                return False
+    return True
+
+
+class _ImportRoot(str):
+    """An identity-tagged path entry so cleanup leaves user changes alone."""
+
+
+def _import_package_module(name: str, root: Path, source_path: Path) -> Any:
+    with _IMPORT_LOCK:
+        if not _cached_package_matches(name, source_path):
+            raise ImportError(f"Cached package module conflicts with {source_path}")
+        import_root = _ImportRoot(root)
+        sys.path.insert(0, import_root)
+        try:
+            parts = name.split(".")
+            for index in range(1, len(parts)):
+                parent = ".".join(parts[:index])
+                parent_path = root.joinpath(*parts[:index], "__init__.py")
+                import_module(parent)
+                if not _cached_package_matches(parent, parent_path):
+                    raise ImportError(
+                        f"Package search path conflicts with {source_path}"
+                    )
+                if not _cached_package_matches(name, source_path):
+                    raise ImportError(
+                        f"Cached package module conflicts with {source_path}"
+                    )
+            module = import_module(name)
+            if Path(getattr(module, "__file__", "")).resolve() != source_path.resolve():
+                raise ImportError(f"Imported module does not match {source_path}")
+            if not _cached_package_matches(name, source_path):
+                raise ImportError(
+                    f"Imported package ancestry does not match {source_path}"
+                )
+            return module
+        finally:
+            sys.path[:] = [entry for entry in sys.path if entry is not import_root]
+
+
 def _import_module_from_path(source_path: Path) -> Any:
     """Import a Python module from a file path."""
+    package_target = _package_import_target(source_path)
+    try:
+        if package_target is not None:
+            return _import_package_module(*package_target, source_path)
+    except (Exception, SystemExit) as exc:
+        raise SourceImportError(_import_failure_message(source_path, exc)) from exc
     # Use the full resolved path to avoid collisions between same-named files
     path_hash = abs(hash(str(source_path.resolve())))
     unique_name = f"_intpot_source_{source_path.stem}_{path_hash}"

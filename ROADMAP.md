@@ -332,8 +332,10 @@ live-versus-ejected parity remain separate executable test families.
       [#9](https://github.com/tugrulguner/intpot/issues/9),
       [#38](https://github.com/tugrulguner/intpot/issues/38)).
 - [ ] Preserve repeatable Typer/Click options and collection cardinality in target schemas.
-- [ ] Support package and sibling imports with explicit loading semantics. Direct file
-      loading currently does not add the source directory to `sys.path`.
+- [ ] Broaden package and sibling import support beyond regular packages. Unreleased
+      regular-package file loading preserves qualified context and normal import caching,
+      refusing cached source-tree conflicts. Standalone files still do not add their
+      source directory to `sys.path`; namespace and arbitrary sibling loading remain deferred.
 - [ ] Support explicit app selection and bounded factory loading without making directory
       discovery import every Python file.
 - [ ] Define multi-method FastAPI route semantics instead of reducing them to one method.

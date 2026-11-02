@@ -317,8 +317,11 @@ The original wrapper still exposes and assesses the whole application.
 The unreleased [trkit case study](examples/external-applications/trkit.md) converts a
 packaged Turkish slug command with real text inputs and default/custom separators.
 Load its normally imported Typer instance; verified relative source imports become
-absolute while retaining the upstream package dependency. Direct package-file loading
-and root CLI lifecycle equivalence remain outside this case.
+absolute while retaining the upstream package dependency. Regular-package file paths
+also work through `intpot to api|mcp ... --tool slug` (unreleased), with package context
+and normal import caching. A cached package from another source tree is refused rather
+than overwritten; use a fresh conversion process. Root CLI lifecycle equivalence remains
+outside this case.
 
 The CLI equivalent is repeatable `--tool NAME` on all three `intpot to` commands:
 
@@ -372,7 +375,7 @@ Unmatched conditional imports remain missing-binding refusals.
 intpot carries direct import statements referenced by a tool body. It does not yet copy
 same-module helpers, constants, classes, models, or closure values that the body
 references, and it does not follow dependencies across imported modules. Factory-created
-apps are not detected by the current AST pre-check. Loading a source file directly also
+apps are not detected by the current AST pre-check. Loading a standalone source file
 does not add its directory to `sys.path`, so a sibling import such as
 `from helpers import normalize` may require installing the package or setting
 `PYTHONPATH`. External services and configuration are not provisioned for you. If intpot

@@ -27,7 +27,7 @@ intpot to cli existing_api.py --output generated_cli.py
 
 ## What loading does
 
-For a file, detection first parses Python syntax and checks for a module-level `FastAPI()`, `Typer()`, or `FastMCP()` assignment. It then imports that file to identify the live app instance and inspect framework routes/commands/tools. Import-time code therefore executes. Detection does not sandbox source, and it does not add the source file's directory to `sys.path`; guard executable startup with `if __name__ == "__main__":` and avoid side effects during import.
+For a file, detection first parses Python syntax and checks for a module-level `FastAPI()`, `Typer()`, or `FastMCP()` assignment. It then imports that file to identify the live app instance and inspect framework routes/commands/tools. Import-time code therefore executes. Detection does not sandbox source. Standalone loading does not add the source file's directory to `sys.path`; regular packages use qualified package imports with a temporary import root (unreleased). Guard executable startup with `if __name__ == "__main__":` and avoid side effects during import.
 
 `intpot inspect path.py` displays normalized operations without generating code; `--json` emits structured data, and `--verbose` prints detection details to stderr. A directory may be inspected recursively. Malformed Python, failed imports, and missing app definitions are errors, not silently skipped files.
 
@@ -67,7 +67,12 @@ separators, Unicode and helper errors. Normally import the package and call
 `intpot.load(imported_app).select("slug")`. Relative source imports can become absolute
 when package context and already-loaded export identity agree; candidates are never
 imported to probe them. The original package remains a runtime dependency. Direct
-package-file loading and root CLI options/lifecycle are not qualified by this case.
+namespace-package loading and root CLI options/lifecycle are not qualified by this case.
+Regular packages with `__init__.py` can also be loaded from a file path through the
+normal conversion CLI (unreleased). Qualified loading reuses matching cached modules,
+rejects cached paths from another source tree and restores loader-owned import-path
+changes. Use a fresh conversion process when switching source trees or after edits.
+Standalone-file loading still does not add its directory to the import search path.
 
 The [csv2vcard case study](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/csv2vcard.md)
 compares an unchanged CLI mapping command with generated real HTTP and MCP clients.

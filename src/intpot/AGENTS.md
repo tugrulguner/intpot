@@ -29,6 +29,10 @@ many files must tolerate one of them raising — see `core/discovery.py`. The co
 prefilter may inspect module-level `if`/`try` branches but must not enter function or
 class scopes or evaluate branch conditions. A candidate constructor is not proof of
 an app: inspect the imported module for an actual framework instance afterward.
+Regular-package file loading uses canonical qualified imports, allowing package
+initializers and relative imports to run with normal import semantics. Never execute
+the requested module a second time after an initializer imported it. Reject cached
+modules from another source tree and restore loader-owned path changes on every exit.
 
 **Identify framework objects structurally, never with `isinstance`.** typer 0.26 vendored
 its own copy of click as `typer._click`, so a Typer app stopped being an instance of
@@ -121,8 +125,11 @@ to bypass callback/dependency/body/binding refusal. Conditional absolute source 
 under module-level if/try require live binding identity against already-loaded module
 exports; do not evaluate conditions, import candidates or enter function/class scopes.
 Relative imports from an already-imported callable can become absolute only with valid
-package context and the same loaded-export identity evidence. This does not fix direct
-filesystem loading of package modules or certify root lifecycle behavior.
+package context and the same loaded-export identity evidence. Regular-package file
+loading preserves qualified package context and normal import caching; reject cached
+modules from another source tree rather than replacing them. Restore loader-owned
+import-path changes on errors too. Standalone files retain isolated loading without
+adding their directory to sys.path. Root lifecycle equivalence is not certified.
 
 **CLI parameter callbacks**
 
