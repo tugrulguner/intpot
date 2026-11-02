@@ -17,6 +17,7 @@ def test_generated_nullable_string_enum_uses_floor_compatible_annotation(
     import sys
 
     import intpot
+    from intpot.core.detector import detect_source
     from intpot.core.generators.cli import CLIGenerator
 
     package = tmp_path / "floor_enum_compat"
@@ -26,8 +27,11 @@ def test_generated_nullable_string_enum_uses_floor_compatible_annotation(
         "from enum import Enum\nclass Mode(str, Enum):\n FAST='fast'\n SAFE='safe'\n"
     )
     source = package / "app.py"
+    effect = tmp_path / "body-executed"
     source.write_text(
-        "from typing import Optional\nimport typer\nfrom .modes import Mode\napp=typer.Typer()\n@app.command()\ndef run(mode: Mode, maybe: Optional[Mode]=None):\n typer.echo(mode.value + ':' + ('none' if maybe is None else maybe.value))\n"
+        "from pathlib import Path\nfrom typing import Optional\nimport typer\nfrom .modes import Mode\napp=typer.Typer()\n@app.command()\ndef run(mode: Mode, maybe: Optional[Mode]=None):\n"
+        f" Path({str(effect)!r}).write_text('executed')\n"
+        " typer.echo(mode.value + ':' + ('none' if maybe is None else maybe.value))\n"
     )
     monkeypatch.syspath_prepend(str(tmp_path))
     try:
@@ -37,7 +41,22 @@ def test_generated_nullable_string_enum_uses_floor_compatible_annotation(
         result = runner.invoke(namespace["app"], ["fast"])
         assert result.exit_code == 0, result.exception
         assert result.stdout.strip() == "fast:none"
-        assert runner.invoke(namespace["app"], ["invalid"]).exit_code == 2
+        assert effect.read_text() == "executed"
+        effect.unlink()
+        _, original = detect_source(source)
+        source_invalid = runner.invoke(original, ["invalid"])
+        assert source_invalid.exit_code != 0
+        assert not effect.exists()
+        generated_invalid = runner.invoke(namespace["app"], ["invalid"])
+        assert generated_invalid.exit_code == source_invalid.exit_code
+        assert not effect.exists()
+        if source_invalid.exit_code != 2:
+            # Legacy Typer/Click can fail while formatting the validation error.
+            # Preserve that source-only failure rather than masking it with a pin.
+            assert isinstance(source_invalid.exception, TypeError)
+            assert "make_metavar" in str(source_invalid.exception)
+            assert type(generated_invalid.exception) is type(source_invalid.exception)
+            assert str(generated_invalid.exception) == str(source_invalid.exception)
     finally:
         for key in tuple(sys.modules):
             if key == package.name or key.startswith(package.name + "."):
