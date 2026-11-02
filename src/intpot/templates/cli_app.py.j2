@@ -26,7 +26,7 @@ import typer as {{ generated_aliases["cli:typer"] }}
 
 {% if tool.is_async %}async {% endif %}def {{ generated_aliases["impl:" ~ tool.name] }}(
 {%- for param in tool.parameters %}
-    {{ param.binding_name or param.name }}: {{ param.type_annotation }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
+    {{ param.binding_name or param.name }}: {{ param | parameter_type }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
@@ -44,7 +44,7 @@ import typer as {{ generated_aliases["cli:typer"] }}
 @app.command(name={{ tool.interface_name | repr }})
 def {{ tool.name }}(
 {%- for param in tool.parameters %}
-    {{ param.name }}: {{ param.type_annotation }}
+    {{ param.name }}: {{ param | parameter_type }}
 {%- if param.placement.value == "cli_option" %} = {{ generated_aliases["cli:typer"] }}.Option({% if param.required %}...{% else %}{{ param.default | source_default }}{% endif %}{% for alias in param.aliases %}, {{ alias | repr }}{% endfor %}, help={{ param.description | repr }}{% if param.minimum is not none %}, min={{ param.minimum | repr }}{% endif %}{% if param.maximum is not none %}, max={{ param.maximum | repr }}{% endif %})
 {%- else %} = {{ generated_aliases["cli:typer"] }}.Argument(..., help={{ param.description | repr }}{% if param.minimum is not none %}, min={{ param.minimum | repr }}{% endif %}{% if param.maximum is not none %}, max={{ param.maximum | repr }}{% endif %})
 {%- endif %},

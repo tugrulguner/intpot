@@ -21,7 +21,7 @@ from typing import {{ typing_imports | join(", ") }}
 
 {% if tool.is_async %}async {% endif %}def {{ generated_aliases["impl:" ~ tool.name] }}(
 {%- for param in tool.parameters %}
-    {{ param.binding_name or param.name }}: {{ param.type_annotation }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
+    {{ param.binding_name or param.name }}: {{ param | parameter_type }} = {% if param.required %}{{ generated_aliases["helper:required"] }}{% else %}{{ param.default | source_default }}{% endif %},
 {%- endfor %}
 ) -> {{ tool.return_type }}:
     """{{ tool.description | escape_doc }}"""
@@ -39,7 +39,7 @@ from typing import {{ typing_imports | join(", ") }}
 @mcp.tool(name={{ tool.interface_name | repr }})
 {% if tool.is_async %}async {% endif %}def {{ tool.name }}(
 {%- for param in tool.parameters %}
-    {{ param.name }}: {{ param.type_annotation }}
+    {{ param.name }}: {{ param | parameter_type }}
 {%- if param.minimum is not none or param.maximum is not none %} = {{ generated_aliases["mcp:Field"] }}({% if param.required %}...{% else %}{{ param.default | source_default }}{% endif %}{% if param.minimum is not none %}, ge={{ param.minimum | repr }}{% endif %}{% if param.maximum is not none %}, le={{ param.maximum | repr }}{% endif %})
 {%- elif not param.required %} = {{ param.default | source_default }}
 {%- endif %},

@@ -55,6 +55,8 @@ def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
         _scan_type_string(tool.return_type, found)
         for param in tool.parameters:
             _scan_type_string(param.type_annotation, found)
+            if param.string_enum is not None and param.string_enum.nullable:
+                found.add("Optional")
     return sorted(found)
 
 
@@ -171,6 +173,12 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     for tool in tools:
         if tool.function_body:
             aliases[f"impl:{tool.name}"] = unique(f"_{tool.name}_impl")
+    for tool in tools:
+        for parameter in tool.parameters:
+            if parameter.string_enum is not None:
+                spec = parameter.string_enum
+                if spec.key not in aliases:
+                    aliases[spec.key] = unique(f"_intpot_enum_{spec.name}")
     return aliases
 
 
@@ -231,6 +239,8 @@ def _collect_extra_imports(
                     seen.add(retained)
                     source_imports.append(retained)
         for parameter in tool.parameters:
+            if parameter.string_enum is not None:
+                default_imports.add(parameter.string_enum.import_source(aliases))
             if parameter.required:
                 continue
             for imp in sorted(_default_imports(parameter.default, aliases)):
@@ -992,6 +1002,15 @@ def render_template(template_name: str, **kwargs: object) -> str:
         keep_trailing_newline=True,
     )
     env.filters["repr"] = repr
+    env.filters["parameter_type"] = lambda p: (
+        (
+            f"Optional[{p.string_enum.alias(aliases)}]"
+            if p.string_enum.nullable
+            else p.string_enum.alias(aliases)
+        )
+        if p.string_enum is not None
+        else p.type_annotation
+    )
     env.filters["source_default"] = lambda value: _source_default(value, aliases)
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case

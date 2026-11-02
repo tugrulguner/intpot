@@ -107,6 +107,16 @@ every human reads. If your agent wants a shortcut wrapping them, keep it untrack
 (`intpot add skills` writing `.claude/skills/` into a *user's* project is the product, and
 unrelated — it emits six formats and privileges none of them.)
 
+**CLI string enums (unreleased):** `ParameterInfo`/`ParameterSchema.string_enum`
+contains pure immutable `StringEnumSpec` metadata; `StringEnumDefault` is a symbolic
+member default, never a live enum class/member. Keep hashes/adapters/runtime copies/
+JSON/source defaults aligned; omit absent metadata. Data decoding must not import
+modules. CLI inspection verifies loaded package exports and rejects unsupported
+custom/local/non-string/alias/case-insensitive/collection enums. Shared rendering
+allocates collision-safe enum imports and `parameter_type` annotations; actual native
+clients must reject invalid values before effects. Preserve all callback guards and
+source-package dependencies; Docling native baseline is not converted-consumer proof.
+
 **Explicit tool selection (unreleased):** `IntpotApp.select(*tool_names)` filters an
 already-inspected immutable schema into an independent wrapper, preserving source order,
 source metadata and all selected-tool guards. Use exact canonical names; reject empty,

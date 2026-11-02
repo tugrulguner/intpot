@@ -65,6 +65,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 unsupported_numeric_range=parameter.unsupported_numeric_range,
                 unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
                 unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
+                string_enum=parameter.string_enum,
             )
             for parameter in info.parameters
         ],

@@ -1,5 +1,18 @@
 # intpot CLI
 
+**Ordinary CLI string enums (unreleased):** `string_enum` is detached immutable
+`StringEnumSpec(module, name, members, nullable)` metadata. The initial subset is a
+module-level `str, Enum` or `StrEnum` exported by an already-loaded regular package.
+Defaults use immutable `StringEnumDefault(enum, member)` descriptors, not live enum
+objects. JSON includes the descriptor only when present; its data-only `from_dict`
+helpers do not import modules. Generated annotations/defaults import the original
+package enum with collision-safe aliases, preserving instances and allowed-value
+validation. The original application package remains a dependency. Local/unimportable,
+custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
+collections are refused. This does not add API/MCP-source enum recovery or general
+callback translation. Existing live `App` callable/default behavior remains separate.
+
+
 **Regular-package file loading (unreleased):** `intpot to api|mcp path/to/pkg/cli.py`
 keeps qualified import context for regular packages with `__init__.py`. Initializers
 execute normally; matching cached modules are reused rather than re-executed. Cached

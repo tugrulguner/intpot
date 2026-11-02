@@ -189,7 +189,7 @@ framework-visible spelling such as `send-email` when it differs.
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
 `param_source`, `placement`, `binding_name`, `interface_name`, `aliases`,
 `unsupported_callback`, `minimum`, `maximum`, `unsupported_numeric_range`,
-`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, plus a
+`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, `string_enum`, plus a
 `required` property. `binding_name` preserves a source callable's valid Python parameter
 spelling when canonical sanitization changes it. `interface_name` is the primary
 framework-visible parameter spelling; `aliases` retains exact additional Typer/Click
@@ -206,6 +206,19 @@ API/MCP generation refuses it. This does not add callback support to `App.tool()
 
 `param_source` is `ParamSource.query` / `header` / `path` / `body` for FastAPI sources
 that declared one, otherwise `None`.
+
+
+**Ordinary CLI string enums (unreleased):** `string_enum` is detached immutable
+`StringEnumSpec(module, name, members, nullable)` metadata. The initial subset is a
+module-level `str, Enum` or `StrEnum` exported by an already-loaded regular package.
+Defaults use immutable `StringEnumDefault(enum, member)` descriptors, not live enum
+objects. JSON includes the descriptor only when present; its data-only `from_dict`
+helpers do not import modules. Generated annotations/defaults import the original
+package enum with collision-safe aliases, preserving instances and allowed-value
+validation. The original application package remains a dependency. Local/unimportable,
+custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
+collections are refused. This does not add API/MCP-source enum recovery or general
+callback translation. Existing live `App` callable/default behavior remains separate.
 
 ### `intpot.inspect_app(source_type, app_instance)`
 

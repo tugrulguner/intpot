@@ -286,6 +286,12 @@ app = typer.Typer()
 def show(path: Path, color: Color):
     typer.echo(f"{path}:{color.value}")
 """)
+    # Enums now require an importable owner instead of being downgraded to str.
+    package = path.parent / "color_callback_control"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    source = package / "app.py"
+    source.write_text(path.read_text())
     assert all(
-        not p.unsupported_callback for p in intpot.load(path).tools[0].parameters
+        not p.unsupported_callback for p in intpot.load(source).tools[0].parameters
     )

@@ -11,6 +11,39 @@ from intpot.cli import app
 runner = CliRunner()
 
 
+def test_generated_nullable_string_enum_uses_floor_compatible_annotation(
+    tmp_path, monkeypatch
+):
+    import sys
+
+    import intpot
+    from intpot.core.generators.cli import CLIGenerator
+
+    package = tmp_path / "floor_enum_compat"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "modes.py").write_text(
+        "from enum import Enum\nclass Mode(str, Enum):\n FAST='fast'\n SAFE='safe'\n"
+    )
+    source = package / "app.py"
+    source.write_text(
+        "from typing import Optional\nimport typer\nfrom .modes import Mode\napp=typer.Typer()\n@app.command()\ndef run(mode: Mode, maybe: Optional[Mode]=None):\n typer.echo(mode.value + ':' + ('none' if maybe is None else maybe.value))\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    try:
+        loaded = intpot.load(source)
+        namespace: dict[str, Any] = {"__name__": "floor_enum_generated"}
+        exec(CLIGenerator().generate(loaded.schema), namespace)
+        result = runner.invoke(namespace["app"], ["fast"])
+        assert result.exit_code == 0, result.exception
+        assert result.stdout.strip() == "fast:none"
+        assert runner.invoke(namespace["app"], ["invalid"]).exit_code == 2
+    finally:
+        for key in tuple(sys.modules):
+            if key == package.name or key.startswith(package.name + "."):
+                del sys.modules[key]
+
+
 def test_public_version_command_starts() -> None:
     result = runner.invoke(app, ["--version"])
 

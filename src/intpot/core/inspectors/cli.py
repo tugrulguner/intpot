@@ -15,6 +15,7 @@ from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
 from intpot.core.provenance import inspected_callable_metadata
+from intpot.core.string_enums import annotation_string_enum, enum_default
 
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
 # are not instances of anything in the standalone `click` package and its
@@ -223,6 +224,9 @@ class CLIInspector(BaseInspector):
                 ) = _registered_parameter_details(
                     annotations.get(param.name, param.annotation), param.default
                 )
+                enum = annotation_string_enum(annotation)
+                if enum is not None and default is not _SENTINEL:
+                    default = enum_default(enum, default)
                 parameters.append(
                     ParameterInfo(
                         name=param.name,
@@ -232,6 +236,7 @@ class CLIInspector(BaseInspector):
                         interface_name=parameter_interface_name,
                         aliases=aliases,
                         unsupported_callback=unsupported_callback,
+                        string_enum=enum,
                         **numeric_range,
                     )
                 )
@@ -304,7 +309,11 @@ class CLIInspector(BaseInspector):
         callback_params: dict[str, inspect.Parameter] = {}
         if callback is not None:
             try:
-                callback_params = dict(inspect.signature(callback).parameters)
+                callback_params = dict(
+                    inspect.signature(
+                        inspect.unwrap(callback), eval_str=True
+                    ).parameters
+                )
             except (TypeError, ValueError):
                 pass
 
@@ -338,6 +347,19 @@ class CLIInspector(BaseInspector):
                 if isinstance(original_help, str):
                     desc = original_help
 
+            original = callback_params.get(param.name)
+            enum = annotation_string_enum(original.annotation) if original else None
+            if enum is not None:
+                if (
+                    not getattr(param.type, "case_sensitive", True)
+                    or getattr(param, "multiple", False)
+                    or getattr(param, "nargs", 1) != 1
+                ):
+                    raise TypeError(
+                        "Collection or case-insensitive enum parameters are not supported"
+                    )
+                if default is not _SENTINEL:
+                    default = enum_default(enum, default)
             aliases = _option_aliases(param)
             params.append(
                 ParameterInfo(
@@ -348,6 +370,7 @@ class CLIInspector(BaseInspector):
                     interface_name=_primary_option_name(aliases),
                     aliases=aliases,
                     unsupported_callback=callable(getattr(param, "callback", None)),
+                    string_enum=enum,
                     **numeric_range,
                 )
             )

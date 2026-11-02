@@ -314,6 +314,14 @@ partial output. Selection happens after source inspection; it cannot rescue an a
 whose source cannot be inspected. Every selected tool retains normal refusal guards.
 The original wrapper still exposes and assesses the whole application.
 
+Ordinary scalar string-enum CLI choices and defaults are supported in unreleased
+source for module-level enums exported by regular packages. Generated code retains
+the original enum type and rejects invalid choices before body effects. Unsupported
+custom/local enums and enum collections refuse instead of becoming unchecked strings.
+The [Docling experiment](examples/external-applications/docling.md) records real native
+HTML-to-Markdown file effects and remaining conversion barriers; it does **not** claim
+working Docling HTTP/MCP conversion.
+
 The unreleased [trkit case study](examples/external-applications/trkit.md) converts a
 packaged Turkish slug command with real text inputs and default/custom separators.
 Load its normally imported Typer instance; verified relative source imports become

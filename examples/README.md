@@ -2,6 +2,13 @@
 
 ## Existing third-party applications
 
+[The Docling experiment](external-applications/docling.md) establishes a pinned,
+unchanged local HTML-to-Markdown baseline, including overwrite and rejection effects,
+and records the first Intpot conversion blocker. Run `external_docling.py` with its
+separately installed official dependencies. Native success is verified; generated
+Docling HTTP/MCP consumers are not yet verified. This is a blocked-conversion case,
+not another successful application claim.
+
 [The trkit case study](external-applications/trkit.md) compares a packaged Turkish
 slug command through its original CLI, generated HTTP and real MCP stdio server.
 Run `external_trkit.py` after installing its pinned source; the generated files and
