@@ -7,6 +7,7 @@ import inspect
 import sys
 import textwrap
 import types
+from importlib.util import resolve_name
 from typing import Any, Union, get_args, get_origin
 
 
@@ -126,8 +127,17 @@ def _conditional_import_matches(
         module_name = alias.name if alias.asname else alias.name.split(".")[0]
         module = sys.modules.get(module_name)
         return module is not None and namespace[bound_name] is module
-    if isinstance(node, ast.ImportFrom) and not node.level and node.module:
-        module = sys.modules.get(node.module)
+    if isinstance(node, ast.ImportFrom):
+        module_name = node.module or ""
+        if node.level:
+            package = namespace.get("__package__")
+            if not isinstance(package, str) or not package:
+                return False
+            try:
+                module_name = resolve_name("." * node.level + module_name, package)
+            except ImportError:
+                return False
+        module = sys.modules.get(module_name)
         if module is not None:
             exports = vars(module)
             name = node.names[0].name
@@ -164,10 +174,25 @@ def extract_source_imports(fn: Any) -> list[str]:
         for node in statements:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 for split, bound in _split_aliases(node):
-                    if not conditional or _conditional_import_matches(
+                    if conditional and not _conditional_import_matches(
                         split, bound, namespace
                     ):
-                        import_nodes.append((split, bound))
+                        continue
+                    if isinstance(split, ast.ImportFrom) and split.level:
+                        if not _conditional_import_matches(split, bound, namespace):
+                            continue
+                        package = namespace.get("__package__")
+                        if not isinstance(package, str) or not package:
+                            continue
+                        try:
+                            absolute = resolve_name(
+                                "." * split.level + (split.module or ""), package
+                            )
+                        except ImportError:
+                            continue
+                        split.module = absolute
+                        split.level = 0
+                    import_nodes.append((split, bound))
             elif isinstance(node, ast.If):
                 collect(node.body, True)
                 collect(node.orelse, True)

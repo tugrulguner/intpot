@@ -1,6 +1,13 @@
 # Examples
 
-## Existing third-party application
+## Existing third-party applications
+
+[The trkit case study](external-applications/trkit.md) compares a packaged Turkish
+slug command through its original CLI, generated HTTP and real MCP stdio server.
+Run `external_trkit.py` after installing its pinned source; the generated files and
+copy-paste commands are described in the guide. This exercises required text, an
+omitted/custom separator, Unicode, missing input and helper errors without editing
+upstream source. Only the selected workflow is qualified (unreleased).
 
 [The csv2vcard case study](external-applications/csv2vcard.md) runs an unmodified,
 pinned contact-conversion CLI, retains real vCard artifacts, and records current

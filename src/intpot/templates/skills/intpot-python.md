@@ -1,5 +1,12 @@
 # intpot Python API
 
+**Verified relative imports (unreleased):** for a normally imported framework instance,
+source imports relative to its callable package may be emitted absolutely only when
+the existing package context resolves to an already-loaded module/export matching the
+live global binding by identity. No candidate import or dynamic attribute hook is used.
+The package stays a runtime dependency. Use `intpot.load(imported_app)`; this does not
+fix filesystem loading of package modules or promise root CLI lifecycle equivalence.
+
 **intpot** exposes two APIs: `intpot.App` for defining tools once and serving them as a
 CLI, API, or MCP server, and `intpot.load()` for converting existing framework code
 programmatically.
