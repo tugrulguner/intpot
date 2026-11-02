@@ -106,6 +106,11 @@ def _registered_parameter_details(
             signature_default,
         )
 
+    if (
+        not getattr(metadata, "case_sensitive", True)
+        and annotation_string_enum(annotation) is not None
+    ):
+        raise TypeError("Unsupported case-insensitive enum parameters")
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )

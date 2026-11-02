@@ -108,6 +108,32 @@ def test_stdlib_strenum_default_reaches_native_http_body(enum_source, tmp_path):
         assert not effect.exists()
 
 
+@pytest.mark.parametrize("target", ["api", "mcp"])
+def test_registered_fallback_preserves_enum_case_refusal(
+    enum_source, tmp_path, monkeypatch, target
+):
+    enum_source.write_text(
+        enum_source.read_text().replace(
+            "mode: Mode = Mode.SAFE",
+            "mode: Mode = typer.Option(Mode.SAFE, case_sensitive=False)",
+        )
+    )
+    _, original = detect_source(enum_source)
+    effect = tmp_path / "native-case"
+    result = CliRunner().invoke(original, [str(effect), "--mode", "FAST"])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "fast"
+
+    def fail_tree():
+        raise RuntimeError("force registered-command fallback")
+
+    monkeypatch.setattr(original, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / f"fallback-{target}.py"
+    with pytest.raises(TypeError, match="case-insensitive"):
+        intpot.load(enum_source).write(destination, target, allow_scaffold=True)
+    assert not destination.exists()
+
+
 def test_postponed_enum_annotation(enum_source):
     enum_source.write_text(
         "from __future__ import annotations\n" + enum_source.read_text()
