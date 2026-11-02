@@ -286,6 +286,11 @@ class IntpotApp:
                 false the file is created exclusively, so a destination another
                 writer creates while this call is running is never overwritten.
 
+        Text that came from the source is written as it was written, so a
+        source containing characters the chosen encoding cannot hold is
+        refused rather than mangled. intpot's own text is escaped, so it never
+        blocks a write on its own.
+
         Returns:
             The resolved Path that was written.
 

@@ -2,15 +2,33 @@
 
 from __future__ import annotations
 
+import importlib.util
 import py_compile
+from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from typer.testing import CliRunner
 
 import intpot
 from intpot.converter import IntpotApp, UnsupportedFastAPIDependencyError
 from intpot.core.detector import DetectionError
 from intpot.core.models import SourceType
+
+
+def _import_written_module(path: Path) -> Any:
+    """Import a generated file from disk, the way a user would run it.
+
+    Importing is the point: it is the step that reads the PEP 263
+    declaration, so a file written in a narrow encoding is only proven to work
+    when the interpreter itself loads it.
+    """
+    spec = importlib.util.spec_from_file_location("written_cli_app", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_unsupported_fastapi_dependency_error_is_public():
@@ -245,6 +263,42 @@ def test_write_to_file_honors_encoding(tmp_path):
     )
     assert "café" in out.read_text(encoding="latin-1")
     py_compile.compile(str(out), cfile=str(tmp_path / "cli_app.pyc"), doraise=True)
+
+    # And the written file has to be a program, not just readable text: the
+    # interpreter loads it through its own PEP 263 handling, and the command
+    # it declares runs.
+    module = _import_written_module(out)
+    result = CliRunner().invoke(module.app, ["greet", "World"])
+    assert result.exit_code == 0, result.exception
+
+
+def test_write_to_file_writes_a_source_intpot_can_represent(tmp_path):
+    """intpot's own text must never be the reason a write is refused.
+
+    The CLI template adds an em dash to the help text. That is intpot's text,
+    not the caller's, so a source whose own text is plain ASCII has to be
+    writable as ASCII — the generated file used to be refused for a character
+    the caller never wrote.
+    """
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        """Greet someone."""
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    intpot.load(mcp).write(out, "cli", encoding="ascii")
+
+    assert out.read_text(encoding="ascii").splitlines()[0] == "# -*- coding: ascii -*-"
+    assert out.read_bytes().isascii()
+
+    module = _import_written_module(out)
+    result = CliRunner().invoke(module.app, ["greet", "World"])
+    assert result.exit_code == 0, result.exception
+    assert "greet called" in result.output
 
 
 def test_write_rejects_an_encoding_python_cannot_load(tmp_path):

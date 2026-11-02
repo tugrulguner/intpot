@@ -87,11 +87,21 @@ mcp_code = app.to_mcp()
 api_code = app.to_api()
 
 app.write("output/cli_app.py", "cli")     # generate and write, returns the Path
+app.write("output/cli_app.py", "cli", encoding="latin-1", overwrite=False)
 
 print(app.source_type)                    # SourceType.MCP / CLI / API
 print(app.schema.to_dict())               # inspect canonical source semantics
 api_schema = app.project("api")           # inspect target semantics before generation
 ```
+
+`write()` writes UTF-8 and replaces an existing file. `encoding` chooses the source-file
+encoding — UTF-8, Latin-1, cp1252, or ASCII — all ASCII-compatible, because Python cannot
+load source that is not; anything other than UTF-8 gets a PEP 263 encoding declaration on
+the first line. `overwrite=False` creates the file exclusively and raises `FileExistsError`
+rather than replacing a file that already exists, including one created while the code was
+being generated. Text that came from the source is written as it was written, so a source
+holding characters the chosen encoding cannot represent is refused with `ValueError`
+instead of being written unreadable.
 
 Calling `to_cli()` on a source that is already a CLI raises `ValueError`; same for the
 other two.

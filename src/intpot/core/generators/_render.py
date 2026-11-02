@@ -95,6 +95,45 @@ def _escape_docstring(text: str) -> str:
     return text
 
 
+# intpot's own text lands in every generated file, so it has to be
+# representable in every encoding intpot supports — the em dash below is not
+# in ASCII or Latin-1. It is written as an escape sequence instead, which
+# keeps the runtime value and leaves the file writable as plain ASCII. Text
+# that came from the user's source is left alone: an encoding that cannot
+# hold it is still refused, rather than silently changed.
+_CLI_HELP_SUFFIX = " — powered by intpot"
+
+
+def _escape_non_ascii(text: str) -> str:
+    """Write every non-ASCII character as an escape sequence.
+
+    The escaped text keeps its runtime value: `\\u2014` and the em dash it
+    stands for are the same string once Python reads the literal.
+    """
+    escaped = []
+    for character in text:
+        if character.isascii():
+            escaped.append(character)
+        elif ord(character) <= 0xFFFF:
+            escaped.append(f"\\u{ord(character):04x}")
+        else:
+            escaped.append(f"\\U{ord(character):08x}")
+    return "".join(escaped)
+
+
+def _cli_help_literal(app_name: str) -> str:
+    """Render the Typer help text as a literal every encoding can hold.
+
+    The em dash is intpot's own text, so it is escaped. The user's app name
+    is passed through untouched — text that came from their source is written
+    as they wrote it, and an encoding that cannot hold it is refused.
+    """
+    literal = repr(f"{app_name}{_CLI_HELP_SUFFIX}")
+    quote = literal[-1]
+    head = literal[1:-1].rpartition(_CLI_HELP_SUFFIX)[0]
+    return f"{quote}{head}{_escape_non_ascii(_CLI_HELP_SUFFIX)}{quote}"
+
+
 def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
     """Choose deterministic helper aliases that cannot collide with source globals."""
     occupied = {tool.name for tool in tools}
@@ -923,6 +962,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case
     env.filters["escape_doc"] = _escape_docstring
+    env.filters["cli_help"] = _cli_help_literal
     env.filters["bind_tool_name"] = lambda body, tool, replacement, preserve=False: (
         bind_global_name(
             body,

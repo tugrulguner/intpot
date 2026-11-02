@@ -260,6 +260,10 @@ print(app.to_cli())
 # Write directly to a file
 app.write("output/cli_app.py", "cli")
 app.write("output/api_app.py", "api")
+
+# Pick the source encoding, and refuse to replace a file that already exists
+app.write("output/cli_app.py", "cli", encoding="latin-1")
+app.write("output/api_app.py", "api", overwrite=False)
 ```
 
 **`App`** (universal runtime):
@@ -273,7 +277,7 @@ app.write("output/api_app.py", "api")
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
 - `.schema` — immutable source `ApplicationSchema`, compiled once
 - `.project(target)` — immutable target projection used by generation
-- `.write(path, target)` — generate and write to a file in one step
+- `.write(path, target, encoding="utf-8", overwrite=True)` — generate and write to a file in one step. `encoding` is the source-file encoding: UTF-8, Latin-1, cp1252, or ASCII — all ASCII-compatible, because Python cannot load source that is not. Anything other than UTF-8 gets a PEP 263 encoding declaration on the first line. `overwrite=False` creates the file exclusively and raises `FileExistsError` instead of replacing a file that already exists, including one created while the code was being generated. Source text the chosen encoding cannot represent is refused with `ValueError` rather than written unreadably.
 - `.tools` — detached `ToolInfo` compatibility objects; mutating them does not alter the schema
 - `.source_type` — detected framework type
 
