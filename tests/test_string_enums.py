@@ -186,6 +186,90 @@ def test_enum_custom_choices_refuse_before_writes(
     assert not effect.exists()
 
 
+@pytest.mark.parametrize("occupied_alias", [False, True])
+def test_nullable_enum_preserves_optional_helper_bindings(
+    enum_source, tmp_path, occupied_alias
+):
+    helpers = "def Optional(mode):\n    return 'none' if mode is None else mode.value\n"
+    if occupied_alias:
+        helpers += "def _intpot_typing_Optional():\n    return '!'\n"
+    enum_source.with_name("helpers.py").write_text(helpers)
+    helper_names = "Optional, _intpot_typing_Optional" if occupied_alias else "Optional"
+    suffix = " + _intpot_typing_Optional()" if occupied_alias else ""
+    enum_source.write_text(
+        "from pathlib import Path\nfrom typing import Optional as Maybe\nimport typer\n"
+        f"from .helpers import {helper_names}\n"
+        "from .modes import Mode\napp = typer.Typer()\n@app.command()\n"
+        "def run(output: str, mode: Maybe[Mode] = None):\n"
+        f"    value = Optional(mode){suffix}\n"
+        "    Path(output).write_text(value)\n    typer.echo(value)\n"
+    )
+    _, native = detect_source(enum_source)
+    effect = tmp_path / "optional-helper-effect"
+    expected_suffix = "!" if occupied_alias else ""
+    for arguments, expected in (([], "none"), (["--mode", "fast"], "fast")):
+        result = CliRunner().invoke(native, [str(effect), *arguments])
+        assert result.exit_code == 0, result.exception
+        assert effect.read_text() == expected + expected_suffix
+        effect.unlink()
+    assert CliRunner().invoke(native, [str(effect), "--mode", "invalid"]).exit_code == 2
+    assert not effect.exists()
+    loaded = intpot.load(enum_source)
+    cli: dict[str, Any] = {"__name__": "nullable_collision_cli"}
+    exec(CLIGenerator().generate(loaded.schema), cli)
+    for arguments, expected in (([], "none"), (["--mode", "fast"], "fast")):
+        result = CliRunner().invoke(cli["app"], [str(effect), *arguments])
+        assert result.exit_code == 0, result.exception
+        assert effect.read_text() == expected + expected_suffix
+        effect.unlink()
+    assert (
+        CliRunner().invoke(cli["app"], [str(effect), "--mode", "invalid"]).exit_code
+        == 2
+    )
+    assert not effect.exists()
+    api: dict[str, Any] = {"__name__": "nullable_collision_api"}
+    exec(loaded.to_api(), api)
+    with TestClient(api["app"]) as client:
+        for extra, expected in (
+            ({}, "none"),
+            ({"mode": None}, "none"),
+            ({"mode": "fast"}, "fast"),
+        ):
+            result = client.post("/run", json={"output": str(effect), **extra})
+            assert result.status_code == 200, result.text
+            assert result.json() == {"result": expected + expected_suffix}
+            assert effect.read_text() == expected + expected_suffix
+            effect.unlink()
+        assert (
+            client.post(
+                "/run", json={"output": str(effect), "mode": "invalid"}
+            ).status_code
+            == 422
+        )
+        assert not effect.exists()
+    mcp: dict[str, Any] = {"__name__": "nullable_collision_mcp"}
+    exec(loaded.to_mcp(), mcp)
+
+    async def check_mcp():
+        async with Client(mcp["mcp"]) as client:
+            for extra, expected in (
+                ({}, "none"),
+                ({"mode": None}, "none"),
+                ({"mode": "fast"}, "fast"),
+            ):
+                result = await client.call_tool("run", {"output": str(effect), **extra})
+                assert result.content[0].text == expected + expected_suffix
+                assert effect.read_text() == expected + expected_suffix
+                effect.unlink()
+            result = await client.call_tool(
+                "run", {"output": str(effect), "mode": "invalid"}, raise_on_error=False
+            )
+            assert result.is_error
+            assert not effect.exists()
+
+    asyncio.run(check_mcp())
+
+
 def test_postponed_enum_annotation(enum_source):
     enum_source.write_text(
         "from __future__ import annotations\n" + enum_source.read_text()

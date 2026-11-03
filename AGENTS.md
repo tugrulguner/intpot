@@ -113,7 +113,7 @@ member default, never a live enum class/member. Keep hashes/adapters/runtime cop
 JSON/source defaults aligned; omit absent metadata. Data decoding must not import
 modules. CLI inspection verifies loaded package exports and rejects unsupported
 custom/local/non-string/alias/case-insensitive/collection enums. Shared rendering
-allocates collision-safe enum imports and `parameter_type` annotations; actual native
+allocates collision-safe enum/typing imports and `parameter_type` annotations; actual native
 clients must reject invalid values before effects. Preserve all callback guards and
 source-package dependencies; Docling native baseline is not converted-consumer proof.
 

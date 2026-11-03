@@ -55,8 +55,6 @@ def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
         _scan_type_string(tool.return_type, found)
         for param in tool.parameters:
             _scan_type_string(param.type_annotation, found)
-            if param.string_enum is not None and param.string_enum.nullable:
-                found.add("Optional")
     return sorted(found)
 
 
@@ -179,6 +177,8 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
                 spec = parameter.string_enum
                 if spec.key not in aliases:
                     aliases[spec.key] = unique(f"_intpot_enum_{spec.name}")
+                if spec.nullable and "typing:Optional" not in aliases:
+                    aliases["typing:Optional"] = unique("_intpot_typing_Optional")
     return aliases
 
 
@@ -241,6 +241,10 @@ def _collect_extra_imports(
         for parameter in tool.parameters:
             if parameter.string_enum is not None:
                 default_imports.add(parameter.string_enum.import_source(aliases))
+                if parameter.string_enum.nullable:
+                    default_imports.add(
+                        f"from typing import Optional as {aliases['typing:Optional']}"
+                    )
             if parameter.required:
                 continue
             for imp in sorted(_default_imports(parameter.default, aliases)):
@@ -1004,7 +1008,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
     env.filters["repr"] = repr
     env.filters["parameter_type"] = lambda p: (
         (
-            f"Optional[{p.string_enum.alias(aliases)}]"
+            f"{aliases['typing:Optional']}[{p.string_enum.alias(aliases)}]"
             if p.string_enum.nullable
             else p.string_enum.alias(aliases)
         )
