@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from enum import Enum
 from typing import Annotated, Any, get_args, get_origin
 
 from intpot.core.inspectors._utils import (
@@ -94,22 +95,29 @@ def _parameter_annotation_metadata(
     annotation: Any, signature_default: Any
 ) -> tuple[Any, Any]:
     """Read original option metadata in either inspector path."""
-    metadata = signature_default
+    metadata = None if isinstance(signature_default, Enum) else signature_default
     if get_origin(annotation) is Annotated:
         annotation, *extras = get_args(annotation)
         metadata = next(
             (
                 extra
                 for extra in extras
-                if hasattr(extra, "help") and hasattr(extra, "default")
+                if not isinstance(extra, Enum)
+                and hasattr(extra, "help")
+                and hasattr(extra, "default")
             ),
-            signature_default,
+            metadata,
         )
 
     return annotation, metadata
 
 
 def _guard_enum_parameter_metadata(metadata: Any) -> None:
+    # Plain enum defaults can expose members named like option settings.
+    if isinstance(metadata, Enum):
+        return
+    if getattr(metadata, "default_factory", None) is not None:
+        raise TypeError("String-enum default factories are not supported")
     if any(
         getattr(metadata, name, None) is not None for name in ("click_type", "parser")
     ):
@@ -128,7 +136,11 @@ def _registered_parameter_details(
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )
-    raw_default = getattr(default_source, "default", default_source)
+    raw_default = (
+        default_source
+        if isinstance(default_source, Enum)
+        else getattr(default_source, "default", default_source)
+    )
     declared_aliases = [
         declaration
         for declaration in (getattr(metadata, "param_decls", None) or ())
@@ -360,9 +372,14 @@ class CLIInspector(BaseInspector):
                 desc = param.help
             else:
                 original = callback_params.get(param.name)
-                original_help = getattr(
-                    getattr(original, "default", None), "help", None
+                metadata = (
+                    _parameter_annotation_metadata(
+                        original.annotation, original.default
+                    )[1]
+                    if original
+                    else None
                 )
+                original_help = getattr(metadata, "help", None)
                 if isinstance(original_help, str):
                     desc = original_help
 

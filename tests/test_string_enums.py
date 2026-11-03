@@ -187,8 +187,9 @@ def test_enum_custom_choices_refuse_before_writes(
 
 
 @pytest.mark.parametrize("occupied_alias", [False, True])
+@pytest.mark.parametrize("fallback", [False, True])
 def test_nullable_enum_preserves_optional_helper_bindings(
-    enum_source, tmp_path, occupied_alias
+    enum_source, tmp_path, occupied_alias, fallback, monkeypatch
 ):
     helpers = "def Optional(mode):\n    return 'none' if mode is None else mode.value\n"
     if occupied_alias:
@@ -214,6 +215,12 @@ def test_nullable_enum_preserves_optional_helper_bindings(
         effect.unlink()
     assert CliRunner().invoke(native, [str(effect), "--mode", "invalid"]).exit_code == 2
     assert not effect.exists()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
     loaded = intpot.load(enum_source)
     cli: dict[str, Any] = {"__name__": "nullable_collision_cli"}
     exec(CLIGenerator().generate(loaded.schema), cli)
@@ -268,6 +275,81 @@ def test_nullable_enum_preserves_optional_helper_bindings(
             assert not effect.exists()
 
     asyncio.run(check_mcp())
+
+
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("scaffold", [False, True])
+def test_enum_default_factories_refuse_without_execution(
+    enum_source, tmp_path, monkeypatch, target, fallback, annotated, scaffold
+):
+    declaration = (
+        "mode: Annotated[Maybe[Mode], typer.Option(default_factory=choose)]"
+        if annotated
+        else "mode: Maybe[Mode] = typer.Option(default_factory=choose)"
+    )
+    enum_source.write_text(
+        "from pathlib import Path\nfrom typing import Optional as Maybe, Annotated\nimport typer\n"
+        "from .modes import Mode\ncalls = []\n"
+        "def choose():\n    calls.append('factory')\n    return Mode.FAST\n"
+        "app = typer.Typer()\n@app.command()\n"
+        f"def run(output: str, {declaration}):\n"
+        "    Path(output).write_text(mode.value)\n    typer.echo(mode.value)\n"
+    )
+    _, native = detect_source(enum_source)
+    module = sys.modules["enumapp.main"]
+    assert module.calls == []
+    effect = tmp_path / "factory-effect"
+    result = CliRunner().invoke(native, [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "fast" and module.calls == ["factory"]
+    effect.unlink()
+    explicit = CliRunner().invoke(native, [str(effect), "--mode", "safe"])
+    assert explicit.exit_code == 0, explicit.exception
+    assert effect.read_text() == "safe" and module.calls == ["factory"]
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / f"factory-{target}.py"
+    with pytest.raises(TypeError):
+        intpot.load(enum_source).write(destination, target, allow_scaffold=scaffold)
+    assert not destination.exists() and not effect.exists()
+    assert module.calls == ["factory"]
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_enum_member_names_are_not_option_metadata(
+    enum_source, tmp_path, monkeypatch, fallback
+):
+    enum_source.with_name("modes.py").write_text(
+        "from enum import Enum\nclass Mode(str, Enum):\n"
+        " SAFE='safe'\n FAST='fast'\n default_factory='factory member'\n"
+        " parser='parser member'\n click_type='click member'\n case_sensitive=''\n"
+        " default='wrong default member'\n help='member help'\n"
+    )
+    _, native = detect_source(enum_source)
+    effect = tmp_path / "metadata-member-effect"
+    result = CliRunner().invoke(native, [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "safe"
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    namespace: dict[str, Any] = {"__name__": "metadata_members_api"}
+    exec(intpot.load(enum_source).to_api(), namespace)
+    with TestClient(namespace["app"]) as client:
+        result = client.post("/run", json={"output": str(effect)})
+        assert result.status_code == 200, result.text
+        assert effect.read_text() == "safe"
 
 
 def test_postponed_enum_annotation(enum_source):

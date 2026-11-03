@@ -54,7 +54,10 @@ def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
     for tool in tools:
         _scan_type_string(tool.return_type, found)
         for param in tool.parameters:
-            _scan_type_string(param.type_annotation, found)
+            # Enum annotations are replaced by private aliases at rendering time.
+            # Their original spelling can introduce unused, conflicting imports.
+            if param.string_enum is None:
+                _scan_type_string(param.type_annotation, found)
     return sorted(found)
 
 
