@@ -90,10 +90,10 @@ def _primary_option_name(aliases: list[str]) -> str | None:
     return primary.split("/", 1)[0].lstrip("-") if primary else None
 
 
-def _registered_parameter_details(
+def _parameter_annotation_metadata(
     annotation: Any, signature_default: Any
-) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
-    """Normalize callback annotations and Typer metadata without building Click."""
+) -> tuple[Any, Any]:
+    """Read original option metadata in either inspector path."""
     metadata = signature_default
     if get_origin(annotation) is Annotated:
         annotation, *extras = get_args(annotation)
@@ -106,11 +106,25 @@ def _registered_parameter_details(
             signature_default,
         )
 
-    if (
-        not getattr(metadata, "case_sensitive", True)
-        and annotation_string_enum(annotation) is not None
+    return annotation, metadata
+
+
+def _guard_enum_parameter_metadata(metadata: Any) -> None:
+    if any(
+        getattr(metadata, name, None) is not None for name in ("click_type", "parser")
     ):
+        raise TypeError("Custom enum parameter types and parsers are not supported")
+    if not getattr(metadata, "case_sensitive", True):
         raise TypeError("Unsupported case-insensitive enum parameters")
+
+
+def _registered_parameter_details(
+    annotation: Any, signature_default: Any
+) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
+    """Normalize callback annotations and Typer metadata without building Click."""
+    annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
+    if annotation_string_enum(annotation) is not None:
+        _guard_enum_parameter_metadata(metadata)
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )
@@ -355,6 +369,11 @@ class CLIInspector(BaseInspector):
             original = callback_params.get(param.name)
             enum = annotation_string_enum(original.annotation) if original else None
             if enum is not None:
+                assert original is not None
+                _, metadata = _parameter_annotation_metadata(
+                    original.annotation, original.default
+                )
+                _guard_enum_parameter_metadata(metadata)
                 if (
                     not getattr(param.type, "case_sensitive", True)
                     or getattr(param, "multiple", False)

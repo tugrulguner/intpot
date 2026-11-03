@@ -217,7 +217,9 @@ helpers do not import modules. Generated annotations/defaults import the origina
 package enum with collision-safe aliases, preserving instances and allowed-value
 validation. The original application package remains a dependency. Local/unimportable,
 custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
-collections are refused. This does not add API/MCP-source enum recovery or general
+collections are refused. Explicit `click_type` and `parser` overrides on enum parameters
+are also refused in both constructed and registered-command inspection, before writes
+even with scaffold permission. This does not add API/MCP-source enum recovery or general
 callback translation. Existing live `App` callable/default behavior remains separate.
 
 ### `intpot.inspect_app(source_type, app_instance)`

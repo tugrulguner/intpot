@@ -134,6 +134,58 @@ def test_registered_fallback_preserves_enum_case_refusal(
     assert not destination.exists()
 
 
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("override", ["click_type", "parser"])
+def test_enum_custom_choices_refuse_before_writes(
+    enum_source, tmp_path, monkeypatch, target, fallback, annotated, scaffold, override
+):
+    enum_source.with_name("modes.py").write_text(
+        "from enum import StrEnum\nclass Mode(StrEnum):\n FAST='fast'\n SAFE='safe'\n"
+    )
+    selection = "_Choice(['safe'])" if override == "click_type" else "_only_safe"
+    declaration = (
+        f"mode: Annotated[Mode, typer.Option({override}={selection})] = Mode.SAFE"
+        if annotated
+        else f"mode: Mode = typer.Option(Mode.SAFE, {override}={selection})"
+    )
+    enum_source.write_text(
+        "from pathlib import Path\nfrom typing import Annotated\nimport typer\n"
+        "from typer.main import get_click_type\nfrom typer.models import OptionInfo\n"
+        "from .modes import Mode\n"
+        "_Choice = type(get_click_type(annotation=Mode, parameter_info=OptionInfo()))\n"
+        "def _only_safe(value):\n"
+        "    if value != 'safe':\n        raise ValueError('Only safe is allowed')\n"
+        "    return Mode.SAFE\n"
+        "app = typer.Typer()\n@app.command()\n"
+        f"def run(output: str, {declaration}):\n"
+        "    Path(output).write_text(str(mode))\n    typer.echo(str(mode))\n"
+    )
+    _, original = detect_source(enum_source)
+    effect = tmp_path / "native-restricted-choice"
+    runner = CliRunner()
+    for arguments in ([], ["--mode", "safe"]):
+        accepted = runner.invoke(original, [str(effect), *arguments])
+        assert accepted.exit_code == 0, accepted.exception
+        assert effect.read_text() == "safe"
+        effect.unlink()
+    assert runner.invoke(original, [str(effect), "--mode", "fast"]).exit_code == 2
+    assert not effect.exists()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(original, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / f"restricted-{target}.py"
+    with pytest.raises(TypeError, match=r"Custom.*enum"):
+        intpot.load(enum_source).write(destination, target, allow_scaffold=scaffold)
+    assert not destination.exists()
+    assert not effect.exists()
+
+
 def test_postponed_enum_annotation(enum_source):
     enum_source.write_text(
         "from __future__ import annotations\n" + enum_source.read_text()

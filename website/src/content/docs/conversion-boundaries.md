@@ -45,7 +45,11 @@ Generated code imports the original type and uses native framework validation;
 valid inputs reach bodies as enum instances, invalid values are rejected before
 file effects in the conformance fixture. The source package remains a dependency.
 Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
-remain refused. These guards do not translate CLI callbacks or lifecycle behavior.
+remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
+also refused before writes, including scaffold generation, in both normal and
+registered-command fallback inspection. An enum class alone does not describe a
+parameter whose native choices or parsing have been overridden. These guards do not
+translate CLI callbacks or lifecycle behavior.
 
 The [Docling experiment](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/docling.md)
 verifies native HTML-to-Markdown file creation and overwriting, while Intpot still
