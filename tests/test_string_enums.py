@@ -330,7 +330,7 @@ def test_enum_member_names_are_not_option_metadata(
         "from enum import Enum\nclass Mode(str, Enum):\n"
         " SAFE='safe'\n FAST='fast'\n default_factory='factory member'\n"
         " parser='parser member'\n click_type='click member'\n case_sensitive=''\n"
-        " default='wrong default member'\n help='member help'\n"
+        " default='wrong default member'\n help='member help'\n envvar='environment member'\n"
     )
     _, native = detect_source(enum_source)
     effect = tmp_path / "metadata-member-effect"
@@ -350,6 +350,66 @@ def test_enum_member_names_are_not_option_metadata(
         result = client.post("/run", json={"output": str(effect)})
         assert result.status_code == 200, result.text
         assert effect.read_text() == "safe"
+
+
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("environment", [None, "fast", "invalid"])
+@pytest.mark.parametrize(
+    "names", ["INTPOT_REVIEW_MODE", ["INTPOT_REVIEW_MISSING", "INTPOT_REVIEW_MODE"]]
+)
+def test_enum_environment_defaults_refuse_before_writes(
+    enum_source,
+    tmp_path,
+    monkeypatch,
+    target,
+    fallback,
+    annotated,
+    scaffold,
+    environment,
+    names,
+):
+    monkeypatch.delenv("INTPOT_REVIEW_MISSING", raising=False)
+    if environment is None:
+        monkeypatch.delenv("INTPOT_REVIEW_MODE", raising=False)
+    else:
+        monkeypatch.setenv("INTPOT_REVIEW_MODE", environment)
+    declaration = (
+        f"mode: Annotated[Mode, typer.Option(envvar={names!r})] = Mode.SAFE"
+        if annotated
+        else f"mode: Mode = typer.Option(Mode.SAFE, envvar={names!r})"
+    )
+    enum_source.write_text(
+        "from pathlib import Path\nfrom typing import Annotated\nimport typer\n"
+        "from .modes import Mode\napp = typer.Typer()\n@app.command()\n"
+        f"def run(output: str, {declaration}):\n"
+        "    Path(output).write_text(mode.value)\n    typer.echo(mode.value)\n"
+    )
+    _, native = detect_source(enum_source)
+    effect = tmp_path / "environment-effect"
+    result = CliRunner().invoke(native, [str(effect)])
+    if environment == "invalid":
+        assert result.exit_code == 2 and not effect.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        assert effect.read_text() == (environment or "safe")
+        effect.unlink()
+    explicit = CliRunner().invoke(native, [str(effect), "--mode", "safe"])
+    assert explicit.exit_code == 0, explicit.exception
+    assert effect.read_text() == "safe"
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / f"environment-{target}.py"
+    with pytest.raises(TypeError, match=r"Environment.*enum"):
+        intpot.load(enum_source).write(destination, target, allow_scaffold=scaffold)
+    assert not destination.exists() and not effect.exists()
 
 
 def test_postponed_enum_annotation(enum_source):

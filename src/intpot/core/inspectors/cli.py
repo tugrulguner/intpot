@@ -118,6 +118,8 @@ def _guard_enum_parameter_metadata(metadata: Any) -> None:
         return
     if getattr(metadata, "default_factory", None) is not None:
         raise TypeError("String-enum default factories are not supported")
+    if getattr(metadata, "envvar", None) is not None:
+        raise TypeError("Environment-backed enum parameters are not supported")
     if any(
         getattr(metadata, name, None) is not None for name in ("click_type", "parser")
     ):

@@ -46,7 +46,8 @@ valid inputs reach bodies as enum instances, invalid values are rejected before
 file effects in the conformance fixture. The source package remains a dependency.
 Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
 remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
-also refused before writes, as are enum default factories (without executing them),
+also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
+declarations (without snapshotting environment values),
 including scaffold generation, in both normal and
 registered-command fallback inspection. An enum class alone does not describe a
 parameter whose native choices or parsing have been overridden. These guards do not
