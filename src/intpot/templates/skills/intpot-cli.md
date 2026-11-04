@@ -5,7 +5,10 @@
 module-level `str, Enum` or `StrEnum` exported by an already-loaded regular package.
 Defaults use immutable `StringEnumDefault(enum, member)` descriptors, not live enum
 objects. JSON includes the descriptor only when present; its data-only `from_dict`
-helpers do not import modules. Generated annotations/defaults import the original
+helpers do not import modules. Live captures also retain weak, process-local identity
+evidence outside the schema, so replacing an export with an identical-member class
+refuses before writes. Fresh captures are independent; JSON-decoded descriptors
+carry data snapshots, not proof of an earlier process identity. Generated annotations/defaults import the original
 package enum with collision-safe aliases, preserving instances and allowed-value
 validation. The original application package remains a dependency. Local/unimportable,
 custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum

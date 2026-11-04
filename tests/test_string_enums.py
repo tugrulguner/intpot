@@ -540,6 +540,63 @@ def test_stable_unicode_enum_bindings_preserve_native_effects(
     asyncio.run(check())
 
 
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("default", ["Mode.SAFE", "'safe'"])
+def test_identical_enum_replacement_refuses_before_writes(
+    enum_source, tmp_path, monkeypatch, target, fallback, scaffold, default
+):
+    from enum import Enum
+
+    enum_source.with_name("helpers.py").write_text(
+        "from .modes import Mode as OriginalMode\ndef matches(mode):\n    return type(mode) is OriginalMode\n"
+    )
+    enum_source.write_text(
+        "from pathlib import Path\nimport typer\nfrom .modes import Mode\nfrom .helpers import matches\n"
+        "app=typer.Typer()\n@app.command()\n"
+        f"def run(output:str,mode:Mode={default}):\n"
+        "    value=str(matches(mode))\n    Path(output).write_text(value)\n    typer.echo(value)\n"
+    )
+    _, native = detect_source(enum_source)
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    loaded = intpot.load(enum_source)
+    schema = loaded.schema
+    if fallback:
+        monkeypatch.delattr(native, "_get_command")
+    namespace: dict[str, Any] = {"__name__": "unchanged_enum_api"}
+    exec(loaded.to_api(), namespace)
+    effect = tmp_path / "identity-effect"
+    with TestClient(namespace["app"]) as client:
+        response = client.post("/run", json={"output": str(effect)})
+        assert response.status_code == 200, response.text
+        assert effect.read_text() == "True"
+        effect.unlink()
+    owner = sys.modules["enumapp.modes"]
+    original = owner.Mode
+    owner.Mode = Enum(
+        "Mode",
+        {name: member.value for name, member in original.__members__.items()},
+        type=str,
+        module=owner.__name__,
+    )
+    assert owner.Mode is not original
+    result = CliRunner().invoke(native, [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "True"
+    effect.unlink()
+    assert loaded.schema is schema
+    destination = tmp_path / f"identical-{target}.py"
+    with pytest.raises(TypeError, match="changed since inspection"):
+        loaded.write(destination, target, allow_scaffold=scaffold)
+    assert not destination.exists() and not effect.exists()
+
+
 def test_postponed_enum_annotation(enum_source):
     enum_source.write_text(
         "from __future__ import annotations\n" + enum_source.read_text()

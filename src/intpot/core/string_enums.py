@@ -6,6 +6,7 @@ import keyword
 import sys
 import types
 import unicodedata
+import weakref
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, EnumType, StrEnum
@@ -22,7 +23,26 @@ def _identifier(value: str) -> bool:
     )
 
 
-@dataclass(frozen=True, slots=True)
+# Live capture evidence stays outside immutable/serialized metadata. Key by object
+# identity, not dataclass equality: fresh captures may describe different classes
+# with equal member data. Weak references retain neither snapshots nor classes.
+_CAPTURED_ENUMS: dict[
+    int, tuple[weakref.ReferenceType[StringEnumSpec], weakref.ReferenceType[type[Enum]]]
+] = {}
+
+
+def _remember_enum(spec: StringEnumSpec, candidate: type[Enum]) -> None:
+    key = id(spec)
+
+    def discard(reference: weakref.ReferenceType[StringEnumSpec]) -> None:
+        entry = _CAPTURED_ENUMS.get(key)
+        if entry is not None and entry[0] is reference:
+            _CAPTURED_ENUMS.pop(key, None)
+
+    _CAPTURED_ENUMS[key] = (weakref.ref(spec, discard), weakref.ref(candidate))
+
+
+@dataclass(frozen=True, slots=True, weakref_slot=True)
 class StringEnumSpec:
     module: str
     name: str
@@ -68,6 +88,9 @@ class StringEnumSpec:
     def resolve(self) -> type[Enum]:
         owner = sys.modules.get(self.module)
         candidate = vars(owner).get(self.name) if owner is not None else None
+        origin = _CAPTURED_ENUMS.get(id(self))
+        if origin is not None and origin[0]() is self and origin[1]() is not candidate:
+            raise TypeError("String-enum export identity changed since inspection")
         current = capture_string_enum(candidate, nullable=self.nullable)
         if current != self:
             raise TypeError("String-enum export or members changed since inspection")
@@ -146,7 +169,7 @@ def capture_string_enum(candidate: Any, *, nullable: bool = False) -> StringEnum
             getattr(StrEnum, name),
         ):
             raise TypeError("Custom string-enum methods are not supported")
-    return StringEnumSpec(
+    spec = StringEnumSpec(
         module_name,
         candidate.__name__,
         tuple(
@@ -155,6 +178,8 @@ def capture_string_enum(candidate: Any, *, nullable: bool = False) -> StringEnum
         ),
         nullable,
     )
+    _remember_enum(spec, cast(type[Enum], candidate))
+    return spec
 
 
 def annotation_string_enum(annotation: Any) -> StringEnumSpec | None:

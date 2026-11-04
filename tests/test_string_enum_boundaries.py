@@ -30,6 +30,73 @@ def test_enum_import_alias_refuses_identifier_normalization(alias):
         spec.alias({spec.key: alias})
 
 
+def test_equal_fresh_enum_capture_preserves_older_identity(enum_package):
+    from intpot.core.string_enums import capture_string_enum
+    from intpot.runtime import _copy_tool_info
+
+    _, root = enum_package
+    owner = __import__(f"{root.name}.modes", fromlist=["Mode"])
+    original = owner.Mode
+    old = capture_string_enum(original)
+    parameter = ParameterInfo(
+        "mode", default=StringEnumDefault(old, "SAFE"), string_enum=old
+    )
+    tool = ToolSchema.from_info(ToolInfo("run", parameters=[parameter]))
+    copied = ToolSchema.from_info(_copy_tool_info(tool.to_info()))
+    assert copied.parameters[0].string_enum is old
+    owner.Mode = Enum(
+        "Mode",
+        {name: member.value for name, member in original.__members__.items()},
+        type=str,
+        module=owner.__name__,
+    )
+    fresh = capture_string_enum(owner.Mode)
+    assert fresh == old and hash(fresh) == hash(old)
+    assert fresh.to_dict() == old.to_dict()
+    assert fresh.resolve() is owner.Mode
+    with pytest.raises(TypeError, match="identity changed"):
+        old.resolve()
+    copied_spec = copied.parameters[0].string_enum
+    assert copied_spec is not None
+    with pytest.raises(TypeError, match="identity changed"):
+        copied_spec.resolve()
+    assert fresh.resolve() is owner.Mode
+
+
+def test_enum_capture_evidence_retains_neither_snapshot_nor_class(enum_package):
+    import gc
+    import weakref
+    from dataclasses import fields
+
+    from intpot.core.string_enums import _CAPTURED_ENUMS, capture_string_enum
+
+    _, root = enum_package
+    owner = __import__(f"{root.name}.modes", fromlist=["Mode"])
+    spec = capture_string_enum(owner.Mode)
+    key = id(spec)
+    original = weakref.ref(owner.Mode)
+    payload = spec.to_dict()
+    decoded = StringEnumSpec.from_dict(json.loads(json.dumps(payload)))
+    assert decoded == spec and id(decoded) not in _CAPTURED_ENUMS
+    assert [field.name for field in fields(spec)] == [
+        "module",
+        "name",
+        "members",
+        "nullable",
+    ]
+    owner.Mode = Enum(
+        "Mode", {"FAST": "fast", "SAFE": "safe"}, type=str, module=owner.__name__
+    )
+    gc.collect()
+    assert original() is None
+    with pytest.raises(TypeError, match="identity changed"):
+        spec.resolve()
+    snapshot = weakref.ref(spec)
+    del spec
+    gc.collect()
+    assert snapshot() is None and key not in _CAPTURED_ENUMS
+
+
 @pytest.fixture
 def enum_package(tmp_path, monkeypatch):
     root = tmp_path / "enum_boundary_pkg"

@@ -44,6 +44,10 @@ retain detached `string_enum` metadata and symbolic default-member descriptors.
 Generated code imports the original type and uses native framework validation;
 valid inputs reach bodies as enum instances, invalid values are rejected before
 file effects in the conformance fixture. The source package remains a dependency.
+Live captured descriptors have weak, process-local identity evidence outside the
+immutable schema: replacing an export with a different class, even with identical
+members, refuses before writes. Equal fresh captures remain independent. JSON
+decoding stays data-only and does not establish an earlier live class identity.
 Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
 remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
 also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
