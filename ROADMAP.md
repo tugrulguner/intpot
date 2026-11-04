@@ -326,6 +326,13 @@ live-versus-ejected parity remain separate executable test families.
 
 ## Phase 4 — Richer types and practical conversion coverage
 
+- [x] Preserve ordinary importable scalar CLI string-enum choices/defaults through
+      immutable metadata, generated type imports, and native validation in unreleased source.
+      Controlled file-producing consumers are qualified; the Docling campaign has a
+      native baseline but still refuses enum collections and does not translate callbacks.
+      This is not general enum/model or full-application conversion.
+
+
 - [ ] Preserve parameter descriptions and supported `Annotated` metadata across targets
       ([#1](https://github.com/tugrulguner/intpot/issues/1),
       [#3](https://github.com/tugrulguner/intpot/issues/3),

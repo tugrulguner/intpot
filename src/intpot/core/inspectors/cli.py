@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from enum import Enum
 from typing import Annotated, Any, get_args, get_origin
 
 from intpot.core.inspectors._utils import (
@@ -15,6 +16,7 @@ from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
 from intpot.core.provenance import inspected_callable_metadata
+from intpot.core.string_enums import annotation_string_enum, enum_default
 
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
 # are not instances of anything in the standalone `click` package and its
@@ -89,26 +91,58 @@ def _primary_option_name(aliases: list[str]) -> str | None:
     return primary.split("/", 1)[0].lstrip("-") if primary else None
 
 
-def _registered_parameter_details(
+def _parameter_annotation_metadata(
     annotation: Any, signature_default: Any
-) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
-    """Normalize callback annotations and Typer metadata without building Click."""
-    metadata = signature_default
+) -> tuple[Any, Any]:
+    """Read original option metadata in either inspector path."""
+    metadata = None if isinstance(signature_default, Enum) else signature_default
     if get_origin(annotation) is Annotated:
         annotation, *extras = get_args(annotation)
         metadata = next(
             (
                 extra
                 for extra in extras
-                if hasattr(extra, "help") and hasattr(extra, "default")
+                if not isinstance(extra, Enum)
+                and hasattr(extra, "help")
+                and hasattr(extra, "default")
             ),
-            signature_default,
+            metadata,
         )
 
+    return annotation, metadata
+
+
+def _guard_enum_parameter_metadata(metadata: Any) -> None:
+    # Plain enum defaults can expose members named like option settings.
+    if isinstance(metadata, Enum):
+        return
+    if getattr(metadata, "default_factory", None) is not None:
+        raise TypeError("String-enum default factories are not supported")
+    if getattr(metadata, "envvar", None) is not None:
+        raise TypeError("Environment-backed enum parameters are not supported")
+    if any(
+        getattr(metadata, name, None) is not None for name in ("click_type", "parser")
+    ):
+        raise TypeError("Custom enum parameter types and parsers are not supported")
+    if not getattr(metadata, "case_sensitive", True):
+        raise TypeError("Unsupported case-insensitive enum parameters")
+
+
+def _registered_parameter_details(
+    annotation: Any, signature_default: Any
+) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
+    """Normalize callback annotations and Typer metadata without building Click."""
+    annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
+    if annotation_string_enum(annotation) is not None:
+        _guard_enum_parameter_metadata(metadata)
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )
-    raw_default = getattr(default_source, "default", default_source)
+    raw_default = (
+        default_source
+        if isinstance(default_source, Enum)
+        else getattr(default_source, "default", default_source)
+    )
     declared_aliases = [
         declaration
         for declaration in (getattr(metadata, "param_decls", None) or ())
@@ -223,6 +257,9 @@ class CLIInspector(BaseInspector):
                 ) = _registered_parameter_details(
                     annotations.get(param.name, param.annotation), param.default
                 )
+                enum = annotation_string_enum(annotation)
+                if enum is not None and default is not _SENTINEL:
+                    default = enum_default(enum, default)
                 parameters.append(
                     ParameterInfo(
                         name=param.name,
@@ -232,6 +269,7 @@ class CLIInspector(BaseInspector):
                         interface_name=parameter_interface_name,
                         aliases=aliases,
                         unsupported_callback=unsupported_callback,
+                        string_enum=enum,
                         **numeric_range,
                     )
                 )
@@ -304,7 +342,11 @@ class CLIInspector(BaseInspector):
         callback_params: dict[str, inspect.Parameter] = {}
         if callback is not None:
             try:
-                callback_params = dict(inspect.signature(callback).parameters)
+                callback_params = dict(
+                    inspect.signature(
+                        inspect.unwrap(callback), eval_str=True
+                    ).parameters
+                )
             except (TypeError, ValueError):
                 pass
 
@@ -332,12 +374,35 @@ class CLIInspector(BaseInspector):
                 desc = param.help
             else:
                 original = callback_params.get(param.name)
-                original_help = getattr(
-                    getattr(original, "default", None), "help", None
+                metadata = (
+                    _parameter_annotation_metadata(
+                        original.annotation, original.default
+                    )[1]
+                    if original
+                    else None
                 )
+                original_help = getattr(metadata, "help", None)
                 if isinstance(original_help, str):
                     desc = original_help
 
+            original = callback_params.get(param.name)
+            enum = annotation_string_enum(original.annotation) if original else None
+            if enum is not None:
+                assert original is not None
+                _, metadata = _parameter_annotation_metadata(
+                    original.annotation, original.default
+                )
+                _guard_enum_parameter_metadata(metadata)
+                if (
+                    not getattr(param.type, "case_sensitive", True)
+                    or getattr(param, "multiple", False)
+                    or getattr(param, "nargs", 1) != 1
+                ):
+                    raise TypeError(
+                        "Collection or case-insensitive enum parameters are not supported"
+                    )
+                if default is not _SENTINEL:
+                    default = enum_default(enum, default)
             aliases = _option_aliases(param)
             params.append(
                 ParameterInfo(
@@ -348,6 +413,7 @@ class CLIInspector(BaseInspector):
                     interface_name=_primary_option_name(aliases),
                     aliases=aliases,
                     unsupported_callback=callable(getattr(param, "callback", None)),
+                    string_enum=enum,
                     **numeric_range,
                 )
             )

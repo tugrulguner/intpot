@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 from uuid import UUID
 
+from intpot.core.string_enums import StringEnumDefault, StringEnumSpec
+
 
 class SourceType(Enum):
     PYTHON = "python"
@@ -184,7 +186,7 @@ class _FrozenDict(Mapping[Any, Any]):
 
 def _freeze_default(value: Any) -> Any:
     """Detach and recursively freeze supported Python parameter defaults."""
-    if value is _SENTINEL:
+    if value is _SENTINEL or isinstance(value, StringEnumDefault):
         return value
     if isinstance(
         value,
@@ -325,6 +327,8 @@ def _json_tag(kind: str, **payload: Any) -> dict[str, Any]:
 
 def _json_default(value: Any) -> Any:
     """Normalize a frozen default into a deterministic JSON-compatible value."""
+    if isinstance(value, StringEnumDefault):
+        return _json_tag("string-enum", **value.to_dict())
     if isinstance(value, _FrozenBytearray):
         return _json_tag(
             "bytearray", base64=base64.b64encode(bytes(value)).decode("ascii")
@@ -441,6 +445,8 @@ def _source_default(value: Any, aliases: Mapping[str, str] | None = None) -> str
         value = _freeze_default(value)
     if value is _SENTINEL:
         raise TypeError("Required parameters do not have a source default")
+    if isinstance(value, StringEnumDefault):
+        return f"{value.enum.alias(aliases)}.{value.member}"
     if isinstance(value, _FrozenBytearray):
         return f"{aliases['builtins']}.bytearray({bytes(value)!r})"
     if isinstance(value, _FrozenDeque):
@@ -533,6 +539,8 @@ def _default_imports(value: Any, aliases: Mapping[str, str] | None = None) -> se
         value, (bytearray, deque, dict, list, tuple, set, frozenset, slice)
     ):
         value = _freeze_default(value)
+    if isinstance(value, StringEnumDefault):
+        return {value.enum.import_source(dict(aliases))}
     imports: set[str] = set()
     if isinstance(value, _FrozenBytearray):
         imports.add(f"import builtins as {aliases['builtins']}")
@@ -771,6 +779,7 @@ class ParameterInfo:
     unsupported_numeric_range: bool = False
     unsupported_api_numeric_range: bool = False
     unsupported_mcp_numeric_range: bool = False
+    string_enum: StringEnumSpec | None = None
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -902,6 +911,7 @@ class ParameterSchema:
     unsupported_numeric_range: bool = False
     unsupported_api_numeric_range: bool = False
     unsupported_mcp_numeric_range: bool = False
+    string_enum: StringEnumSpec | None = None
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -919,6 +929,19 @@ class ParameterSchema:
         ):
             object.__setattr__(self, "binding_name", source_name)
         object.__setattr__(self, "name", canonical_name)
+        if self.string_enum is not None:
+            if not isinstance(self.string_enum, StringEnumSpec):
+                raise TypeError("string_enum must be immutable StringEnumSpec metadata")
+            if self.default is not _SENTINEL and not (
+                (
+                    isinstance(self.default, StringEnumDefault)
+                    and self.default.enum == self.string_enum
+                )
+                or (self.default is None and self.string_enum.nullable)
+            ):
+                raise TypeError("Enum default must match its string_enum metadata")
+        elif isinstance(self.default, StringEnumDefault):
+            raise TypeError("Enum default requires string_enum metadata")
         object.__setattr__(self, "default", _freeze_default(self.default))
         object.__setattr__(self, "aliases", tuple(self.aliases))
 
@@ -941,6 +964,7 @@ class ParameterSchema:
             self.unsupported_numeric_range,
             self.unsupported_api_numeric_range,
             self.unsupported_mcp_numeric_range,
+            self.string_enum,
         ) == (
             other.name,
             other.type_annotation,
@@ -957,6 +981,7 @@ class ParameterSchema:
             other.unsupported_numeric_range,
             other.unsupported_api_numeric_range,
             other.unsupported_mcp_numeric_range,
+            other.string_enum,
         )
 
     def __hash__(self) -> int:
@@ -977,6 +1002,7 @@ class ParameterSchema:
                 self.unsupported_numeric_range,
                 self.unsupported_api_numeric_range,
                 self.unsupported_mcp_numeric_range,
+                self.string_enum,
             )
         )
 
@@ -998,6 +1024,7 @@ class ParameterSchema:
             unsupported_numeric_range=parameter.unsupported_numeric_range,
             unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
             unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
+            string_enum=parameter.string_enum,
         )
 
     @property
@@ -1022,6 +1049,7 @@ class ParameterSchema:
             unsupported_numeric_range=self.unsupported_numeric_range,
             unsupported_api_numeric_range=self.unsupported_api_numeric_range,
             unsupported_mcp_numeric_range=self.unsupported_mcp_numeric_range,
+            string_enum=self.string_enum,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1051,6 +1079,8 @@ class ParameterSchema:
             data["unsupported_api_numeric_range"] = True
         if self.unsupported_mcp_numeric_range:
             data["unsupported_mcp_numeric_range"] = True
+        if self.string_enum is not None:
+            data["string_enum"] = self.string_enum.to_dict()
         if not self.required:
             data["default"] = _json_default(self.default)
         return data

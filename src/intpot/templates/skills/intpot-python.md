@@ -189,7 +189,7 @@ framework-visible spelling such as `send-email` when it differs.
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
 `param_source`, `placement`, `binding_name`, `interface_name`, `aliases`,
 `unsupported_callback`, `minimum`, `maximum`, `unsupported_numeric_range`,
-`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, plus a
+`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, `string_enum`, plus a
 `required` property. `binding_name` preserves a source callable's valid Python parameter
 spelling when canonical sanitization changes it. `interface_name` is the primary
 framework-visible parameter spelling; `aliases` retains exact additional Typer/Click
@@ -206,6 +206,24 @@ API/MCP generation refuses it. This does not add callback support to `App.tool()
 
 `param_source` is `ParamSource.query` / `header` / `path` / `body` for FastAPI sources
 that declared one, otherwise `None`.
+
+
+**Ordinary CLI string enums (unreleased):** `string_enum` is detached immutable
+`StringEnumSpec(module, name, members, nullable)` metadata. The initial subset is a
+module-level `str, Enum` or `StrEnum` exported by an already-loaded regular package.
+Defaults use immutable `StringEnumDefault(enum, member)` descriptors, not live enum
+objects. JSON includes the descriptor only when present; its data-only `from_dict`
+helpers do not import modules. Live captures also retain weak, process-local identity
+evidence outside the schema, so replacing an export with an identical-member class
+refuses before writes. Fresh captures are independent; JSON-decoded descriptors
+carry data snapshots, not proof of an earlier process identity. Generated annotations/defaults import the original
+package enum with collision-safe aliases, preserving instances and allowed-value
+validation. The original application package remains a dependency. Local/unimportable,
+custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
+collections are refused. Explicit `click_type` and `parser` overrides on enum parameters
+and enum default factories or explicit `envvar` declarations are also refused in both constructed and registered-command inspection, before writes
+even with scaffold permission. Enum module components, type/member names and introduced aliases must preserve exact spelling under Python NFKC identifier normalization. Non-stable names are refused, not rewritten; stable Unicode remains supported. This does not add API/MCP-source enum recovery or general
+callback translation. Existing live `App` callable/default behavior remains separate.
 
 ### `intpot.inspect_app(source_type, app_instance)`
 

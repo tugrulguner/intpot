@@ -37,6 +37,34 @@ Inspected and registered tool metadata is compiled into immutable `ApplicationSc
 
 The source-to-target transform adjusts parameter placement, names, and aliases before the target generator renders Python. For instance, FastAPI path/query/body inputs cannot all become an equivalent CLI option or MCP argument: the transformer records the source semantics and only maps shapes it supports. Do not treat two schemas with similar field names as proof of equivalent validation or wire behavior—test the generated target itself.
 
+## Ordinary CLI string enums (unreleased)
+
+Scalar choices/defaults from ordinary module-level string enums in regular packages
+retain detached `string_enum` metadata and symbolic default-member descriptors.
+Generated code imports the original type and uses native framework validation;
+valid inputs reach bodies as enum instances, invalid values are rejected before
+file effects in the conformance fixture. The source package remains a dependency.
+Live captured descriptors have weak, process-local identity evidence outside the
+immutable schema: replacing an export with a different class, even with identical
+members, refuses before writes. Equal fresh captures remain independent. JSON
+decoding stays data-only and does not establish an earlier live class identity.
+Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
+remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
+also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
+declarations (without snapshotting environment values). Module components, enum
+type/member names and introduced aliases must preserve exact spelling under Python
+NFKC identifier normalization; non-stable names refuse rather than being rewritten,
+while stable Unicode remains supported. These refusals apply before writes,
+including scaffold generation, in both normal and
+registered-command fallback inspection. An enum class alone does not describe a
+parameter whose native choices or parsing have been overridden. These guards do not
+translate CLI callbacks or lifecycle behavior.
+
+The [Docling experiment](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/docling.md)
+verifies native HTML-to-Markdown file creation and overwriting, while Intpot still
+refuses the selected command's unsupported enum collections. Callback semantics also
+remain unresolved. Native Docling success is not a converted HTTP/MCP success.
+
 ## Explicit tool selection (unreleased)
 
 `selected = app.select("mapping")` creates an independent conversion view after
