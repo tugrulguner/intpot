@@ -47,7 +47,10 @@ file effects in the conformance fixture. The source package remains a dependency
 Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
 remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
 also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
-declarations (without snapshotting environment values),
+declarations (without snapshotting environment values). Module components, enum
+type/member names and introduced aliases must preserve exact spelling under Python
+NFKC identifier normalization; non-stable names refuse rather than being rewritten,
+while stable Unicode remains supported. These refusals apply before writes,
 including scaffold generation, in both normal and
 registered-command fallback inspection. An enum class alone does not describe a
 parameter whose native choices or parsing have been overridden. These guards do not

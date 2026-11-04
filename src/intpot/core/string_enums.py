@@ -5,6 +5,7 @@ from __future__ import annotations
 import keyword
 import sys
 import types
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, EnumType, StrEnum
@@ -12,7 +13,13 @@ from typing import Annotated, Any, Union, cast, get_args, get_origin
 
 
 def _identifier(value: str) -> bool:
-    return type(value) is str and value.isidentifier() and not keyword.iskeyword(value)
+    # Python normalizes identifier tokens; runtime Enum names retain exact spelling.
+    return (
+        type(value) is str
+        and value.isidentifier()
+        and not keyword.iskeyword(value)
+        and unicodedata.normalize("NFKC", value) == value
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +56,10 @@ class StringEnumSpec:
         return f"enum:{self.module}.{self.name}"
 
     def alias(self, aliases: Mapping[str, str]) -> str:
-        return aliases.get(self.key, f"_intpot_enum_{self.name}")
+        alias = aliases.get(self.key, f"_intpot_enum_{self.name}")
+        if not _identifier(alias):
+            raise ValueError("Invalid string-enum import alias")
+        return alias
 
     def import_source(self, aliases: Mapping[str, str]) -> str:
         self.resolve()

@@ -412,6 +412,134 @@ def test_enum_environment_defaults_refuse_before_writes(
     assert not destination.exists() and not effect.exists()
 
 
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("collision", [False, True])
+@pytest.mark.parametrize("kind", ["member", "type", "module"])
+def test_enum_normalized_identifiers_refuse_before_writes(
+    enum_source, tmp_path, monkeypatch, target, fallback, scaffold, collision, kind
+):
+    enum_source.with_name("modes.py").write_text(
+        "from enum import Enum\n"
+        + (
+            "Mode=Enum('Mode', {'\u212aEY':'safe'"
+            + (",'KEY':'fast'" if collision else ",'OTHER':'fast'")
+            + "},type=str,module=__name__)\n"
+            if kind == "member"
+            else "Mode=Enum('\u212aind', {'SAFE':'safe','FAST':'fast'},type=str,module=__name__)\nglobals()['\u212aind']=Mode\n"
+            + (
+                "Kind=Enum('Kind', {'SAFE':'fast','FAST':'safe'},type=str,module=__name__)\n"
+                if collision
+                else ""
+            )
+            if kind == "type"
+            else "Mode=Enum('Mode', {'SAFE':'safe','FAST':'fast'},type=str,module=__name__)\n"
+        )
+    )
+    if kind == "module":
+        enum_source.with_name("\uff26\uff21\uff33\uff34.py").write_text(
+            enum_source.with_name("modes.py").read_text()
+        )
+        if collision:
+            enum_source.with_name("FAST.py").write_text(
+                "from enum import Enum\nMode=Enum('Mode', {'SAFE':'fast','FAST':'safe'},type=str,module=__name__)\n"
+            )
+        source_import = "from importlib import import_module\nMode=import_module('.\uff26\uff21\uff33\uff34',__package__).Mode\n"
+    else:
+        source_import = "from .modes import Mode\n"
+    member = "\u212aEY" if kind == "member" else "SAFE"
+    enum_source.write_text(
+        "from pathlib import Path\nimport typer\n"
+        + source_import
+        + "app=typer.Typer()\n@app.command()\n"
+        + f"def run(output:str,mode:Mode=Mode[{member!r}]):\n"
+        + "    Path(output).write_text(mode.value)\n    typer.echo(mode.value)\n"
+    )
+    _, native = detect_source(enum_source)
+    effect = tmp_path / "normalization-effect"
+    result = CliRunner().invoke(native, [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "safe"
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / f"normalization-{target}.py"
+    with pytest.raises((TypeError, ValueError), match="string-enum"):
+        intpot.load(enum_source).write(destination, target, allow_scaffold=scaffold)
+    assert not destination.exists() and not effect.exists()
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_stable_unicode_enum_bindings_preserve_native_effects(
+    enum_source, tmp_path, monkeypatch, fallback
+):
+    enum_source.with_name("ΔΟΚΙΜΗ.py").write_text(
+        "from enum import Enum\nMode=Enum('ΔΕΛΤΑ', {'ΑΣΦΑΛΕΣ':'safe','ΓΡΗΓΟΡΟ':'fast'},type=str,module=__name__)\n"
+        "globals()['ΔΕΛΤΑ']=Mode\n"
+    )
+    enum_source.write_text(
+        "from pathlib import Path\nimport typer\nfrom .ΔΟΚΙΜΗ import Mode\n"
+        "def _intpot_enum_ΔΕΛΤΑ():\n    return '!'\n"
+        "app=typer.Typer()\n@app.command()\n"
+        "def run(output:str,mode:Mode=Mode['ΑΣΦΑΛΕΣ']):\n"
+        "    value=mode.value+_intpot_enum_ΔΕΛΤΑ()\n"
+        "    Path(output).write_text(value)\n    typer.echo(value)\n"
+    )
+    _, native = detect_source(enum_source)
+    effect = tmp_path / "unicode-effect"
+    result = CliRunner().invoke(native, [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "safe!"
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    loaded = intpot.load(enum_source)
+    namespace: dict[str, Any] = {"__name__": "stable_unicode_cli"}
+    exec(CLIGenerator().generate(loaded.schema), namespace)
+    result = CliRunner().invoke(namespace["app"], [str(effect)])
+    assert result.exit_code == 0, result.exception
+    assert effect.read_text() == "safe!"
+    effect.unlink()
+    namespace = {"__name__": "stable_unicode_api"}
+    exec(loaded.to_api(), namespace)
+    with TestClient(namespace["app"]) as client:
+        for extra, expected in (({}, "safe!"), ({"mode": "fast"}, "fast!")):
+            response = client.post("/run", json={"output": str(effect), **extra})
+            assert response.status_code == 200, response.text
+            assert effect.read_text() == expected
+            effect.unlink()
+        assert (
+            client.post(
+                "/run", json={"output": str(effect), "mode": "invalid"}
+            ).status_code
+            == 422
+        )
+        assert not effect.exists()
+    namespace = {"__name__": "stable_unicode_mcp"}
+    exec(loaded.to_mcp(), namespace)
+
+    async def check():
+        async with Client(namespace["mcp"]) as client:
+            for extra, expected in (({}, "safe!"), ({"mode": "fast"}, "fast!")):
+                response = await client.call_tool(
+                    "run", {"output": str(effect), **extra}
+                )
+                assert response.content[0].text == expected
+                assert effect.read_text() == expected
+                effect.unlink()
+
+    asyncio.run(check())
+
+
 def test_postponed_enum_annotation(enum_source):
     enum_source.write_text(
         "from __future__ import annotations\n" + enum_source.read_text()

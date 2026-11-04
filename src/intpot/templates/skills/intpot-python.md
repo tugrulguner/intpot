@@ -219,7 +219,7 @@ validation. The original application package remains a dependency. Local/unimpor
 custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
 collections are refused. Explicit `click_type` and `parser` overrides on enum parameters
 and enum default factories or explicit `envvar` declarations are also refused in both constructed and registered-command inspection, before writes
-even with scaffold permission. This does not add API/MCP-source enum recovery or general
+even with scaffold permission. Enum module components, type/member names and introduced aliases must preserve exact spelling under Python NFKC identifier normalization. Non-stable names are refused, not rewritten; stable Unicode remains supported. This does not add API/MCP-source enum recovery or general
 callback translation. Existing live `App` callable/default behavior remains separate.
 
 ### `intpot.inspect_app(source_type, app_instance)`

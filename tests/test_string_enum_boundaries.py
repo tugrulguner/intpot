@@ -16,6 +16,20 @@ from intpot.core.models import ParameterInfo, ParameterSchema, ToolInfo, ToolSch
 from intpot.core.string_enums import StringEnumDefault, StringEnumSpec
 
 
+@pytest.mark.parametrize(
+    "alias",
+    [
+        "_intpot_enum_\u212a",
+        "_intpot_enum_\uff26\uff21\uff33\uff34",
+        "_intpot_enum_e\u0301",
+    ],
+)
+def test_enum_import_alias_refuses_identifier_normalization(alias):
+    spec = StringEnumSpec("enumapp.modes", "Mode", (("SAFE", "safe"),))
+    with pytest.raises(ValueError, match="alias"):
+        spec.alias({spec.key: alias})
+
+
 @pytest.fixture
 def enum_package(tmp_path, monkeypatch):
     root = tmp_path / "enum_boundary_pkg"
