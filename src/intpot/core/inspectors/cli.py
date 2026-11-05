@@ -130,6 +130,9 @@ def _guard_enum_parameter_metadata(metadata: Any) -> None:
         raise TypeError("Custom enum parameter types and parsers are not supported")
     if not getattr(metadata, "case_sensitive", True):
         raise TypeError("Unsupported case-insensitive enum parameters")
+    prompt = getattr(metadata, "prompt", False)
+    if prompt is not None and prompt is not False:
+        raise TypeError("Prompt-backed enum parameters are not supported")
 
 
 def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:

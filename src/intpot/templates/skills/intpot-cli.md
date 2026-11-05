@@ -20,7 +20,7 @@ option alias, MCP the canonical parameter name. Explicit HTTP null follows the i
 type/default behavior (legacy versions can treat it as omission); nonnullable MCP
 arrays reject explicit null. Option(None) omission is measured with the installed
 Typer builtin converter: modern versions preserve None, the legacy floor yields []. Explicit `click_type` and `parser` overrides on enum parameters
-and enum default factories or explicit `envvar` declarations are also refused in both constructed and registered-command inspection, before writes
+and enum default factories, explicit `envvar` declarations or prompt-backed options are also refused in both constructed and registered-command inspection, before writes
 even with scaffold permission. Enum module components, type/member names and introduced aliases must preserve exact spelling under Python NFKC identifier normalization. Non-stable names are refused, not rewritten; stable Unicode remains supported. This does not add API/MCP-source enum recovery or general
 callback translation. Existing live `App` callable/default behavior remains separate.
 

@@ -59,7 +59,10 @@ MCP arrays reject explicit null.
 Required/positional/nested collections, tuple annotations, nullable elements,
 local/custom/non-string enums, aliases and case-insensitive choices remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
 also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
-declarations (without snapshotting environment values). Module components, enum
+declarations (without snapshotting environment values). Prompt-backed enum options
+(including empty prompt labels) refuse before writes rather than executing omitted
+inputs without the source interaction; disabled `prompt=False`/`None` remains supported.
+Module components, enum
 type/member names and introduced aliases must preserve exact spelling under Python
 NFKC identifier normalization; non-stable names refuse rather than being rewritten,
 while stable Unicode remains supported. These refusals apply before writes,

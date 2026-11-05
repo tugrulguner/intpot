@@ -201,6 +201,79 @@ def test_collection_preserves_list_helper_bindings(
     )
 
 
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("scalar", [False, True])
+@pytest.mark.parametrize("prompt", [True, "Choose formats", ""])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("scaffold", [False, True])
+def test_prompt_backed_enums_refuse_before_writes(
+    collection_source,
+    tmp_path,
+    monkeypatch,
+    fallback,
+    annotated,
+    scalar,
+    prompt,
+    target,
+    scaffold,
+):
+    annotation = "Optional[Mode]" if scalar else "list[Mode]"
+    if annotated:
+        declaration = (
+            f"modes:Annotated[{annotation},typer.Option('--to',prompt={prompt!r})]=None"
+        )
+    else:
+        declaration = f"modes:{annotation}=typer.Option(None,'--to',prompt={prompt!r})"
+    text = collection_source.read_text().replace(
+        "import typer\n", "import typer\nfrom typing import Annotated,Optional\n"
+    )
+    text = text.replace("modes:list[Mode]=typer.Option(None,'--to')", declaration)
+    if scalar:
+        text = text.replace("[m.value for m in modes]", "modes.value")
+    collection_source.write_text(text)
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "prompt-effect.json"
+    result = CliRunner().invoke(native, [str(effect), "--to", "md"])
+    assert result.exit_code == 0, result.exception
+    assert json.loads(effect.read_text()) == ("md" if scalar else ["md"])
+    effect.unlink()
+    if scalar:
+        result = CliRunner().invoke(native, [str(effect)], input="md\n")
+        assert result.exit_code == 0, result.exception
+        assert json.loads(effect.read_text()) == "md"
+        effect.unlink()
+    result = CliRunner().invoke(native, [str(effect)], input="")
+    assert result.exit_code != 0 and not effect.exists()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / "prompt-consumer.py"
+    with pytest.raises(TypeError, match="Prompt-backed enum parameters"):
+        intpot.load(collection_source).write(
+            destination, target, allow_scaffold=scaffold
+        )
+    assert not destination.exists() and not effect.exists()
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("prompt", [False, None])
+def test_disabled_prompt_preserves_ordinary_collection(
+    collection_source, tmp_path, monkeypatch, fallback, prompt
+):
+    collection_source.write_text(
+        collection_source.read_text().replace(
+            "typer.Option(None,'--to')", f"typer.Option(None,'--to',prompt={prompt!r})"
+        )
+    )
+    test_collection_consumers_preserve_none_order_duplicates(
+        collection_source, tmp_path, monkeypatch, fallback, False, "None"
+    )
+
+
 @pytest.fixture
 def collection_source(tmp_path, monkeypatch):
     package = tmp_path / "enum_collection_app"

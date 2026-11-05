@@ -113,7 +113,9 @@ FastAPI type/default behavior, whereas nonnullable MCP arrays reject null.
 This controlled fixture is not Docling's full converter.
 
 Unimportable/custom/non-string enums, member aliases, case-insensitive choices,
-required/positional/nested enum collections and nullable elements remain refused.
+required/positional/nested enum collections, nullable elements and prompt-backed
+enum options remain refused. Native prompt-backed omission may abort without file
+effects, so it must not silently become an ordinary None default in HTTP/MCP.
 Docling callback/lifecycle semantics are still a separate barrier. Generated HTTP and
 stdio MCP file-effect comparisons for the actual Docling command remain acceptance
 gates, not completed results in this experiment.
