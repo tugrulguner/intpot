@@ -176,6 +176,31 @@ def test_collection_omission_uses_only_builtin_empty_converter(
     assert calls == [()]
 
 
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("nullable", [False, True])
+@pytest.mark.parametrize("private_collision", [False, True])
+def test_collection_preserves_list_helper_bindings(
+    collection_source, tmp_path, monkeypatch, fallback, nullable, private_collision
+):
+    support = "def list(values):\n"
+    if private_collision:
+        support = "def _intpot_defaults_builtins():\n return 'original'\n" + support
+        support += " assert _intpot_defaults_builtins() == 'original'\n"
+    support += " return None if values is None else [item.value for item in values]\n"
+    text = collection_source.read_text().replace(
+        "import typer\n", "import typer\nfrom typing import List as Modes\n"
+    )
+    text = text.replace("app=typer.Typer()\n", "app=typer.Typer()\n" + support)
+    text = text.replace("modes:list[Mode]", "modes:Modes[Mode]")
+    text = text.replace(
+        "value=None if modes is None else [m.value for m in modes]", "value=list(modes)"
+    )
+    collection_source.write_text(text)
+    test_collection_consumers_preserve_none_order_duplicates(
+        collection_source, tmp_path, monkeypatch, fallback, nullable, "None"
+    )
+
+
 @pytest.fixture
 def collection_source(tmp_path, monkeypatch):
     package = tmp_path / "enum_collection_app"
@@ -218,6 +243,7 @@ def test_collection_consumers_preserve_none_order_duplicates(
             collection_source.read_text()
             .replace("import typer\n", "import typer\nfrom typing import Optional\n")
             .replace("modes:list[Mode]", "modes:Optional[list[Mode]]")
+            .replace("modes:Modes[Mode]", "modes:Optional[Modes[Mode]]")
         )
     _, native = detect_source(collection_source)
     effect = tmp_path / "effect.json"

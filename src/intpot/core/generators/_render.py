@@ -249,6 +249,8 @@ def _collect_extra_imports(
         for parameter in tool.parameters:
             if parameter.string_enum is not None:
                 default_imports.add(parameter.string_enum.import_source(aliases))
+                if parameter.string_enum.many:
+                    default_imports.add(f"import builtins as {aliases['builtins']}")
                 if parameter.string_enum.nullable:
                     default_imports.add(
                         f"from typing import Optional as {aliases['typing:Optional']}"
@@ -1021,7 +1023,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
             return parameter.type_annotation
         annotation = spec.alias(aliases)
         if spec.many:
-            annotation = f"list[{annotation}]"
+            annotation = f"{aliases['builtins']}.list[{annotation}]"
         if spec.nullable:
             annotation = f"{aliases['typing:Optional']}[{annotation}]"
         return annotation
