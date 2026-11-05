@@ -86,9 +86,13 @@ the contracts a change has to keep.
 
 **Templates**
 
-- The custom Jinja filters are `repr`, `pascal`, and `escape_doc`, registered in
-  `core/generators/_render.py`. An unknown filter raises `TemplateAssertionError` while
-  loading the template.
+- The custom Jinja filters are `repr`, `ascii_literal`, `pascal`, and `escape_doc`,
+  registered in `core/generators/_render.py`. An unknown filter raises
+  `TemplateAssertionError` while loading the template.
+- `ascii_literal` is for intpot's *own* generated text: it writes the literal as
+  Python escapes, so it survives any source encoding. Text copied out of the
+  user's source stays verbatim, and `write()` refuses an encoding that cannot
+  represent it.
 - Path parameters in the API template must not get `= Path(...)`; FastAPI infers them
   from the route.
 - Generated code carries its own imports — review the import block, not just the body.

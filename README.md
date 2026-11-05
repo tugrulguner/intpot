@@ -262,6 +262,22 @@ app.write("output/cli_app.py", "cli")
 app.write("output/api_app.py", "api")
 ```
 
+`.write(path, target, *, encoding="utf-8", overwrite=True)` also controls how the file is written:
+
+- **`encoding`** — `utf-8` (the default), `latin-1`, `cp1252`, or `ascii`. These are the
+  ASCII-compatible encodings Python can load a source file from; UTF-16 and UTF-32 are refused
+  because they write a BOM and a null byte. A file that is not written as UTF-8 gets a PEP 263
+  `# -*- coding: iso8859-1 -*-` declaration on its first line, so the loader reads back exactly
+  what was written.
+- **`overwrite`** — `True` (the default) replaces an existing file. `False` creates it
+  exclusively, so a destination another writer creates while the code is being generated is
+  never overwritten; `write()` raises `FileExistsError` instead.
+- **Unrepresentable text is refused, not rewritten.** Text copied out of your source — tool
+  names, descriptions, parameter help — is written verbatim, so a write whose encoding cannot
+  represent it raises `ValueError` instead of mangling it. Write it as UTF-8, or pick an
+  encoding that covers it. intpot's own generated text is written as ASCII-safe escapes, so it
+  never causes a refusal and never changes the value at runtime.
+
 **`App`** (universal runtime):
 - `.tool(name=None, description=None)` — decorator to register functions as tools; both arguments override the defaults taken from the function name and docstring. Functions with `*args` or `**kwargs` are rejected because those parameters have no consistent CLI, HTTP API, and MCP representation.
 - `.serve(mode, host, port)` — serve as CLI, API, or MCP
@@ -273,7 +289,7 @@ app.write("output/api_app.py", "api")
 - `.to_cli()`, `.to_mcp()`, `.to_api()` — return generated code as strings
 - `.schema` — immutable source `ApplicationSchema`, compiled once
 - `.project(target)` — immutable target projection used by generation
-- `.write(path, target)` — generate and write to a file in one step
+- `.write(path, target, *, encoding="utf-8", overwrite=True)` — generate and write to a file in one step; `encoding` picks the source file's encoding (`utf-8`, `latin-1`, `cp1252`, `ascii`) and `overwrite=False` creates the file exclusively instead of replacing it
 - `.tools` — detached `ToolInfo` compatibility objects; mutating them does not alter the schema
 - `.source_type` — detected framework type
 

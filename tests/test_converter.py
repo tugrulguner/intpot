@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import ast
+import importlib.util
 import py_compile
+from pathlib import Path
+from types import ModuleType
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +15,38 @@ import intpot
 from intpot.converter import IntpotApp, UnsupportedFastAPIDependencyError
 from intpot.core.detector import DetectionError
 from intpot.core.models import SourceType
+
+
+def _import_written(path: Path) -> ModuleType:
+    """Import a written artifact from disk, the way Python loads a module.
+
+    The loader decodes the file with the encoding its own PEP 263 declaration
+    names — which is the part a `compile()` of a string never exercises.
+    """
+    spec = importlib.util.spec_from_file_location("written_cli_app", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _written_typer_help(path: Path, encoding: str) -> str:
+    """Read the help text back out of a written file, as Python will read it.
+
+    The source holds an escape; the value it stands for has to be the one
+    intpot meant. An assertion on the generated string would not see the
+    escape at all, so the file is parsed the way the loader parses it.
+    """
+    tree = ast.parse(path.read_text(encoding=encoding))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if getattr(node.func, "attr", None) != "Typer":
+            continue
+        for keyword in node.keywords:
+            if keyword.arg == "help":
+                return ast.literal_eval(keyword.value)
+    raise AssertionError("the written file has no Typer(help=...) call")
 
 
 def test_unsupported_fastapi_dependency_error_is_public():
@@ -240,10 +276,72 @@ def test_write_to_file_honors_encoding(tmp_path):
     # The encoding only matters if Python can still load what was written: a
     # declaration the loader accepts, then the real compile the file would
     # have to survive on disk.
-    assert out.read_text(encoding="latin-1").splitlines()[0] == (
-        "# -*- coding: iso8859-1 -*-"
-    )
-    assert "café" in out.read_text(encoding="latin-1")
+    written = out.read_text(encoding="latin-1")
+    assert written.splitlines()[0] == "# -*- coding: iso8859-1 -*-"
+    assert "café" in written
+    py_compile.compile(str(out), cfile=str(tmp_path / "cli_app.pyc"), doraise=True)
+
+    # intpot's own text is written as an escape. U+2014 is not in Latin-1, so
+    # an em dash left in the source was enough to refuse the whole write.
+    assert "\\u2014" in written
+    assert "—" not in written
+
+
+def test_the_written_cli_artifact_imports_and_runs(tmp_path):
+    """A file that compiles is not a file that runs.
+
+    The written source has to survive the loader's own decoding — the PEP 263
+    declaration, the declared encoding — and then behave like the CLI it
+    claims to be.
+    """
+    from fastmcp import FastMCP
+    from typer.testing import CliRunner
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        """Greet someone with a café, naïve façade."""
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    intpot.load(mcp).write(out, "cli", encoding="latin-1")
+
+    module = _import_written(out)
+
+    # The escape must not change the value: the CLI still says what intpot
+    # meant, it is only the bytes on disk that changed.
+    assert _written_typer_help(out, "latin-1") == "test — powered by intpot"
+
+    result = CliRunner().invoke(module.app, ["greet", "World"])
+
+    assert result.exit_code == 0, result.exception
+    assert result.output.strip() == "Hello, World!"
+
+
+def test_intpot_own_text_does_not_block_a_narrow_encoding(tmp_path):
+    """The refusal belongs to the user's text, not to intpot's own.
+
+    The CLI template adds an em dash to the app help. Latin-1 does not cover
+    U+2014 and ASCII does not either, so that one character of intpot's own
+    boilerplate was enough to refuse every narrow-encoding write.
+    """
+    from fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+
+    @mcp.tool()
+    def greet(name: str) -> str:
+        """Greet someone with a wave."""
+        return f"Hello, {name}!"
+
+    out = tmp_path / "encoded" / "cli_app.py"
+    intpot.load(mcp).write(out, "cli", encoding="ascii")
+
+    written = out.read_text(encoding="ascii")
+
+    assert written.isascii()
+    assert "\\u2014" in written
     py_compile.compile(str(out), cfile=str(tmp_path / "cli_app.pyc"), doraise=True)
 
 
@@ -279,6 +377,9 @@ def test_write_rejects_a_source_its_encoding_cannot_represent(tmp_path):
     with pytest.raises(ValueError, match="not representable"):
         intpot.load(mcp).write(out, "cli", encoding="ascii")
 
+    # The refusal is the user's own text: intpot's em dash is written as an
+    # escape, but a description copied out of the source is not.
+    #
     # Not an empty file either: cp1252 is the supported encoding that holds
     # the em dash, and the same source has to survive the round trip.
     assert not out.exists()

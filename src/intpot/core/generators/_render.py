@@ -76,6 +76,22 @@ def _to_pascal_case(name: str) -> str:
     return "".join(word.capitalize() for word in expanded if word)
 
 
+def _ascii_literal(value: object) -> str:
+    """Render a value as a Python literal that survives any source encoding.
+
+    `ascii()` is `repr()` with every non-ASCII character escaped, so the literal
+    still evaluates to the same string while the source file stays loadable
+    under ascii, latin-1 or cp1252.
+
+    This is for intpot's *own* generated text. A user string is written
+    verbatim and the write is refused when the chosen encoding cannot hold it;
+    intpot's boilerplate must never be the reason a write is rejected. The
+    "powered by intpot" suffix carries an em dash, and Latin-1 does not cover
+    U+2014 — it stopped the CLI template from being written at all.
+    """
+    return ascii(value)
+
+
 def _escape_docstring(text: str) -> str:
     """Make text safe to drop between triple quotes.
 
@@ -919,6 +935,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
         keep_trailing_newline=True,
     )
     env.filters["repr"] = repr
+    env.filters["ascii_literal"] = _ascii_literal
     env.filters["source_default"] = lambda value: _source_default(value, aliases)
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case

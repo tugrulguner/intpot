@@ -87,11 +87,27 @@ mcp_code = app.to_mcp()
 api_code = app.to_api()
 
 app.write("output/cli_app.py", "cli")     # generate and write, returns the Path
+app.write("output/cli_app.py", "cli", encoding="latin-1", overwrite=False)
 
 print(app.source_type)                    # SourceType.MCP / CLI / API
 print(app.schema.to_dict())               # inspect canonical source semantics
 api_schema = app.project("api")           # inspect target semantics before generation
 ```
+
+`write()` also controls how the file is written:
+
+- `encoding` — `utf-8` (the default), `latin-1`, `cp1252`, or `ascii`. These are the
+  ASCII-compatible encodings Python can load a source file from; UTF-16 and UTF-32 are refused
+  because they write a BOM and a null byte. A file that is not written as UTF-8 gets a PEP 263
+  `# -*- coding: iso8859-1 -*-` declaration on its first line, so the loader reads back exactly
+  what was written.
+- `overwrite` — `True` (the default) replaces an existing file. `False` creates it exclusively,
+  so a destination another writer creates while the code is being generated is never
+  overwritten; `write()` raises `FileExistsError` instead.
+- Text the chosen encoding cannot represent is refused with `ValueError` rather than
+  rewritten. Text copied out of the source — names, descriptions, parameter help — is written
+  verbatim; intpot's own generated text is written as ASCII-safe escapes, so it never causes a
+  refusal and never changes the value at runtime.
 
 Calling `to_cli()` on a source that is already a CLI raises `ValueError`; same for the
 other two.
