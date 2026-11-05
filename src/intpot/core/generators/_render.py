@@ -12,7 +12,12 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from intpot.core.generators.base import RenderableTool
-from intpot.core.models import _default_imports, _source_default
+from intpot.core.models import (
+    ParameterInfo,
+    ParameterSchema,
+    _default_imports,
+    _source_default,
+)
 from intpot.core.transforms import bind_global_name
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
@@ -1009,15 +1014,19 @@ def render_template(template_name: str, **kwargs: object) -> str:
         keep_trailing_newline=True,
     )
     env.filters["repr"] = repr
-    env.filters["parameter_type"] = lambda p: (
-        (
-            f"{aliases['typing:Optional']}[{p.string_enum.alias(aliases)}]"
-            if p.string_enum.nullable
-            else p.string_enum.alias(aliases)
-        )
-        if p.string_enum is not None
-        else p.type_annotation
-    )
+
+    def parameter_type(parameter: ParameterInfo | ParameterSchema) -> str:
+        spec = parameter.string_enum
+        if spec is None:
+            return parameter.type_annotation
+        annotation = spec.alias(aliases)
+        if spec.many:
+            annotation = f"list[{annotation}]"
+        if spec.nullable:
+            annotation = f"{aliases['typing:Optional']}[{annotation}]"
+        return annotation
+
+    env.filters["parameter_type"] = parameter_type
     env.filters["source_default"] = lambda value: _source_default(value, aliases)
     env.filters["fastapi_alias"] = lambda name: aliases[f"fastapi:{name}"]
     env.filters["pascal"] = _to_pascal_case

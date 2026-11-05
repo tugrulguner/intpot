@@ -329,7 +329,7 @@ live-versus-ejected parity remain separate executable test families.
 - [x] Preserve ordinary importable scalar CLI string-enum choices/defaults through
       immutable metadata, generated type imports, and native validation in unreleased source.
       Controlled file-producing consumers are qualified; the Docling campaign has a
-      native baseline but still refuses enum collections and does not translate callbacks.
+      native baseline and now inspects enum lists, but does not translate callbacks.
       This is not general enum/model or full-application conversion.
 
 
@@ -339,6 +339,9 @@ live-versus-ejected parity remain separate executable test families.
       [#9](https://github.com/tugrulguner/intpot/issues/9),
       [#38](https://github.com/tugrulguner/intpot/issues/38)).
 - [ ] Preserve repeatable Typer/Click options and collection cardinality in target schemas.
+      A bounded unreleased subset now supports optional repeatable string-enum lists
+      with typed elements and native defaults/order/duplicates. Required/positional,
+      arbitrary containers and non-enum repeatable fidelity remain separate work.
 - [ ] Broaden package and sibling import support beyond regular packages. Unreleased
       regular-package file loading preserves qualified context and normal import caching,
       refusing cached source-tree conflicts. Standalone files still do not add their

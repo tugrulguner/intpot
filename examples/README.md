@@ -1,5 +1,12 @@
 # Examples
 
+## Repeatable enum-option conformance
+
+Run `python examples/enum_collection_conformance.py --output-dir /path/to/new-evidence`
+from the synchronized checkout. It creates a synthetic package and compares native CLI,
+generated CLI, real loopback HTTP and stdio MCP, including defaults, ordered duplicate
+selections and invalid-element rejection before files. This is not Docling conversion.
+
 ## Existing third-party applications
 
 [The Docling experiment](external-applications/docling.md) establishes a pinned,

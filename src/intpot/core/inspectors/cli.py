@@ -16,7 +16,11 @@ from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
 from intpot.core.provenance import inspected_callable_metadata
-from intpot.core.string_enums import annotation_string_enum, enum_default
+from intpot.core.string_enums import (
+    StringEnumSpec,
+    annotation_string_enum,
+    enum_default,
+)
 
 # Typer vendors its own copy of click (`typer._click`), so a Typer app's objects
 # are not instances of anything in the standalone `click` package and its
@@ -128,12 +132,31 @@ def _guard_enum_parameter_metadata(metadata: Any) -> None:
         raise TypeError("Unsupported case-insensitive enum parameters")
 
 
+def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:
+    if spec.many and default is None:
+        # Use only Typer's builtin converter on an empty tuple, never a source
+        # callback, enum parser or default factory. Legacy Typer yields []; newer
+        # versions preserve None. Read the installed API instead of version tags.
+        import typer.main
+
+        factory: Any = typer.main.generate_list_convertor
+        if "default_value" in inspect.signature(factory).parameters:
+            converter = factory(None, default_value=None)
+        else:
+            converter = factory(None)
+        default = converter(())
+        if default is not None and (type(default) is not list or default):
+            raise TypeError("Unsupported native enum collection default")
+    return enum_default(spec, default)
+
+
 def _registered_parameter_details(
     annotation: Any, signature_default: Any
 ) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
-    if annotation_string_enum(annotation) is not None:
+    enum = annotation_string_enum(annotation)
+    if enum is not None:
         _guard_enum_parameter_metadata(metadata)
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
@@ -158,6 +181,15 @@ def _registered_parameter_details(
         if raw_default is inspect.Parameter.empty or raw_default is Ellipsis
         else raw_default
     )
+    if (
+        enum is not None
+        and enum.many
+        and (
+            default is _SENTINEL
+            or (hasattr(metadata, "param_decls") and not hasattr(metadata, "prompt"))
+        )
+    ):
+        raise TypeError("Only optional repeatable enum options are supported")
     help_text = getattr(metadata, "help", "")
     description = help_text if isinstance(help_text, str) else ""
     numeric_range = (
@@ -259,7 +291,7 @@ class CLIInspector(BaseInspector):
                 )
                 enum = annotation_string_enum(annotation)
                 if enum is not None and default is not _SENTINEL:
-                    default = enum_default(enum, default)
+                    default = _enum_parameter_default(enum, default)
                 parameters.append(
                     ParameterInfo(
                         name=param.name,
@@ -395,14 +427,20 @@ class CLIInspector(BaseInspector):
                 _guard_enum_parameter_metadata(metadata)
                 if (
                     not getattr(param.type, "case_sensitive", True)
-                    or getattr(param, "multiple", False)
+                    or bool(getattr(param, "multiple", False)) != enum.many
                     or getattr(param, "nargs", 1) != 1
+                    or (
+                        enum.many
+                        and (
+                            default is _SENTINEL or not hasattr(param, "secondary_opts")
+                        )
+                    )
                 ):
                     raise TypeError(
                         "Collection or case-insensitive enum parameters are not supported"
                     )
                 if default is not _SENTINEL:
-                    default = enum_default(enum, default)
+                    default = _enum_parameter_default(enum, default)
             aliases = _option_aliases(param)
             params.append(
                 ParameterInfo(

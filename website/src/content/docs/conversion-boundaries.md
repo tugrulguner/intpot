@@ -48,8 +48,16 @@ Live captured descriptors have weak, process-local identity evidence outside the
 immutable schema: replacing an export with a different class, even with identical
 members, refuses before writes. Equal fresh captures remain independent. JSON
 decoding stays data-only and does not establish an earlier live class identity.
-Local/custom/non-string enums, aliases, case-insensitive choices and enum collections
-remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
+Optional repeatable `list[Enum]` and `Optional[list[Enum]]` CLI options also preserve
+typed elements, order, duplicates and None/empty/nonempty defaults through typed
+HTTP/MCP arrays. `many=True` is omitted for scalar JSON. HTTP uses option aliases,
+MCP canonical names. Explicit empty arrays are tested separately from omission.
+Option(None) omission follows installed Typer semantics: modern versions preserve
+None, while the legacy floor yields []. HTTP null follows the installed FastAPI
+type/default behavior (legacy versions can treat it as omission), while nonnullable
+MCP arrays reject explicit null.
+Required/positional/nested collections, tuple annotations, nullable elements,
+local/custom/non-string enums, aliases and case-insensitive choices remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
 also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
 declarations (without snapshotting environment values). Module components, enum
 type/member names and introduced aliases must preserve exact spelling under Python
@@ -62,8 +70,8 @@ translate CLI callbacks or lifecycle behavior.
 
 The [Docling experiment](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/docling.md)
 verifies native HTML-to-Markdown file creation and overwriting, while Intpot still
-refuses the selected command's unsupported enum collections. Callback semantics also
-remain unresolved. Native Docling success is not a converted HTTP/MCP success.
+inspects its enum collections but refuses the selected command's three parameter
+callbacks. Callback/lifecycle semantics remain unresolved. Native Docling success is not a converted HTTP/MCP success.
 
 ## Explicit tool selection (unreleased)
 

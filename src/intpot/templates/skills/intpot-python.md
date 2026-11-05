@@ -219,8 +219,15 @@ refuses before writes. Fresh captures are independent; JSON-decoded descriptors
 carry data snapshots, not proof of an earlier process identity. Generated annotations/defaults import the original
 package enum with collision-safe aliases, preserving instances and allowed-value
 validation. The original application package remains a dependency. Local/unimportable,
-custom/non-string enums, duplicate-value aliases, case-insensitive choices, and enum
-collections are refused. Explicit `click_type` and `parser` overrides on enum parameters
+custom/non-string enums, duplicate-value aliases and case-insensitive choices are refused.
+Optional repeatable `list[Enum]` and `Optional[list[Enum]]` CLI options carry `many=True`
+(omitted from scalar JSON). Generated typed arrays retain enum instances, order,
+duplicates and native None/empty/nonempty defaults. Required/positional/nested
+collections, tuple annotations and nullable elements remain refused. HTTP uses the
+option alias, MCP the canonical parameter name. Explicit HTTP null follows the installed FastAPI
+type/default behavior (legacy versions can treat it as omission); nonnullable MCP
+arrays reject explicit null. Option(None) omission is measured with the installed
+Typer builtin converter: modern versions preserve None, the legacy floor yields []. Explicit `click_type` and `parser` overrides on enum parameters
 and enum default factories or explicit `envvar` declarations are also refused in both constructed and registered-command inspection, before writes
 even with scaffold permission. Enum module components, type/member names and introduced aliases must preserve exact spelling under Python NFKC identifier normalization. Non-stable names are refused, not rewritten; stable Unicode remains supported. This does not add API/MCP-source enum recovery or general
 callback translation. Existing live `App` callable/default behavior remains separate.

@@ -48,6 +48,7 @@ class StringEnumSpec:
     name: str
     members: tuple[tuple[str, str], ...]
     nullable: bool = False
+    many: bool = False
 
     def __post_init__(self) -> None:
         if (
@@ -69,6 +70,8 @@ class StringEnumSpec:
             raise ValueError("String-enum aliases are not supported")
         if type(self.nullable) is not bool:
             raise ValueError("Invalid enum nullability")
+        if type(self.many) is not bool:
+            raise ValueError("Unsupported enum collection shape")
         object.__setattr__(self, "members", members)
 
     @property
@@ -91,7 +94,7 @@ class StringEnumSpec:
         origin = _CAPTURED_ENUMS.get(id(self))
         if origin is not None and origin[0]() is self and origin[1]() is not candidate:
             raise TypeError("String-enum export identity changed since inspection")
-        current = capture_string_enum(candidate, nullable=self.nullable)
+        current = capture_string_enum(candidate, nullable=self.nullable, many=self.many)
         if current != self:
             raise TypeError("String-enum export or members changed since inspection")
         return cast(type[Enum], candidate)
@@ -102,6 +105,7 @@ class StringEnumSpec:
             "name": self.name,
             "members": [list(pair) for pair in self.members],
             "nullable": self.nullable,
+            **({"many": True} if self.many else {}),
         }
 
     @classmethod
@@ -127,7 +131,9 @@ class StringEnumDefault:
         return cls(StringEnumSpec.from_dict(data["enum"]), data["member"])
 
 
-def capture_string_enum(candidate: Any, *, nullable: bool = False) -> StringEnumSpec:
+def capture_string_enum(
+    candidate: Any, *, nullable: bool = False, many: bool = False
+) -> StringEnumSpec:
     if type(candidate) is not EnumType or candidate.__bases__ not in (
         (str, Enum),
         (StrEnum,),
@@ -177,6 +183,7 @@ def capture_string_enum(candidate: Any, *, nullable: bool = False) -> StringEnum
             for name, member in candidate.__members__.items()
         ),
         nullable,
+        many,
     )
     _remember_enum(spec, cast(type[Enum], candidate))
     return spec
@@ -191,6 +198,14 @@ def annotation_string_enum(annotation: Any) -> StringEnumSpec | None:
         if len(args) == 2 and type(None) in args:
             annotation = next(a for a in args if a is not type(None))
             nullable = True
+    if get_origin(annotation) is list:
+        arguments = get_args(annotation)
+        if (
+            len(arguments) == 1
+            and isinstance(arguments[0], type)
+            and issubclass(arguments[0], Enum)
+        ):
+            return capture_string_enum(arguments[0], nullable=nullable, many=True)
     if isinstance(annotation, type) and issubclass(annotation, Enum):
         return capture_string_enum(annotation, nullable=nullable)
     for argument in get_args(annotation):
@@ -201,12 +216,24 @@ def annotation_string_enum(annotation: Any) -> StringEnumSpec | None:
 
 def enum_default(spec: StringEnumSpec, default: Any) -> Any:
     cls = spec.resolve()
+    if spec.many:
+        if default is None:
+            return None
+        if type(default) not in (list, tuple):
+            raise TypeError("Enum collection default must be None or a sequence")
+        return [_enum_member_default(spec, cls, value) for value in default]
+    if default is None and spec.nullable:
+        return None
+    return _enum_member_default(spec, cls, default)
+
+
+def _enum_member_default(
+    spec: StringEnumSpec, cls: type[Enum], default: Any
+) -> StringEnumDefault:
     if isinstance(default, cls):
         return StringEnumDefault(spec, default.name)
     if type(default) is str:
         members = [name for name, value in spec.members if value == default]
         if members:
             return StringEnumDefault(spec, members[0])
-    if default is None and spec.nullable:
-        return None
     raise TypeError("String-enum default does not match the declared enum")

@@ -83,6 +83,7 @@ def test_enum_capture_evidence_retains_neither_snapshot_nor_class(enum_package):
         "name",
         "members",
         "nullable",
+        "many",
     ]
     owner.Mode = Enum(
         "Mode", {"FAST": "fast", "SAFE": "safe"}, type=str, module=owner.__name__
