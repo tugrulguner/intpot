@@ -167,10 +167,37 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
             raise RuntimeError("Native overwrite failed")
         if markdown_path.read_bytes() != baseline:
             raise RuntimeError("Default/explicit Markdown or overwrite output differs")
+        for name, options, expected_files in (
+            (
+                "native-md-json",
+                ["--to", "md", "--to", "json"],
+                {"case.md", "case.json"},
+            ),
+            (
+                "native-json-md",
+                ["--to", "json", "--to", "md"],
+                {"case.md", "case.json"},
+            ),
+            ("native-duplicate-md", ["--to", "md", "--to", "md"], {"case.md"}),
+        ):
+            target = output / name
+            if native(name, fixture, target, *options) != 0:
+                raise RuntimeError(f"Native enum collection failed: {name}")
+            if {
+                path.name for path in target.iterdir() if path.is_file()
+            } != expected_files:
+                raise RuntimeError(f"Unexpected native collection outputs: {name}")
+            if (target / "case.md").read_bytes() != baseline:
+                raise RuntimeError("Repeated selections changed Markdown")
+            if "case.json" in expected_files:
+                document = json.loads((target / "case.json").read_text())
+                if "İstanbul" not in json.dumps(document, ensure_ascii=False):
+                    raise RuntimeError("JSON document lost source text")
+        report["native_enum_collection_workflow_verified"] = True
         report["native_workflow_verified"] = True
         for name, input_path, options in (
             ("native-missing", output / "missing.html", []),
-            ("native-invalid-format", fixture, ["--to", "not-a-format"]),
+            ("native-invalid-format", fixture, ["--to", "md", "--to", "not-a-format"]),
         ):
             target = output / name
             if native(name, input_path, target, *options) == 0:
@@ -201,10 +228,13 @@ def run(checkout: Path, output: Path) -> dict[str, Any]:
                 raise RuntimeError(
                     "Conversion boundary changed; qualify consumers before updating this example"
                 )
-            if "Collection or compound enum annotations are not supported" not in error:
+            if "callback" not in error.lower() or not all(
+                name in error
+                for name in ("show_external_plugins", "version", "docling_logo")
+            ):
                 raise RuntimeError(f"Unexpected first conversion blocker: {error}")
         report["first_conversion_blocker"] = (
-            "Enum collections refused during inspection; callback translation also remains unsupported"
+            "Three CLI parameter callbacks refused before writes; enum collection inspection now succeeds"
         )
         report["expected_refusal_verified"] = True
         return report

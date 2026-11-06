@@ -120,7 +120,10 @@ contains pure immutable `StringEnumSpec` metadata; `StringEnumDefault` is a symb
 member default, never a live enum class/member. Keep hashes/adapters/runtime copies/
 JSON/source defaults aligned; omit absent metadata. Data decoding must not import
 modules. CLI inspection verifies loaded package exports and rejects unsupported
-custom/local/non-string/alias/case-insensitive/collection enums. Shared rendering
+custom/local/non-string/alias/case-insensitive enums and unsupported collection shapes.
+Optional repeatable `list[Enum]`/`Optional[list[Enum]]` options use `many=True`;
+preserve None versus empty-list defaults, element identity, order and duplicates.
+Required/positional/nested enum collections still refuse. Shared rendering
 allocates collision-safe enum/typing imports and `parameter_type` annotations; actual native
 clients must reject invalid values before effects. Preserve all callback guards and
 source-package dependencies; Docling native baseline is not converted-consumer proof.

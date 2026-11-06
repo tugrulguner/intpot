@@ -45,10 +45,10 @@ def enum_source(tmp_path, monkeypatch):
         sys.modules.update(before)
 
 
-def test_enum_collection_does_not_become_unchecked_scalar(enum_source):
+def test_nested_enum_collection_does_not_become_unchecked_scalar(enum_source):
     enum_source.write_text(
         enum_source.read_text().replace(
-            "mode: Mode = Mode.SAFE", "mode: list[Mode] = []"
+            "mode: Mode = Mode.SAFE", "mode: list[list[Mode]] = []"
         )
     )
     with pytest.raises(TypeError, match="enum"):
@@ -331,6 +331,7 @@ def test_enum_member_names_are_not_option_metadata(
         " SAFE='safe'\n FAST='fast'\n default_factory='factory member'\n"
         " parser='parser member'\n click_type='click member'\n case_sensitive=''\n"
         " default='wrong default member'\n help='member help'\n envvar='environment member'\n"
+        " prompt='prompt member'\n"
     )
     _, native = detect_source(enum_source)
     effect = tmp_path / "metadata-member-effect"

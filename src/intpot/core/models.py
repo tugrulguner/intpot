@@ -929,20 +929,34 @@ class ParameterSchema:
         ):
             object.__setattr__(self, "binding_name", source_name)
         object.__setattr__(self, "name", canonical_name)
+        frozen_default = _freeze_default(self.default)
         if self.string_enum is not None:
             if not isinstance(self.string_enum, StringEnumSpec):
                 raise TypeError("string_enum must be immutable StringEnumSpec metadata")
             if self.default is not _SENTINEL and not (
                 (
-                    isinstance(self.default, StringEnumDefault)
+                    not self.string_enum.many
+                    and isinstance(self.default, StringEnumDefault)
                     and self.default.enum == self.string_enum
                 )
-                or (self.default is None and self.string_enum.nullable)
+                or (
+                    self.default is None
+                    and (self.string_enum.nullable or self.string_enum.many)
+                )
+                or (
+                    self.string_enum.many
+                    and isinstance(frozen_default, _FrozenList)
+                    and all(
+                        isinstance(value, StringEnumDefault)
+                        and value.enum == self.string_enum
+                        for value in frozen_default
+                    )
+                )
             ):
                 raise TypeError("Enum default must match its string_enum metadata")
         elif isinstance(self.default, StringEnumDefault):
             raise TypeError("Enum default requires string_enum metadata")
-        object.__setattr__(self, "default", _freeze_default(self.default))
+        object.__setattr__(self, "default", frozen_default)
         object.__setattr__(self, "aliases", tuple(self.aliases))
 
     def __eq__(self, other: object) -> bool:

@@ -314,10 +314,12 @@ partial output. Selection happens after source inspection; it cannot rescue an a
 whose source cannot be inspected. Every selected tool retains normal refusal guards.
 The original wrapper still exposes and assesses the whole application.
 
-Ordinary scalar string-enum CLI choices and defaults are supported in unreleased
+Ordinary scalar and optional repeatable string-enum CLI choices/defaults are supported in unreleased
 source for module-level enums exported by regular packages. Generated code retains
 the original enum type and rejects invalid choices before body effects. Unsupported
-custom/local enums and enum collections refuse instead of becoming unchecked strings.
+custom/local enums and required/positional/nested collections refuse instead of becoming unchecked strings.
+Repeatable options preserve typed array elements, order, duplicates and None versus
+empty-list defaults; see the runnable [collection conformance driver](examples/enum_collection_conformance.py).
 The [Docling experiment](examples/external-applications/docling.md) records real native
 HTML-to-Markdown file effects and remaining conversion barriers; it does **not** claim
 working Docling HTTP/MCP conversion.

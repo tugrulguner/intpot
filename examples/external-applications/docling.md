@@ -47,7 +47,11 @@ docling convert case.html --from html --output native
 docling convert case.html --from html --to md --output native
 ```
 
-The default output and explicit Markdown output matched. The driver seeds `case.md`
+The default output and explicit Markdown output matched. Repeated `--to md --to json`
+and reversed `--to json --to md` selections produced both outputs; duplicate `--to md`
+succeeded with one Markdown destination. The driver checks their document content,
+not export iteration order. Invalid format validation is also crossed with a valid
+`--to md` selection. The driver seeds `case.md`
 with sentinel content before the second call and verifies that the real conversion
 replaces it with the original Markdown bytes. Heading/text, Unicode, list and table
 content are checked. A missing input returned exit 1; an invalid output format returned
@@ -71,23 +75,20 @@ intpot to mcp /path/to/docling/docling/cli/main.py \
   --tool convert --output converted-mcp.py
 ```
 
-Both return exit 1 with:
-
-```text
-Collection or compound enum annotations are not supported
-```
-
-No requested generated file is created. The current refusal is an explicit inspection
-boundary for collections of enum values. It precedes callback assessment and
-consumer execution; it is not a failure of Docling's native converter.
+Both return exit 1 with callback refusal identifying `convert.show_external_plugins`,
+`convert.version` and `convert.docling_logo`. No requested generated file is created.
+Enum collection inspection now succeeds; callback translation remains a separate,
+non-bypassable boundary before generated-consumer execution. This is not a failure
+of Docling's native converter.
 
 At baseline `f167cd4`, the first actual failure was instead Intpot's unconditional
 rejection of enum defaults during canonical schema construction. The unreleased string-enum
 slice supports ordinary importable scalar choices and defaults. A real intermediate run
-then reached the existing refusal for Docling's three parameter callbacks. Additional
-negative controls now explicitly reject enum collections, which still lack cardinality
-and element-type support, rather than converting them into unchecked scalar strings.
-This newly explicit inspection boundary is the current first blocker.
+then reached the existing refusal for Docling's three parameter callbacks. The scalar
+slice subsequently made unsupported enum collection inspection explicit. The next
+unreleased slice now supports optional repeatable enum lists and their defaults,
+so callback refusal is again the first blocker. Required/positional/nested collections
+remain refused rather than becoming unchecked strings.
 
 Source inspection found 76 parameters on Docling's selected `convert` command, including
 collections, enum choices, and three eager callback parameters (`show_external_plugins`,
@@ -101,11 +102,23 @@ The first unreleased slice implements ordinary importable scalar string-enum par
 and defaults with detached immutable schema data, normal source-package type imports,
 allowed-value validation and rejected-input checks before file effects. Native CLI,
 generated CLI, HTTP and MCP exercise a controlled package fixture, not the Docling command.
-Unimportable/custom/non-string enums, member aliases, case-insensitive choices and enum
-collections remain refused. Collections and callback/lifecycle semantics are still
-separate barriers for Docling. Native CLI, generated HTTP and
-stdio MCP file-effect comparisons are acceptance gates for eventual workflow support,
-not completed results in this experiment.
+Optional repeatable `list[Enum]` and `Optional[list[Enum]]` options are also supported
+in unreleased source. The controlled `enum_collection_conformance.py` driver compares
+native/generated CLI, real HTTP and stdio MCP file effects: omission, ordered multiple
+selections, duplicates and invalid elements. Native `Option(None)` omission remains
+None in the pinned experiment environment, not an invented empty list. The separate
+legacy Typer floor instead yields [], and inspection preserves that native behavior.
+JSON arrays expose an explicit empty-list value; HTTP null follows the installed
+FastAPI type/default behavior, whereas nonnullable MCP arrays reject null.
+This controlled fixture is not Docling's full converter.
+
+Unimportable/custom/non-string enums, member aliases, case-insensitive choices,
+required/positional/nested enum collections, nullable elements and prompt-backed
+enum options remain refused. Native prompt-backed omission may abort without file
+effects, so it must not silently become an ordinary None default in HTTP/MCP.
+Docling callback/lifecycle semantics are still a separate barrier. Generated HTTP and
+stdio MCP file-effect comparisons for the actual Docling command remain acceptance
+gates, not completed results in this experiment.
 
 The server-side path contract is also distinct from a file-upload/download API and from
 safe public filesystem access. This experiment makes neither promise.
