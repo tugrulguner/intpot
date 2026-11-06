@@ -62,7 +62,10 @@ also refused before writes, as are enum default factories (without executing the
 declarations and effective `auto_envvar_prefix` option bindings (without snapshotting
 environment values). Context inheritance and Typer registration overrides are checked;
 unrelated sibling prefixes, unused flattened-group settings and positional arguments
-do not create automatic option bindings. Prompt-backed enum options
+do not create automatic option bindings. Effective non-None `default_map` entries
+for enum parameters also refuse before writes, including callable entries (never
+invoked during inspection). Missing, unrelated or None entries and overridden maps
+do not change ordinary enum conversion. Prompt-backed enum options
 (including empty prompt labels) refuse before writes rather than executing omitted
 inputs without the source interaction; disabled `prompt=False`/`None` remains supported.
 Module components, enum

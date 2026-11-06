@@ -476,6 +476,161 @@ def test_automatic_environment_ignores_unaffected_enum_parameters(
             effect.unlink()
 
 
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("mapped", ["valid", "invalid", "callable"])
+@pytest.mark.parametrize(
+    "location",
+    ["app", "command", "nested", "registration", "inherited", "callback", "reused"],
+)
+def test_context_default_map_enums_refuse_before_writes(
+    collection_source,
+    tmp_path,
+    monkeypatch,
+    fallback,
+    target,
+    scaffold,
+    mapped,
+    location,
+):
+    text = collection_source.read_text()
+    value = "['md','json']" if mapped == "valid" else "['invalid-choice']"
+    if mapped == "callable":
+        text = text.replace(
+            "app=typer.Typer()",
+            "calls=[]\ndef mapped_default():\n calls.append('called')\n return ['md','json']\napp=typer.Typer()",
+        )
+        value = "mapped_default"
+    mapping = "{'modes':" + value + "}"
+    args = []
+    if location == "app":
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'default_map':" + mapping + "})",
+        )
+    elif location == "command":
+        text = text.replace(
+            "@app.command()",
+            "@app.command(context_settings={'default_map':" + mapping + "})",
+        )
+    elif location == "reused":
+        args = ["mapped", "run"]
+        text += (
+            "\nchild=app\napp=typer.Typer()\napp.add_typer(child,name='plain')\napp.add_typer(child,name='mapped',context_settings={'default_map':{'run':"
+            + mapping
+            + "}})\n"
+        )
+    elif location == "callback":
+        args = ["run"]
+        text += (
+            "\n@app.callback(context_settings={'default_map':{'run':"
+            + mapping
+            + "}})\ndef root_callback():\n pass\n"
+        )
+    else:
+        args = ["group", "run"]
+        if location == "nested":
+            text = text.replace(
+                "app=typer.Typer()",
+                "app=typer.Typer(context_settings={'default_map':{'run':"
+                + mapping
+                + "}})",
+            )
+        text += "\nchild=app\n"
+        text += (
+            "app=typer.Typer(context_settings={'default_map':{'group':{'run':"
+            + mapping
+            + "}}})\n"
+            if location == "inherited"
+            else "app=typer.Typer()\n"
+        )
+        text += (
+            "app.add_typer(child,name='group',context_settings={'default_map':{'run':"
+            + mapping
+            + "}})\n"
+            if location == "registration"
+            else "app.add_typer(child,name='group')\n"
+        )
+    collection_source.write_text(text)
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "mapped-effect.json"
+    result = CliRunner().invoke(native, [*args, str(effect), "--to", "json"])
+    assert result.exit_code == 0 and json.loads(effect.read_text()) == ["json"]
+    effect.unlink()
+    result = CliRunner().invoke(native, [*args, str(effect)])
+    if mapped == "invalid":
+        assert result.exit_code != 0 and not effect.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        assert json.loads(effect.read_text()) == ["md", "json"]
+        effect.unlink()
+    callback = sys.modules["enum_collection_app.main"].run
+    calls = list(callback.__globals__.get("calls", []))
+    hits = []
+    if fallback:
+
+        def fail_tree():
+            hits.append(True)
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / "mapped-consumer.py"
+    with pytest.raises(TypeError, match="Context-backed enum defaults"):
+        intpot.load(collection_source).write(
+            destination, target, allow_scaffold=scaffold
+        )
+    assert not destination.exists() and not effect.exists()
+    assert callback.__globals__.get("calls", []) == calls
+    if fallback:
+        assert hits
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        "None",
+        "{}",
+        "{'modes':None}",
+        "{'unrelated':lambda: (_ for _ in ()).throw(AssertionError('called'))}",
+    ],
+)
+def test_unrelated_context_default_maps_preserve_collection(
+    collection_source, tmp_path, monkeypatch, fallback, mapping
+):
+    collection_source.write_text(
+        collection_source.read_text().replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'default_map':" + mapping + "})",
+        )
+    )
+    test_collection_consumers_preserve_none_order_duplicates(
+        collection_source, tmp_path, monkeypatch, fallback, False, "None"
+    )
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize(
+    "mapping", ["{}", "{'modes':None}", "{'unrelated':['invalid-choice']}"]
+)
+def test_context_default_map_overrides_do_not_reject_unaffected_collection(
+    collection_source, tmp_path, monkeypatch, fallback, mapping
+):
+    text = collection_source.read_text().replace(
+        "app=typer.Typer()",
+        "app=typer.Typer(context_settings={'default_map':{'modes':['invalid-choice']}})",
+    )
+    text = text.replace(
+        "@app.command()",
+        "@app.command(context_settings={'default_map':" + mapping + "})",
+    )
+    collection_source.write_text(text)
+    test_collection_consumers_preserve_none_order_duplicates(
+        collection_source, tmp_path, monkeypatch, fallback, False, "None"
+    )
+
+
 @pytest.fixture
 def collection_source(tmp_path, monkeypatch):
     package = tmp_path / "enum_collection_app"

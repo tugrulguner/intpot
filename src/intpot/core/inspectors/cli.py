@@ -124,6 +124,28 @@ def _automatic_envvar(context_settings: Any, inherited: bool = False) -> bool:
     )
 
 
+def _context_default_map(context_settings: Any, inherited: Any = None) -> Any:
+    """Explicit maps replace inherited maps; None retains the current lookup."""
+    configured = (
+        dict.get(context_settings, "default_map")
+        if isinstance(context_settings, dict)
+        else None
+    )
+    return inherited if configured is None else configured
+
+
+def _child_default_map(default_map: Any, name: str) -> Any:
+    return dict.get(default_map, name) if isinstance(default_map, dict) else default_map
+
+
+def _has_context_default(default_map: Any, name: str) -> bool:
+    # Do not invoke entries: Click permits callables here. Unknown map shapes
+    # cannot certify an enum default either, but unrelated/None entries are inert.
+    return default_map is not None and (
+        not isinstance(default_map, dict) or dict.get(default_map, name) is not None
+    )
+
+
 def _registered_setting(app: Any, registration: Any, name: str) -> Any:
     """Read just one Typer setting with registration/callback/app precedence."""
     from typer.models import DefaultPlaceholder
@@ -140,7 +162,7 @@ def _registered_setting(app: Any, registration: Any, name: str) -> Any:
 
 
 def _guard_enum_parameter_metadata(
-    metadata: Any, *, automatic_envvar: bool = False
+    metadata: Any, *, automatic_envvar: bool = False, context_default: bool = False
 ) -> None:
     # Plain enum defaults can expose members named like option settings.
     if isinstance(metadata, Enum):
@@ -158,6 +180,8 @@ def _guard_enum_parameter_metadata(
     prompt = getattr(metadata, "prompt", False)
     if prompt is not None and prompt is not False:
         raise TypeError("Prompt-backed enum parameters are not supported")
+    if context_default:
+        raise TypeError("Context-backed enum defaults are not supported")
 
 
 def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:
@@ -179,7 +203,11 @@ def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:
 
 
 def _registered_parameter_details(
-    annotation: Any, signature_default: Any, *, automatic_envvar: bool = False
+    annotation: Any,
+    signature_default: Any,
+    *,
+    automatic_envvar: bool = False,
+    context_default: bool = False,
 ) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
@@ -192,7 +220,9 @@ def _registered_parameter_details(
             and signature_default is not Ellipsis
         )
         _guard_enum_parameter_metadata(
-            metadata, automatic_envvar=automatic_envvar and option
+            metadata,
+            automatic_envvar=automatic_envvar and option,
+            context_default=context_default,
         )
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
@@ -283,6 +313,7 @@ class CLIInspector(BaseInspector):
         seen: set[int] | None = None,
         automatic_envvar: bool = False,
         registration: Any = None,
+        default_map: Any = None,
     ) -> None:
         """Inspect Typer callbacks when its Click tree cannot be constructed."""
         if seen is None:
@@ -308,10 +339,9 @@ class CLIInspector(BaseInspector):
             registration is None
             or _text_name(_registered_setting(app, registration, "name"))
         ):
-            automatic_envvar = _automatic_envvar(
-                _registered_setting(app, registration, "context_settings"),
-                automatic_envvar,
-            )
+            settings = _registered_setting(app, registration, "context_settings")
+            automatic_envvar = _automatic_envvar(settings, automatic_envvar)
+            default_map = _context_default_map(settings, default_map)
 
         for command in commands:
             callback = getattr(command, "callback", None)
@@ -337,6 +367,12 @@ class CLIInspector(BaseInspector):
                     getattr(app, "info", None), "context_settings", None
                 )
             command_auto_envvar = _automatic_envvar(context_settings, automatic_envvar)
+            command_default_map = _context_default_map(
+                context_settings,
+                _child_default_map(default_map, command_name)
+                if is_group
+                else default_map,
+            )
             parameters: list[ParameterInfo] = []
             for param in signature.parameters.values():
                 (
@@ -351,6 +387,9 @@ class CLIInspector(BaseInspector):
                     annotations.get(param.name, param.annotation),
                     param.default,
                     automatic_envvar=command_auto_envvar,
+                    context_default=_has_context_default(
+                        command_default_map, param.name
+                    ),
                 )
                 enum = annotation_string_enum(annotation)
                 if enum is not None and default is not _SENTINEL:
@@ -397,7 +436,16 @@ class CLIInspector(BaseInspector):
                 )
             nested_prefix = f"{prefix}{group_name}_" if group_name else prefix
             self._extract_registered_app(
-                nested, tools, nested_prefix, seen, automatic_envvar, group
+                # Mounts have independent contexts; only ancestor cycles repeat.
+                nested,
+                tools,
+                nested_prefix,
+                seen.copy(),
+                automatic_envvar,
+                group,
+                _child_default_map(default_map, group_name)
+                if group_name
+                else default_map,
             )
 
     def _extract_commands(
@@ -406,12 +454,17 @@ class CLIInspector(BaseInspector):
         tools: list[ToolInfo],
         prefix: str = "",
         automatic_envvar: bool = False,
+        default_map: Any = None,
     ) -> None:
         """Recursively extract commands from Click/Typer groups."""
         automatic_envvar = _automatic_envvar(
             getattr(group, "context_settings", None), automatic_envvar
         )
+        default_map = _context_default_map(
+            getattr(group, "context_settings", None), default_map
+        )
         commands = _child_commands(group)
+        is_group = commands is not None
         if commands is None:
             # A single command rather than a group.
             commands = {getattr(group, "name", None) or "main": group}
@@ -430,11 +483,17 @@ class CLIInspector(BaseInspector):
                     tools,
                     prefix=f"{full_name}_",
                     automatic_envvar=automatic_envvar,
+                    default_map=_child_default_map(default_map, cmd_name),
                 )
                 continue
 
             self._extract_single_command(
-                cmd, full_name, interface_name, tools, automatic_envvar
+                cmd,
+                full_name,
+                interface_name,
+                tools,
+                automatic_envvar,
+                _child_default_map(default_map, cmd_name) if is_group else default_map,
             )
 
     def _extract_single_command(
@@ -444,8 +503,12 @@ class CLIInspector(BaseInspector):
         interface_name: str,
         tools: list[ToolInfo],
         automatic_envvar: bool = False,
+        default_map: Any = None,
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
+        default_map = _context_default_map(
+            getattr(cmd, "context_settings", None), default_map
+        )
         automatic_envvar = _automatic_envvar(
             getattr(cmd, "context_settings", None), automatic_envvar
         )
@@ -512,6 +575,7 @@ class CLIInspector(BaseInspector):
                         and getattr(param, "param_type_name", None) == "option"
                         and getattr(param, "allow_from_autoenv", True)
                     ),
+                    context_default=_has_context_default(default_map, param.name),
                 )
                 if (
                     not getattr(param.type, "case_sensitive", True)
