@@ -274,6 +274,208 @@ def test_disabled_prompt_preserves_ordinary_collection(
     )
 
 
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("environment", [None, "md json", "invalid-choice"])
+@pytest.mark.parametrize(
+    "location",
+    ["app", "command", "nested", "registration", "inherited", "empty", "callback"],
+)
+def test_automatic_environment_enum_options_refuse_before_writes(
+    collection_source,
+    tmp_path,
+    monkeypatch,
+    fallback,
+    target,
+    scaffold,
+    environment,
+    location,
+):
+    text = collection_source.read_text()
+    args = []
+    key = "ENUM_FIX_MODES"
+    if location in ("app", "empty"):
+        prefix = "" if location == "empty" else "ENUM_FIX"
+        key = f"{prefix}_MODES"
+        text = text.replace(
+            "app=typer.Typer()",
+            f"app=typer.Typer(context_settings={{'auto_envvar_prefix':{prefix!r}}})",
+        )
+    elif location == "callback":
+        args = ["run"]
+        key = "ENUM_FIX_RUN_MODES"
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'IGNORED'})",
+        )
+        text += "\n@app.callback(context_settings={'auto_envvar_prefix':'ENUM_FIX'})\ndef root_callback():\n pass\n"
+    elif location == "command":
+        text = text.replace(
+            "@app.command()",
+            "@app.command(context_settings={'auto_envvar_prefix':'ENUM_FIX'})",
+        )
+    else:
+        args = ["group", "run"]
+        key = "ENUM_FIX_RUN_MODES"
+        if location == "nested":
+            text = text.replace(
+                "app=typer.Typer()",
+                "app=typer.Typer(context_settings={'auto_envvar_prefix':'ENUM_FIX'})",
+            )
+        text += "\nchild=app\n"
+        text += (
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'ENUM_FIX'})\n"
+            if location == "inherited"
+            else "app=typer.Typer()\n"
+        )
+        text += (
+            "app.add_typer(child,name='group',context_settings={'auto_envvar_prefix':'ENUM_FIX'})\n"
+            if location == "registration"
+            else "app.add_typer(child,name='group')\n"
+        )
+        if location == "inherited":
+            key = "ENUM_FIX_GROUP_RUN_MODES"
+    collection_source.write_text(text)
+    if environment is None:
+        monkeypatch.delenv(key, raising=False)
+    else:
+        monkeypatch.setenv(key, environment)
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "auto-env-effect.json"
+    result = CliRunner().invoke(native, [*args, str(effect)])
+    if environment == "invalid-choice":
+        assert result.exit_code != 0 and not effect.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        value = json.loads(effect.read_text())
+        assert value == ["md", "json"] if environment else value in (None, [])
+        effect.unlink()
+    hits = []
+    if fallback:
+
+        def fail_tree():
+            hits.append(True)
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / "auto-env-consumer.py"
+    with pytest.raises(TypeError, match="Environment-backed enum parameters"):
+        intpot.load(collection_source).write(
+            destination, target, allow_scaffold=scaffold
+        )
+    assert not destination.exists() and not effect.exists()
+    if fallback:
+        assert hits
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize(
+    "location",
+    ["sibling", "command_override", "flattened", "positional", "registration_override"],
+)
+def test_automatic_environment_ignores_unaffected_enum_parameters(
+    collection_source, tmp_path, monkeypatch, fallback, location
+):
+    text = collection_source.read_text()
+    args = []
+    scalar = location == "positional"
+    if location in ("sibling", "flattened"):
+        args = ["run"]
+    if location == "sibling":
+        text += "\nother=typer.Typer(context_settings={'auto_envvar_prefix':'OTHER'})\n@other.command()\ndef ping():\n typer.echo('pong')\napp.add_typer(other,name='other')\n"
+    elif location == "command_override":
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'OTHER'})",
+        )
+        text = text.replace(
+            "@app.command()",
+            "@app.command(context_settings={'help_option_names':['--help']})",
+        )
+    elif location == "registration_override":
+        args = ["child", "run"]
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'OTHER'})",
+        )
+        text += "\nchild=app\napp=typer.Typer()\napp.add_typer(child,name='child',context_settings={})\n"
+    elif location == "flattened":
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'OTHER'})",
+        )
+        text += "\nchild=app\napp=typer.Typer()\napp.add_typer(child)\n"
+    else:
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'auto_envvar_prefix':'OTHER'})",
+        )
+        text = text.replace(
+            "modes:list[Mode]=typer.Option(None,'--to')",
+            "modes:Mode=typer.Argument(Mode.MD)",
+        )
+        text = text.replace("[m.value for m in modes]", "modes.value")
+    collection_source.write_text(text)
+    monkeypatch.setenv("OTHER_MODES", "invalid-choice")
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "unaffected.json"
+    result = CliRunner().invoke(native, [*args, str(effect)])
+    if location == "flattened" and result.exit_code != 0:
+        import typer.main
+
+        # Older Typer omits unnamed subgroup commands altogether. This is a
+        # source-only admission failure, not a generated-consumer failure.
+        assert "run" not in typer.main.get_command(native).commands
+        assert not effect.exists()
+        pytest.skip("Source framework does not expose unnamed subgroup commands")
+    assert result.exit_code == 0, result.exception
+    omitted = json.loads(effect.read_text())
+    assert omitted == "md" if scalar else omitted in (None, [])
+    effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    loaded = intpot.load(collection_source)
+    for target in ("api", "mcp"):
+        namespace: dict[str, Any] = {"__name__": "unaffected_enum_consumer"}
+        exec(getattr(loaded, "to_" + target)(), namespace)
+        tool = "child_run" if location == "registration_override" else "run"
+        bodies = [
+            ({"output": str(effect)}, omitted),
+            (
+                {
+                    "output": str(effect),
+                    "modes" if scalar else "to": "json" if scalar else ["json", "md"],
+                },
+                "json" if scalar else ["json", "md"],
+            ),
+        ]
+        for body, expected in bodies:
+            if target == "api":
+                with TestClient(namespace["app"]) as client:
+                    response = client.post("/" + tool, json=body)
+                    assert response.status_code == 200, response.text
+            else:
+
+                async def invoke(server=namespace["mcp"], body=body, tool=tool):
+                    async with Client(server) as client:
+                        wire_body = dict(body)
+                        if "to" in wire_body:
+                            wire_body["modes"] = wire_body.pop("to")
+                        response = await client.call_tool(tool, wire_body)
+                        assert not getattr(
+                            response, "is_error", getattr(response, "isError", False)
+                        )
+
+                asyncio.run(invoke())
+            assert json.loads(effect.read_text()) == expected
+            effect.unlink()
+
+
 @pytest.fixture
 def collection_source(tmp_path, monkeypatch):
     package = tmp_path / "enum_collection_app"

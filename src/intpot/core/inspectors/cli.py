@@ -116,13 +116,38 @@ def _parameter_annotation_metadata(
     return annotation, metadata
 
 
-def _guard_enum_parameter_metadata(metadata: Any) -> None:
+def _automatic_envvar(context_settings: Any, inherited: bool = False) -> bool:
+    """Track binding eligibility, never read or snapshot environment values."""
+    return inherited or (
+        isinstance(context_settings, dict)
+        and context_settings.get("auto_envvar_prefix") is not None
+    )
+
+
+def _registered_setting(app: Any, registration: Any, name: str) -> Any:
+    """Read just one Typer setting with registration/callback/app precedence."""
+    from typer.models import DefaultPlaceholder
+
+    for owner in (
+        registration,
+        getattr(app, "registered_callback", None),
+        getattr(app, "info", None),
+    ):
+        value = getattr(owner, name, _SENTINEL)
+        if value is not _SENTINEL and not isinstance(value, DefaultPlaceholder):
+            return value
+    return None
+
+
+def _guard_enum_parameter_metadata(
+    metadata: Any, *, automatic_envvar: bool = False
+) -> None:
     # Plain enum defaults can expose members named like option settings.
     if isinstance(metadata, Enum):
-        return
+        metadata = None
     if getattr(metadata, "default_factory", None) is not None:
         raise TypeError("String-enum default factories are not supported")
-    if getattr(metadata, "envvar", None) is not None:
+    if getattr(metadata, "envvar", None) is not None or automatic_envvar:
         raise TypeError("Environment-backed enum parameters are not supported")
     if any(
         getattr(metadata, name, None) is not None for name in ("click_type", "parser")
@@ -154,13 +179,21 @@ def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:
 
 
 def _registered_parameter_details(
-    annotation: Any, signature_default: Any
+    annotation: Any, signature_default: Any, *, automatic_envvar: bool = False
 ) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
     enum = annotation_string_enum(annotation)
     if enum is not None:
-        _guard_enum_parameter_metadata(metadata)
+        # Arguments do not participate in automatic option environment lookup.
+        option = hasattr(metadata, "prompt") or (
+            not hasattr(metadata, "param_decls")
+            and signature_default is not inspect.Parameter.empty
+            and signature_default is not Ellipsis
+        )
+        _guard_enum_parameter_metadata(
+            metadata, automatic_envvar=automatic_envvar and option
+        )
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
     )
@@ -229,7 +262,7 @@ class CLIInspector(BaseInspector):
                 # Build the click group by invoking typer internals
                 import typer.main
 
-                click_group = typer.main.get_group(app)
+                click_group = typer.main.get_command(app)
         except Exception:
             registered = getattr(app, "registered_commands", None)
             if isinstance(registered, list):
@@ -248,6 +281,8 @@ class CLIInspector(BaseInspector):
         tools: list[ToolInfo],
         prefix: str = "",
         seen: set[int] | None = None,
+        automatic_envvar: bool = False,
+        registration: Any = None,
     ) -> None:
         """Inspect Typer callbacks when its Click tree cannot be constructed."""
         if seen is None:
@@ -260,6 +295,23 @@ class CLIInspector(BaseInspector):
         commands = getattr(app, "registered_commands", None)
         if not isinstance(commands, list):
             return
+
+        is_group = bool(
+            registration is not None
+            or getattr(app, "registered_callback", None)
+            or getattr(getattr(app, "info", None), "callback", None)
+            or getattr(app, "registered_groups", None)
+            or len(commands) > 1
+        )
+        # Unnamed add_typer groups are flattened: their context is unused.
+        if is_group and (
+            registration is None
+            or _text_name(_registered_setting(app, registration, "name"))
+        ):
+            automatic_envvar = _automatic_envvar(
+                _registered_setting(app, registration, "context_settings"),
+                automatic_envvar,
+            )
 
         for command in commands:
             callback = getattr(command, "callback", None)
@@ -279,6 +331,12 @@ class CLIInspector(BaseInspector):
             except Exception:
                 annotations = inspect.get_annotations(callback, eval_str=False)
 
+            context_settings = getattr(command, "context_settings", None)
+            if not is_group and not context_settings:
+                context_settings = getattr(
+                    getattr(app, "info", None), "context_settings", None
+                )
+            command_auto_envvar = _automatic_envvar(context_settings, automatic_envvar)
             parameters: list[ParameterInfo] = []
             for param in signature.parameters.values():
                 (
@@ -290,7 +348,9 @@ class CLIInspector(BaseInspector):
                     unsupported_callback,
                     numeric_range,
                 ) = _registered_parameter_details(
-                    annotations.get(param.name, param.annotation), param.default
+                    annotations.get(param.name, param.annotation),
+                    param.default,
+                    automatic_envvar=command_auto_envvar,
                 )
                 enum = annotation_string_enum(annotation)
                 if enum is not None and default is not _SENTINEL:
@@ -336,15 +396,21 @@ class CLIInspector(BaseInspector):
                     getattr(getattr(nested, "info", None), "name", None)
                 )
             nested_prefix = f"{prefix}{group_name}_" if group_name else prefix
-            self._extract_registered_app(nested, tools, nested_prefix, seen)
+            self._extract_registered_app(
+                nested, tools, nested_prefix, seen, automatic_envvar, group
+            )
 
     def _extract_commands(
         self,
         group: Any,
         tools: list[ToolInfo],
         prefix: str = "",
+        automatic_envvar: bool = False,
     ) -> None:
         """Recursively extract commands from Click/Typer groups."""
+        automatic_envvar = _automatic_envvar(
+            getattr(group, "context_settings", None), automatic_envvar
+        )
         commands = _child_commands(group)
         if commands is None:
             # A single command rather than a group.
@@ -359,10 +425,17 @@ class CLIInspector(BaseInspector):
 
             # Recurse into sub-groups
             if _child_commands(cmd) is not None:
-                self._extract_commands(cmd, tools, prefix=f"{full_name}_")
+                self._extract_commands(
+                    cmd,
+                    tools,
+                    prefix=f"{full_name}_",
+                    automatic_envvar=automatic_envvar,
+                )
                 continue
 
-            self._extract_single_command(cmd, full_name, interface_name, tools)
+            self._extract_single_command(
+                cmd, full_name, interface_name, tools, automatic_envvar
+            )
 
     def _extract_single_command(
         self,
@@ -370,8 +443,12 @@ class CLIInspector(BaseInspector):
         name: str,
         interface_name: str,
         tools: list[ToolInfo],
+        automatic_envvar: bool = False,
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
+        automatic_envvar = _automatic_envvar(
+            getattr(cmd, "context_settings", None), automatic_envvar
+        )
         description = cmd.help or ""
         callback = getattr(cmd, "callback", None)
         callback_params: dict[str, inspect.Parameter] = {}
@@ -388,10 +465,11 @@ class CLIInspector(BaseInspector):
         params: list[ParameterInfo] = []
         for param in cmd.params:
             if param.name is None or (
-                param.name == "help" and not getattr(param, "expose_value", True)
+                not getattr(param, "expose_value", True)
+                and param.name not in callback_params
             ):
-                # Framework help is not passed to the command callback; a user
-                # parameter named help is, and must retain its validation marker.
+                # Framework help/completion options are not callback inputs.
+                # Retain user parameters (even named help) and their guards.
                 continue
 
             type_str = _click_type_to_str(param.type)
@@ -427,7 +505,14 @@ class CLIInspector(BaseInspector):
                 _, metadata = _parameter_annotation_metadata(
                     original.annotation, original.default
                 )
-                _guard_enum_parameter_metadata(metadata)
+                _guard_enum_parameter_metadata(
+                    metadata,
+                    automatic_envvar=(
+                        automatic_envvar
+                        and getattr(param, "param_type_name", None) == "option"
+                        and getattr(param, "allow_from_autoenv", True)
+                    ),
+                )
                 if (
                     not getattr(param.type, "case_sensitive", True)
                     or bool(getattr(param, "multiple", False)) != enum.many

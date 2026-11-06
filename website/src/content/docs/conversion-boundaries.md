@@ -59,7 +59,10 @@ MCP arrays reject explicit null.
 Required/positional/nested collections, tuple annotations, nullable elements,
 local/custom/non-string enums, aliases and case-insensitive choices remain refused. Explicit `click_type` and `parser` overrides on enum parameters are
 also refused before writes, as are enum default factories (without executing them) and explicit enum `envvar`
-declarations (without snapshotting environment values). Prompt-backed enum options
+declarations and effective `auto_envvar_prefix` option bindings (without snapshotting
+environment values). Context inheritance and Typer registration overrides are checked;
+unrelated sibling prefixes, unused flattened-group settings and positional arguments
+do not create automatic option bindings. Prompt-backed enum options
 (including empty prompt labels) refuse before writes rather than executing omitted
 inputs without the source interaction; disabled `prompt=False`/`None` remains supported.
 Module components, enum
