@@ -116,33 +116,68 @@ def _parameter_annotation_metadata(
     return annotation, metadata
 
 
+def _plain_context_settings(settings: Any) -> Any:
+    """Only builtin storage certifies lookup semantics; never invoke map hooks."""
+    if settings is None:
+        return None
+    from typer.models import DefaultPlaceholder
+
+    if type(settings) is DefaultPlaceholder:
+        settings = settings.value
+    return settings if settings is None or type(settings) is dict else _SENTINEL
+
+
 def _automatic_envvar(context_settings: Any, inherited: bool = False) -> bool:
     """Track binding eligibility, never read or snapshot environment values."""
-    return inherited or (
-        isinstance(context_settings, dict)
-        and context_settings.get("auto_envvar_prefix") is not None
+    context_settings = _plain_context_settings(context_settings)
+    return (
+        inherited
+        or context_settings is _SENTINEL
+        or (
+            type(context_settings) is dict
+            and context_settings.get("auto_envvar_prefix") is not None
+        )
+    )
+
+
+def _unsupported_enum_context(settings: Any, inherited: bool = False) -> bool:
+    """Token normalization inherits; resilient parsing is context-local."""
+    settings = _plain_context_settings(settings)
+    return (
+        inherited
+        or settings is _SENTINEL
+        or (type(settings) is dict and settings.get("token_normalize_func") is not None)
+    )
+
+
+def _resilient_enum_context(settings: Any) -> bool:
+    settings = _plain_context_settings(settings)
+    return type(settings) is dict and (
+        settings.get("resilient_parsing", False) is not False
+        and settings.get("resilient_parsing") is not None
     )
 
 
 def _context_default_map(context_settings: Any, inherited: Any = None) -> Any:
     """Explicit maps replace inherited maps; None retains the current lookup."""
+    context_settings = _plain_context_settings(context_settings)
+    if context_settings is _SENTINEL:
+        return _SENTINEL
     configured = (
-        dict.get(context_settings, "default_map")
-        if isinstance(context_settings, dict)
-        else None
+        context_settings.get("default_map") if type(context_settings) is dict else None
     )
     return inherited if configured is None else configured
 
 
 def _child_default_map(default_map: Any, name: str) -> Any:
-    return dict.get(default_map, name) if isinstance(default_map, dict) else default_map
+    return default_map.get(name) if type(default_map) is dict else default_map
 
 
 def _has_context_default(default_map: Any, name: str) -> bool:
     # Do not invoke entries: Click permits callables here. Unknown map shapes
     # cannot certify an enum default either, but unrelated/None entries are inert.
     return default_map is not None and (
-        not isinstance(default_map, dict) or dict.get(default_map, name) is not None
+        type(default_map) is not dict or default_map.get(name) is not None
     )
 
 
@@ -162,7 +197,11 @@ def _registered_setting(app: Any, registration: Any, name: str) -> Any:
 
 
 def _guard_enum_parameter_metadata(
-    metadata: Any, *, automatic_envvar: bool = False, context_default: bool = False
+    metadata: Any,
+    *,
+    automatic_envvar: bool = False,
+    context_default: bool = False,
+    unsupported_context: bool = False,
 ) -> None:
     # Plain enum defaults can expose members named like option settings.
     if isinstance(metadata, Enum):
@@ -180,6 +219,8 @@ def _guard_enum_parameter_metadata(
     prompt = getattr(metadata, "prompt", False)
     if prompt is not None and prompt is not False:
         raise TypeError("Prompt-backed enum parameters are not supported")
+    if unsupported_context:
+        raise TypeError("Custom enum context settings are not supported")
     if context_default:
         raise TypeError("Context-backed enum defaults are not supported")
 
@@ -208,6 +249,7 @@ def _registered_parameter_details(
     *,
     automatic_envvar: bool = False,
     context_default: bool = False,
+    unsupported_context: bool = False,
 ) -> tuple[Any, Any, str, str | None, list[str], bool, dict[str, Any]]:
     """Normalize callback annotations and Typer metadata without building Click."""
     annotation, metadata = _parameter_annotation_metadata(annotation, signature_default)
@@ -223,6 +265,7 @@ def _registered_parameter_details(
             metadata,
             automatic_envvar=automatic_envvar and option,
             context_default=context_default,
+            unsupported_context=unsupported_context,
         )
     default_source = (
         metadata if signature_default is inspect.Parameter.empty else signature_default
@@ -314,6 +357,7 @@ class CLIInspector(BaseInspector):
         automatic_envvar: bool = False,
         registration: Any = None,
         default_map: Any = None,
+        unsupported_context: bool = False,
     ) -> None:
         """Inspect Typer callbacks when its Click tree cannot be constructed."""
         if seen is None:
@@ -342,6 +386,9 @@ class CLIInspector(BaseInspector):
             settings = _registered_setting(app, registration, "context_settings")
             automatic_envvar = _automatic_envvar(settings, automatic_envvar)
             default_map = _context_default_map(settings, default_map)
+            unsupported_context = _unsupported_enum_context(
+                settings, unsupported_context
+            )
 
         for command in commands:
             callback = getattr(command, "callback", None)
@@ -367,6 +414,9 @@ class CLIInspector(BaseInspector):
                     getattr(app, "info", None), "context_settings", None
                 )
             command_auto_envvar = _automatic_envvar(context_settings, automatic_envvar)
+            command_unsupported_context = _unsupported_enum_context(
+                context_settings, unsupported_context
+            ) or _resilient_enum_context(context_settings)
             command_default_map = _context_default_map(
                 context_settings,
                 _child_default_map(default_map, command_name)
@@ -387,6 +437,7 @@ class CLIInspector(BaseInspector):
                     annotations.get(param.name, param.annotation),
                     param.default,
                     automatic_envvar=command_auto_envvar,
+                    unsupported_context=command_unsupported_context,
                     context_default=_has_context_default(
                         command_default_map, param.name
                     ),
@@ -446,6 +497,7 @@ class CLIInspector(BaseInspector):
                 _child_default_map(default_map, group_name)
                 if group_name
                 else default_map,
+                unsupported_context,
             )
 
     def _extract_commands(
@@ -455,8 +507,12 @@ class CLIInspector(BaseInspector):
         prefix: str = "",
         automatic_envvar: bool = False,
         default_map: Any = None,
+        unsupported_context: bool = False,
     ) -> None:
         """Recursively extract commands from Click/Typer groups."""
+        unsupported_context = _unsupported_enum_context(
+            getattr(group, "context_settings", None), unsupported_context
+        )
         automatic_envvar = _automatic_envvar(
             getattr(group, "context_settings", None), automatic_envvar
         )
@@ -484,6 +540,7 @@ class CLIInspector(BaseInspector):
                     prefix=f"{full_name}_",
                     automatic_envvar=automatic_envvar,
                     default_map=_child_default_map(default_map, cmd_name),
+                    unsupported_context=unsupported_context,
                 )
                 continue
 
@@ -494,6 +551,7 @@ class CLIInspector(BaseInspector):
                 tools,
                 automatic_envvar,
                 _child_default_map(default_map, cmd_name) if is_group else default_map,
+                unsupported_context,
             )
 
     def _extract_single_command(
@@ -504,8 +562,12 @@ class CLIInspector(BaseInspector):
         tools: list[ToolInfo],
         automatic_envvar: bool = False,
         default_map: Any = None,
+        unsupported_context: bool = False,
     ) -> None:
         """Extract a single Click command into a ToolInfo."""
+        unsupported_context = _unsupported_enum_context(
+            getattr(cmd, "context_settings", None), unsupported_context
+        ) or _resilient_enum_context(getattr(cmd, "context_settings", None))
         default_map = _context_default_map(
             getattr(cmd, "context_settings", None), default_map
         )
@@ -576,6 +638,7 @@ class CLIInspector(BaseInspector):
                         and getattr(param, "allow_from_autoenv", True)
                     ),
                     context_default=_has_context_default(default_map, param.name),
+                    unsupported_context=unsupported_context,
                 )
                 if (
                     not getattr(param.type, "case_sensitive", True)

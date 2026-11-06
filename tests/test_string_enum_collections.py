@@ -372,7 +372,14 @@ def test_automatic_environment_enum_options_refuse_before_writes(
 @pytest.mark.parametrize("fallback", [False, True])
 @pytest.mark.parametrize(
     "location",
-    ["sibling", "command_override", "flattened", "positional", "registration_override"],
+    [
+        "sibling",
+        "command_override",
+        "flattened",
+        "positional",
+        "registration_override",
+        "parent_resilient",
+    ],
 )
 def test_automatic_environment_ignores_unaffected_enum_parameters(
     collection_source, tmp_path, monkeypatch, fallback, location
@@ -393,6 +400,13 @@ def test_automatic_environment_ignores_unaffected_enum_parameters(
             "@app.command()",
             "@app.command(context_settings={'help_option_names':['--help']})",
         )
+    elif location == "parent_resilient":
+        args = ["child", "run"]
+        text = text.replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'resilient_parsing':True})",
+        )
+        text += "\nchild=app\napp=typer.Typer()\napp.add_typer(child,name='child')\n"
     elif location == "registration_override":
         args = ["child", "run"]
         text = text.replace(
@@ -443,7 +457,11 @@ def test_automatic_environment_ignores_unaffected_enum_parameters(
     for target in ("api", "mcp"):
         namespace: dict[str, Any] = {"__name__": "unaffected_enum_consumer"}
         exec(getattr(loaded, "to_" + target)(), namespace)
-        tool = "child_run" if location == "registration_override" else "run"
+        tool = (
+            "child_run"
+            if location in ("registration_override", "parent_resilient")
+            else "run"
+        )
         bodies = [
             ({"output": str(effect)}, omitted),
             (
@@ -626,6 +644,181 @@ def test_context_default_map_overrides_do_not_reject_unaffected_collection(
         "@app.command(context_settings={'default_map':" + mapping + "})",
     )
     collection_source.write_text(text)
+    test_collection_consumers_preserve_none_order_duplicates(
+        collection_source, tmp_path, monkeypatch, fallback, False, "None"
+    )
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize("invalid", [False, True])
+@pytest.mark.parametrize("boundary", ["parameter", "route", "settings"])
+def test_custom_context_lookups_refuse_without_invoking_hooks(
+    collection_source,
+    tmp_path,
+    monkeypatch,
+    fallback,
+    target,
+    scaffold,
+    invalid,
+    boundary,
+):
+    text = collection_source.read_text()
+    value = "['invalid-choice']" if invalid else "['md','json']"
+    support = "calls=[]\nclass CustomMap(dict):\n def get(self,key,default=None):\n  calls.append(key)\n"
+    args = []
+    if boundary == "parameter":
+        support += (
+            "  if key=='modes':return "
+            + value
+            + "\n  return super().get(key,default)\n"
+        )
+        text = text.replace(
+            "app=typer.Typer()",
+            support + "app=typer.Typer(context_settings={'default_map':CustomMap()})",
+        )
+    elif boundary == "route":
+        args = ["group", "run"]
+        support += (
+            "  if key=='group':return {'run':{'modes':"
+            + value
+            + "}}\n  return super().get(key,default)\n"
+        )
+        text = text.replace("app=typer.Typer()", support + "app=typer.Typer()")
+        text += "\nchild=app\napp=typer.Typer(context_settings={'default_map':CustomMap()})\napp.add_typer(child,name='group')\n"
+    else:
+        support = (
+            "calls=[]\nclass CustomSettings(dict):\n def __bool__(self):return True\n def items(self):\n  calls.append('items')\n  return {'default_map':{'modes':"
+            + value
+            + "}}.items()\n"
+        )
+        text = text.replace(
+            "app=typer.Typer()",
+            support + "app=typer.Typer(context_settings=CustomSettings())",
+        )
+    collection_source.write_text(text)
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "custom-lookup.json"
+    result = CliRunner().invoke(native, [*args, str(effect), "--to", "json"])
+    assert result.exit_code == 0 and json.loads(effect.read_text()) == ["json"]
+    effect.unlink()
+    result = CliRunner().invoke(native, [*args, str(effect)])
+    if invalid:
+        assert result.exit_code != 0 and not effect.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        assert json.loads(effect.read_text()) == ["md", "json"]
+        effect.unlink()
+    module = sys.modules["enum_collection_app.main"]
+    before = list(module.calls)
+    hits = []
+    if fallback:
+
+        def fail_tree():
+            hits.append(True)
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / "custom-consumer.py"
+    with pytest.raises(
+        TypeError,
+        match=r"Context-backed enum defaults|Environment-backed enum parameters|Custom enum context settings",
+    ):
+        intpot.load(collection_source).write(
+            destination, target, allow_scaffold=scaffold
+        )
+    assert not destination.exists() and not effect.exists()
+    assert module.calls == before
+    if fallback:
+        assert hits
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("target", ["api", "mcp"])
+@pytest.mark.parametrize("scaffold", [False, True])
+@pytest.mark.parametrize(
+    "behavior,location",
+    [
+        (behavior, location)
+        for behavior in ("token_normalize_func", "resilient_parsing")
+        for location in ("app", "command", "nested")
+        if (behavior, location) != ("resilient_parsing", "nested")
+    ],
+)
+def test_behavior_changing_enum_context_refuses_before_writes(
+    collection_source,
+    tmp_path,
+    monkeypatch,
+    fallback,
+    target,
+    scaffold,
+    behavior,
+    location,
+):
+    text = collection_source.read_text()
+    settings = (
+        "{'token_normalize_func':str.lower}"
+        if behavior == "token_normalize_func"
+        else "{'resilient_parsing':True}"
+    )
+    args = []
+    if location == "command":
+        text = text.replace(
+            "@app.command()", "@app.command(context_settings=" + settings + ")"
+        )
+    else:
+        text = text.replace(
+            "app=typer.Typer()", "app=typer.Typer(context_settings=" + settings + ")"
+        )
+        if location == "nested":
+            text += (
+                "\nchild=app\napp=typer.Typer()\napp.add_typer(child,name='group')\n"
+            )
+            args = ["group", "run"]
+    collection_source.write_text(text)
+    _, native = detect_source(collection_source)
+    effect = tmp_path / "context-behavior.json"
+    result = CliRunner().invoke(native, [*args, str(effect), "--to", "json"])
+    assert result.exit_code == 0 and json.loads(effect.read_text()) == ["json"]
+    effect.unlink()
+    value = "MD" if behavior == "token_normalize_func" else "invalid-choice"
+    result = CliRunner().invoke(native, [*args, str(effect), "--to", value])
+    if behavior == "resilient_parsing" and result.exit_code != 0:
+        # Legacy Typer's builtin list converter raises before the body instead
+        # of retaining None after Click suppresses the invalid-choice error.
+        assert isinstance(result.exception, TypeError)
+        assert "'NoneType' object is not iterable" in str(result.exception)
+        assert not effect.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        expected = ["md"] if behavior == "token_normalize_func" else None
+        assert json.loads(effect.read_text()) == expected
+        effect.unlink()
+    if fallback:
+
+        def fail_tree():
+            raise RuntimeError("force registered-command fallback")
+
+        monkeypatch.setattr(native, "_get_command", fail_tree, raising=False)
+    destination = tmp_path / "behavior-consumer.py"
+    with pytest.raises(TypeError, match="Custom enum context settings"):
+        intpot.load(collection_source).write(
+            destination, target, allow_scaffold=scaffold
+        )
+    assert not destination.exists() and not effect.exists()
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_disabled_enum_context_behavior_remains_convertible(
+    collection_source, tmp_path, monkeypatch, fallback
+):
+    collection_source.write_text(
+        collection_source.read_text().replace(
+            "app=typer.Typer()",
+            "app=typer.Typer(context_settings={'token_normalize_func':None,'resilient_parsing':False})",
+        )
+    )
     test_collection_consumers_preserve_none_order_duplicates(
         collection_source, tmp_path, monkeypatch, fallback, False, "None"
     )

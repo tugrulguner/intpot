@@ -65,7 +65,10 @@ unrelated sibling prefixes, unused flattened-group settings and positional argum
 do not create automatic option bindings. Effective non-None `default_map` entries
 for enum parameters also refuse before writes, including callable entries (never
 invoked during inspection). Missing, unrelated or None entries and overridden maps
-do not change ordinary enum conversion. Prompt-backed enum options
+do not change ordinary enum conversion. Custom lookup containers, active token
+normalization and resilient parsing also refuse for enum parameters rather than
+assuming builtin lookup or strict choice-validation semantics. Inspection does not
+invoke those lookup/normalization hooks. Prompt-backed enum options
 (including empty prompt labels) refuse before writes rather than executing omitted
 inputs without the source interaction; disabled `prompt=False`/`None` remains supported.
 Module components, enum
