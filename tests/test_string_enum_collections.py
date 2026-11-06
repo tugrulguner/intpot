@@ -788,7 +788,10 @@ def test_behavior_changing_enum_context_refuses_before_writes(
         # Legacy Typer's builtin list converter raises before the body instead
         # of retaining None after Click suppresses the invalid-choice error.
         assert isinstance(result.exception, TypeError)
-        assert "'NoneType' object is not iterable" in str(result.exception)
+        assert str(result.exception) in (
+            "'NoneType' object is not iterable",
+            "object of type 'NoneType' has no len()",
+        )
         assert not effect.exists()
     else:
         assert result.exit_code == 0, result.exception
