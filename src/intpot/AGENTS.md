@@ -144,7 +144,27 @@ modules from another source tree rather than replacing them. Restore loader-owne
 import-path changes on errors too. Standalone files retain isolated loading without
 adding their directory to sys.path. Root lifecycle equivalence is not certified.
 
+**Informational policy propagation (unreleased):** `ApplicationSchema.callback_policy`
+is an optional immutable application-level marker, omitted from JSON when absent.
+Explicit `exclusive-informational` assessment/projection/build/write paths share
+`core/informational_projection.py` qualification; source schemas remain unchanged.
+Direct API/MCP generators requalify policy-bearing snapshots and dispatch conditional
+rendering, clearing the marker only on their internal ordinary-renderer snapshot.
+Legacy `to_tools()` lists cannot represent the policy and restore callback refusal.
+Never silently discard it or let scaffold permission qualify a callback. The unreleased
+CLI exposes `--callback-policy exclusive-informational` on `to api`, `to mcp` and
+`inspect`; use canonical projection for conversion and policy-aware assessment without
+mutating raw inspection metadata. Preserve batch-before-write and dry-run behavior.
+Full Docling conversion remains unfinished.
+
 **CLI parameter callbacks**
+
+- `informational_callback` is optional immutable candidate identity metadata on both
+  parameter records. It does not certify callback effects or permit conversion. Keep
+  `unsupported_callback=True`, all before-write/scaffold guards, and default refusal.
+  Capture only already-loaded ordinary package exports without invoking callbacks or
+  evaluating annotation strings; data decoding must not import. Preserve weak live
+  identity evidence, code snapshots, adapters/hash/JSON and runtime detachment.
 
 - `ParameterInfo` and `ParameterSchema` append the boolean `unsupported_callback`; retain
   positional compatibility, equality/hash, adapters, and JSON mapping (only true is emitted).

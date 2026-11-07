@@ -47,8 +47,17 @@ class UnsupportedFastAPIDependencyError(Exception):
     """Raised when FastAPI dependency injection cannot be converted safely."""
 
 
-def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
+def assess_schema(
+    schema: ApplicationSchema, *, callback_policy: str | None = None
+) -> dict[str, Any]:
     """Assess known refusals, body recovery and bindings, not complete fidelity."""
+    selected_policy = (
+        callback_policy if callback_policy is not None else schema.callback_policy
+    )
+    if selected_policy is not None:
+        from intpot.core.informational_projection import qualify_informational_schema
+
+        schema = qualify_informational_schema(schema, selected_policy, strict=False)
     missing = [tool.name for tool in schema.tools if tool.function_body is None]
     refusal_diagnostics: list[dict[str, Any]] = []
     skipped_targets: set[SourceType] = set()
@@ -158,6 +167,7 @@ def assess_schema(schema: ApplicationSchema) -> dict[str, Any]:
         ],
     )
     return {
+        **({"callback_policy": selected_policy} if selected_policy is not None else {}),
         "body_recovery_complete": not missing,
         "missing_function_body": missing,
         "diagnostics": [
@@ -570,9 +580,20 @@ def project_schema(
     target: SourceType,
     *,
     allow_scaffold: bool = False,
+    callback_policy: str | None = None,
 ) -> ApplicationSchema:
     """Project a canonical schema into target-specific immutable semantics."""
     from intpot.core.transforms import transform_schema
+
+    selected_policy = (
+        callback_policy if callback_policy is not None else schema.callback_policy
+    )
+    if selected_policy is not None:
+        if target not in (SourceType.API, SourceType.MCP):
+            raise ValueError("Informational policy supports API/MCP targets only")
+        from intpot.core.informational_projection import qualify_informational_schema
+
+        schema = qualify_informational_schema(schema, selected_policy)
 
     if schema.source_type == SourceType.API and target in (
         SourceType.CLI,
@@ -685,9 +706,9 @@ class IntpotApp:
         selected.__dict__["schema"] = schema
         return selected
 
-    def assess(self) -> dict[str, Any]:
+    def assess(self, *, callback_policy: str | None = None) -> dict[str, Any]:
         """Report known refusals and per-target bindings, not complete fidelity."""
-        return assess_schema(self.schema)
+        return assess_schema(self.schema, callback_policy=callback_policy)
 
     @property
     def tools(self) -> list[ToolInfo]:
@@ -699,7 +720,11 @@ class IntpotApp:
         return self.project(target).to_tools()
 
     def project(
-        self, target: str | SourceType, *, allow_scaffold: bool = False
+        self,
+        target: str | SourceType,
+        *,
+        allow_scaffold: bool = False,
+        callback_policy: str | None = None,
     ) -> ApplicationSchema:
         """Return an immutable target projection of the compiled application."""
         if isinstance(target, str):
@@ -717,7 +742,12 @@ class IntpotApp:
             raise ValueError(
                 f"Source is already a {self.source_type.value.upper()} app"
             )
-        return project_schema(self.schema, target, allow_scaffold=allow_scaffold)
+        return project_schema(
+            self.schema,
+            target,
+            allow_scaffold=allow_scaffold,
+            callback_policy=callback_policy,
+        )
 
     def to_cli(self, *, allow_scaffold: bool = False) -> str:
         """Generate Typer CLI code."""
@@ -729,24 +759,43 @@ class IntpotApp:
             self.project(SourceType.CLI, allow_scaffold=allow_scaffold)
         )
 
-    def to_mcp(self, *, allow_scaffold: bool = False) -> str:
-        """Generate FastMCP server code."""
+    def to_mcp(
+        self, *, allow_scaffold: bool = False, callback_policy: str | None = None
+    ) -> str:
+        """Generate FastMCP server code; callback adaptation is opt-in."""
         if self.source_type == SourceType.MCP:
             raise ValueError("Source is already an MCP server")
+        if callback_policy not in (None, "exclusive-informational"):
+            raise ValueError(f"Unknown callback policy: {callback_policy!r}")
         from intpot.core.generators.mcp import MCPGenerator
 
         return MCPGenerator().generate(
-            self.project(SourceType.MCP, allow_scaffold=allow_scaffold)
+            self.project(
+                SourceType.MCP,
+                allow_scaffold=allow_scaffold,
+                callback_policy=callback_policy,
+            )
         )
 
-    def to_api(self, *, allow_scaffold: bool = False) -> str:
-        """Generate FastAPI app code."""
+    def to_api(
+        self,
+        *,
+        allow_scaffold: bool = False,
+        callback_policy: str | None = None,
+    ) -> str:
+        """Generate FastAPI app code; callback adaptation is opt-in."""
         if self.source_type == SourceType.API:
             raise ValueError("Source is already an API app")
+        if callback_policy not in (None, "exclusive-informational"):
+            raise ValueError(f"Unknown callback policy: {callback_policy!r}")
         from intpot.core.generators.api import APIGenerator
 
         return APIGenerator().generate(
-            self.project(SourceType.API, allow_scaffold=allow_scaffold)
+            self.project(
+                SourceType.API,
+                allow_scaffold=allow_scaffold,
+                callback_policy=callback_policy,
+            )
         )
 
     def write(
@@ -755,6 +804,7 @@ class IntpotApp:
         target: str | SourceType,
         *,
         allow_scaffold: bool = False,
+        callback_policy: str | None = None,
     ) -> Path:
         """Generate code and write it to a file.
 
@@ -771,11 +821,17 @@ class IntpotApp:
 
         generators = {
             "cli": lambda: self.to_cli(allow_scaffold=allow_scaffold),
-            "mcp": lambda: self.to_mcp(allow_scaffold=allow_scaffold),
-            "api": lambda: self.to_api(allow_scaffold=allow_scaffold),
+            "mcp": lambda: self.to_mcp(
+                allow_scaffold=allow_scaffold, callback_policy=callback_policy
+            ),
+            "api": lambda: self.to_api(
+                allow_scaffold=allow_scaffold, callback_policy=callback_policy
+            ),
         }
         if target not in generators:
             raise ValueError(f"Unknown target '{target}', expected: cli, mcp, api")
+        if callback_policy is not None and target not in ("api", "mcp"):
+            raise ValueError("Informational policy supports API/MCP targets only")
         code = generators[target]()
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)

@@ -107,6 +107,19 @@ every human reads. If your agent wants a shortcut wrapping them, keep it untrack
 (`intpot add skills` writing `.claude/skills/` into a *user's* project is the product, and
 unrelated — it emits six formats and privileges none of them.)
 
+**Informational policy propagation (unreleased):** `ApplicationSchema.callback_policy`
+is an optional immutable application-level marker, omitted from JSON when absent.
+Explicit `exclusive-informational` assessment/projection/build/write paths share
+`core/informational_projection.py` qualification; source schemas remain unchanged.
+Direct API/MCP generators requalify policy-bearing snapshots and dispatch conditional
+rendering, clearing the marker only on their internal ordinary-renderer snapshot.
+Legacy `to_tools()` lists cannot represent the policy and restore callback refusal.
+Never silently discard it or let scaffold permission qualify a callback. The unreleased
+CLI exposes `--callback-policy exclusive-informational` on `to api`, `to mcp` and
+`inspect`; use canonical projection for conversion and policy-aware assessment without
+mutating raw inspection metadata. Preserve batch-before-write and dry-run behavior.
+Full Docling conversion remains unfinished.
+
 **CLI string enums (unreleased):** `ParameterInfo`/`ParameterSchema.string_enum`
 contains pure immutable `StringEnumSpec` metadata; `StringEnumDefault` is a symbolic
 member default, never a live enum class/member. Keep hashes/adapters/runtime copies/

@@ -189,7 +189,8 @@ framework-visible spelling such as `send-email` when it differs.
 `ParameterInfo` fields: `name`, `type_annotation`, `default`, `description`,
 `param_source`, `placement`, `binding_name`, `interface_name`, `aliases`,
 `unsupported_callback`, `minimum`, `maximum`, `unsupported_numeric_range`,
-`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, `string_enum`, plus a
+`unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, `string_enum`,
+`informational_callback`, plus a
 `required` property. `binding_name` preserves a source callable's valid Python parameter
 spelling when canonical sanitization changes it. `interface_name` is the primary
 framework-visible parameter spelling; `aliases` retains exact additional Typer/Click
@@ -202,7 +203,30 @@ when the parameter is required — check `param.required` rather than comparing 
 
 `unsupported_callback` records a source CLI parameter callback as a boolean, never the
 callable itself. It survives immutable schema and detached compatibility round trips;
-API/MCP generation refuses it. This does not add callback support to `App.tool()`.
+Default API/MCP generation refuses it. This does not add callback support to `App.tool()`.
+`informational_callback`, when present, is pure immutable candidate identity metadata
+for an already-loaded eager boolean callback, not permission to run it. Decoding does
+not import code. Live captures retain separate weak export identity evidence and a
+code snapshot; inspection never calls the callback. The callback refusal stays active
+regardless of this candidate field or scaffold permission. Deferred/custom annotation
+providers remain unqualified: reading annotations must not execute a provider.
+Experimental source-checkout-only `to_api(callback_policy="exclusive-informational")`
+and matching `to_mcp(...)` adapt verified eager informational callbacks: at most one flag may be true,
+conflicts reject, normal inputs stay typed, and information returns a result-text object.
+A bounded fresh worker invokes the original callback package; this is not shared-state
+or lifecycle equivalence. Dynamic environment/default-map activation stays refused.
+The generated MCP tracer has been exercised on FastMCP 4.1.2 / MCP 2.2.0,
+2.14.7 / MCP 1.30.0 and 2.0.0 with MCP 1.12.4 and 1.6.0. Older protocols
+without structured output return checked native text instead; no validation is disabled.
+These are bounded workflow checks. `assess()`, `project()` and `write()` accept the same
+programmatic policy; projected `ApplicationSchema.callback_policy` directs standalone
+generation. A legacy `to_tools()` list restores callback refusal because it cannot carry
+application-level policy. Runtime qualification uses Python 3.11; callbacks exposing
+`__annotate__` providers, including ordinary callbacks on tested Python 3.14.9, remain
+refused without reading their annotations. Do not claim Python 3.14 callback adaptation.
+The source-checkout CLI exposes the same explicit
+`--callback-policy exclusive-informational` on `to api`, `to mcp` and `inspect`;
+public v0.16.0 does not include these tracers.
 
 `param_source` is `ParamSource.query` / `header` / `path` / `body` for FastAPI sources
 that declared one, otherwise `None`.

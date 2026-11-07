@@ -7,6 +7,7 @@ import inspect
 from enum import Enum
 from typing import Annotated, Any, get_args, get_origin
 
+from intpot.core.informational_callbacks import capture_parameter_informational_callback
 from intpot.core.inspectors._utils import (
     extract_function_body,
     extract_source_imports,
@@ -442,6 +443,19 @@ class CLIInspector(BaseInspector):
                         command_default_map, param.name
                     ),
                 )
+                _, original_metadata = _parameter_annotation_metadata(
+                    annotations.get(param.name, param.annotation), param.default
+                )
+                informational_callback = capture_parameter_informational_callback(
+                    annotation,
+                    original_metadata,
+                    default,
+                    automatic_envvar=command_auto_envvar,
+                    context_default=_has_context_default(
+                        command_default_map, param.name
+                    ),
+                    unsupported_context=command_unsupported_context,
+                )
                 enum = annotation_string_enum(annotation)
                 if enum is not None and default is not _SENTINEL:
                     default = _enum_parameter_default(enum, default)
@@ -454,6 +468,7 @@ class CLIInspector(BaseInspector):
                         interface_name=parameter_interface_name,
                         aliases=aliases,
                         unsupported_callback=unsupported_callback,
+                        informational_callback=informational_callback,
                         string_enum=enum,
                         **numeric_range,
                     )
@@ -656,6 +671,21 @@ class CLIInspector(BaseInspector):
                     )
                 if default is not _SENTINEL:
                     default = _enum_parameter_default(enum, default)
+            informational_callback = None
+            if original is not None:
+                original_annotation, original_metadata = _parameter_annotation_metadata(
+                    original.annotation, original.default
+                )
+                informational_callback = capture_parameter_informational_callback(
+                    original_annotation,
+                    original_metadata,
+                    default,
+                    automatic_envvar=(
+                        automatic_envvar and getattr(param, "allow_from_autoenv", True)
+                    ),
+                    context_default=_has_context_default(default_map, param.name),
+                    unsupported_context=unsupported_context,
+                )
             aliases = _option_aliases(param)
             params.append(
                 ParameterInfo(
@@ -666,6 +696,7 @@ class CLIInspector(BaseInspector):
                     interface_name=_primary_option_name(aliases),
                     aliases=aliases,
                     unsupported_callback=callable(getattr(param, "callback", None)),
+                    informational_callback=informational_callback,
                     string_enum=enum,
                     **numeric_range,
                 )
