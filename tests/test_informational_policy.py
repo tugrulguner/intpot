@@ -40,7 +40,9 @@ def _candidate(tmp_path: Path, body: str, extra: str = ""):
 @pytest.mark.parametrize(
     "exit_expression", ["Exit()", "Exit(0)", "Exit(code=0)", "typer.Exit()", "Exit"]
 )
-def test_qualifies_exit_without_calling(tmp_path, exit_expression):
+def test_qualifies_exit_without_calling(
+    tmp_path, exit_expression, eager_callback_annotations
+):
     module, spec, path = _candidate(
         tmp_path, "if value:\n    calls.append(value)\n    raise " + exit_expression
     )
@@ -70,14 +72,14 @@ def test_qualifies_exit_without_calling(tmp_path, exit_expression):
         "if value:\n    global calls\n    raise Exit()",
     ],
 )
-def test_rejects_nonconforming_body(tmp_path, body):
+def test_rejects_nonconforming_body(tmp_path, body, eager_callback_annotations):
     module, spec, _ = _candidate(tmp_path, body)
     with pytest.raises(TypeError):
         qualify_informational_callback(spec)
     assert module.calls == []
 
 
-def test_stale_source_rejected(tmp_path):
+def test_stale_source_rejected(tmp_path, eager_callback_annotations):
     _, spec, path = _candidate(tmp_path, "if value:\n    raise Exit()")
     path.write_text(path.read_text().replace("raise Exit()", "pass"))
     with pytest.raises(TypeError):
@@ -101,7 +103,9 @@ def test_subclass_cannot_execute_resolution_hook():
 
 
 @pytest.mark.parametrize("replacement", [None, ValueError])
-def test_mutated_framework_exit_is_not_certified(tmp_path, monkeypatch, replacement):
+def test_mutated_framework_exit_is_not_certified(
+    tmp_path, monkeypatch, replacement, eager_callback_annotations
+):
     import typer
 
     module, spec, _ = _candidate(tmp_path, "if value:\n    raise Exit()")
@@ -112,7 +116,7 @@ def test_mutated_framework_exit_is_not_certified(tmp_path, monkeypatch, replacem
     assert module.calls == []
 
 
-def test_rebound_exit_refused_without_calling(tmp_path):
+def test_rebound_exit_refused_without_calling(tmp_path, eager_callback_annotations):
     module, spec, _ = _candidate(tmp_path, "if value:\n    raise Exit()")
     module.Exit = ValueError
     with pytest.raises(TypeError):

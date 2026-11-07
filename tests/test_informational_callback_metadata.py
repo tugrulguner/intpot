@@ -25,14 +25,11 @@ def _loaded(tmp_source, declaration=None):
 
 
 def test_custom_annotation_provider_is_not_executed(tmp_source):
-    import sys
 
     from intpot.core.informational_callbacks import capture_informational_callback
 
     loaded = _loaded(tmp_source)
-    spec = loaded.schema.tools[0].parameters[0].informational_callback
-    assert spec is not None
-    callback = sys.modules[spec.module].info
+    callback = loaded.app.registered_commands[0].callback.__globals__["info"]
     calls = []
 
     def annotate(format):
@@ -44,7 +41,9 @@ def test_custom_annotation_provider_is_not_executed(tmp_source):
     assert calls == []
 
 
-def test_runtime_copy_preserves_callback_evidence(tmp_source):
+def test_runtime_copy_preserves_callback_evidence(
+    tmp_source, eager_callback_annotations
+):
     from intpot.runtime import _copy_tool_info
 
     loaded = _loaded(tmp_source)
@@ -64,7 +63,9 @@ def test_canonical_callback_metadata_rejects_mutable_payload():
         ParameterSchema("x", "bool", default=False, informational_callback={})  # type: ignore[arg-type]
 
 
-def test_supported_eager_bool_callback_is_pure_candidate_metadata(tmp_source):
+def test_supported_eager_bool_callback_is_pure_candidate_metadata(
+    tmp_source, eager_callback_annotations
+):
     package = tmp_source("""\
 import typer
 from .callbacks import verbose
@@ -102,7 +103,7 @@ def run(verbose: bool = typer.Option(False, "--verbose", is_eager=True, callback
     ],
 )
 def test_capture_is_detached_and_never_calls_callback(
-    tmp_source, fallback, declaration
+    tmp_source, fallback, declaration, eager_callback_annotations
 ):
     import sys
 
@@ -154,7 +155,9 @@ def test_capture_is_detached_and_never_calls_callback(
 
 
 @pytest.mark.parametrize("change", ["rebind", "code"])
-def test_captured_identity_detects_callback_change(tmp_source, change):
+def test_captured_identity_detects_callback_change(
+    tmp_source, change, eager_callback_annotations
+):
     import sys
     import types
 
@@ -233,8 +236,7 @@ def test_unqualified_callable_capture_is_conservative(tmp_source, source):
     from intpot.core.informational_callbacks import capture_informational_callback
 
     loaded = _loaded(tmp_source)
-    spec = loaded.schema.tools[0].parameters[0].informational_callback
-    assert spec is not None
-    owner = sys.modules[spec.module]
+    callback = loaded.app.registered_commands[0].callback.__globals__["info"]
+    owner = sys.modules[callback.__module__]
     exec(source, vars(owner))
     assert capture_informational_callback(owner.info) is None

@@ -27,7 +27,7 @@ def _is_error(result):
 
 @pytest.mark.parametrize("generation", ["builder", "projection", "write", "cli"])
 def test_exclusive_information_mcp_keeps_flat_typed_calls(
-    tmp_source, monkeypatch, generation
+    tmp_source, monkeypatch, generation, eager_callback_annotations
 ):
     path = tmp_source("""from enum import StrEnum
 from pathlib import Path

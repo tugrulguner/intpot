@@ -13,7 +13,9 @@ from intpot.core.generators.api import APIGenerator
 from intpot.core.models import ApplicationSchema, SourceType
 
 
-def test_projected_policy_reaches_direct_api_generation(monkeypatch):
+def test_projected_policy_reaches_direct_api_generation(
+    monkeypatch, eager_callback_annotations
+):
     source = (
         Path(__file__).resolve().parents[1]
         / "examples"
@@ -40,7 +42,7 @@ def test_projected_policy_reaches_direct_api_generation(monkeypatch):
         }
 
 
-def test_assessment_uses_explicit_callback_policy():
+def test_assessment_uses_explicit_callback_policy(eager_callback_annotations):
     source = (
         Path(__file__).resolve().parents[1]
         / "examples"
@@ -60,7 +62,7 @@ def test_assessment_uses_explicit_callback_policy():
 
 
 def test_partial_policy_assessment_retains_unqualified_refusal_before_writes(
-    tmp_source,
+    tmp_source, callback_annotations_eager
 ):
     path = tmp_source("""from pathlib import Path
 import typer
@@ -88,10 +90,17 @@ def convert(output: str, version: bool=typer.Option(False, callback=info, is_eag
         for item in assessment["diagnostics"]
         if item["code"] == "unsupported_cli_parameter_callback"
     ]
-    assert len(refused) == 2 and {item["parameter"] for item in refused} == {"extra"}
+    expected = {"extra"} if callback_annotations_eager else {"version", "extra"}
+    assert (
+        len(refused) == 2 * len(expected)
+        and {item["parameter"] for item in refused} == expected
+    )
     target = path.parent / "not-created" / "generated.py"
     for kind in ("api", "mcp"):
-        with pytest.raises(UnsupportedCLIParameterCallbackError, match="extra"):
+        with pytest.raises(
+            UnsupportedCLIParameterCallbackError,
+            match="extra" if callback_annotations_eager else "version",
+        ):
             loaded.write(
                 target,
                 kind,

@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 import intpot
 
 
-def test_write_policy_generates_executable_api(tmp_path, monkeypatch):
+def test_write_policy_generates_executable_api(
+    tmp_path, monkeypatch, eager_callback_annotations
+):
     source = (
         Path(__file__).resolve().parents[1]
         / "examples"

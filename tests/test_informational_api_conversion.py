@@ -98,7 +98,7 @@ def _http_client(namespace, code, path, live):
 
 @pytest.mark.parametrize("live", [False, True])
 def test_exclusive_information_http_preserves_body_and_early_exit(
-    tmp_source, monkeypatch, live
+    tmp_source, monkeypatch, live, eager_callback_annotations
 ):
     path = tmp_source("""import json
 from pathlib import Path

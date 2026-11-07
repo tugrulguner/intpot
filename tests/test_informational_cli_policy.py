@@ -16,7 +16,9 @@ from intpot.cli import app
 
 @pytest.mark.parametrize("directory", [False, True])
 @pytest.mark.parametrize("as_json", [False, True])
-def test_inspect_cli_policy_reports_qualified_assessment(directory, as_json):
+def test_inspect_cli_policy_reports_qualified_assessment(
+    directory, as_json, callback_annotations_eager
+):
     source = (
         Path(__file__).resolve().parents[1]
         / "examples"
@@ -34,7 +36,17 @@ def test_inspect_cli_policy_reports_qualified_assessment(directory, as_json):
         payload = json.loads(result.output)[0]
         assessment = payload["assessment"]
         assert assessment["callback_policy"] == "exclusive-informational"
-        assert assessment["diagnostics"] == []
+        if callback_annotations_eager:
+            assert assessment["diagnostics"] == []
+        else:
+            assert len(assessment["diagnostics"]) == 4
+            assert {item["code"] for item in assessment["diagnostics"]} == {
+                "unsupported_cli_parameter_callback"
+            }
+            assert all(
+                item["reference_analysis"] == "skipped_due_to_refusal"
+                for item in assessment["diagnostics"]
+            )
         assert any(
             parameter.get("unsupported_callback")
             for tool in payload["tools"]
@@ -49,7 +61,7 @@ def test_inspect_cli_policy_reports_qualified_assessment(directory, as_json):
 
 @pytest.mark.parametrize("invocation", ["runner", "process"])
 def test_conversion_cli_policy_generates_executable_api(
-    tmp_path, monkeypatch, invocation
+    tmp_path, monkeypatch, invocation, eager_callback_annotations
 ):
     source = (
         Path(__file__).resolve().parents[1]
@@ -116,7 +128,9 @@ def test_cli_refuses_without_valid_policy_before_output(tmp_path, target, option
     assert "Traceback" not in result.output
 
 
-def test_cli_directory_policy_is_atomic_and_dry_run_does_not_write(tmp_path):
+def test_cli_directory_policy_is_atomic_and_dry_run_does_not_write(
+    tmp_path, eager_callback_annotations
+):
     package = tmp_path / ("campaign_" + uuid4().hex)
     package.mkdir()
     (package / "__init__.py").write_text("")
