@@ -36,6 +36,19 @@ def tool_selection_option() -> Any:
     )
 
 
+def callback_policy_option() -> Any:
+    """Keep the opt-in policy a value option on legacy and vendored Typer."""
+    backend = getattr(typer.core, "click", None)
+    unset = getattr(getattr(backend, "core", None), "UNSET", None)
+    options = {"flag_value": unset} if unset is not None else {}
+    return typer.Option(
+        None,
+        "--callback-policy",
+        help="Opt in to exclusive-informational CLI callbacks (API/MCP only)",
+        **options,
+    )
+
+
 def _schema_or_exit(
     source_type: SourceType,
     app_instance: object,
@@ -44,12 +57,15 @@ def _schema_or_exit(
     source_path: Path,
     allow_scaffold: bool = False,
     tools: list[str] | None = None,
+    callback_policy: str | None = None,
 ):
     try:
         application = IntpotApp(source_type, app_instance, source_path=source_path)
         if tools is not None:
             application = application.select(*tools)
-        return application.project(target, allow_scaffold=allow_scaffold)
+        return application.project(
+            target, allow_scaffold=allow_scaffold, callback_policy=callback_policy
+        )
     except (
         InspectionError,
         TypeError,
@@ -130,6 +146,7 @@ def convert(
     dry_run: bool = False,
     allow_scaffold: bool = False,
     tools: list[str] | None = None,
+    callback_policy: str | None = None,
 ) -> None:
     """Shared conversion logic for all `intpot to *` commands.
 
@@ -181,6 +198,7 @@ def convert(
                 source_path=file_path,
                 allow_scaffold=allow_scaffold,
                 tools=tools,
+                callback_policy=callback_policy,
             )
             planned.append((file_path, destination, generator.generate(schema)))
 
@@ -225,6 +243,7 @@ def convert(
         source_path=source,
         allow_scaffold=allow_scaffold,
         tools=tools,
+        callback_policy=callback_policy,
     )
     code = generator.generate(schema)
 

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 from uuid import UUID
 
+from intpot.core.informational_callbacks import InformationalCallbackSpec
 from intpot.core.string_enums import StringEnumDefault, StringEnumSpec
 
 
@@ -780,6 +781,7 @@ class ParameterInfo:
     unsupported_api_numeric_range: bool = False
     unsupported_mcp_numeric_range: bool = False
     string_enum: StringEnumSpec | None = None
+    informational_callback: InformationalCallbackSpec | None = None
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -912,6 +914,7 @@ class ParameterSchema:
     unsupported_api_numeric_range: bool = False
     unsupported_mcp_numeric_range: bool = False
     string_enum: StringEnumSpec | None = None
+    informational_callback: InformationalCallbackSpec | None = None
 
     def __post_init__(self) -> None:
         _validate_numeric_bounds(
@@ -929,6 +932,13 @@ class ParameterSchema:
         ):
             object.__setattr__(self, "binding_name", source_name)
         object.__setattr__(self, "name", canonical_name)
+        if (
+            self.informational_callback is not None
+            and type(self.informational_callback) is not InformationalCallbackSpec
+        ):
+            raise TypeError(
+                "informational_callback must be immutable callback metadata"
+            )
         frozen_default = _freeze_default(self.default)
         if self.string_enum is not None:
             if not isinstance(self.string_enum, StringEnumSpec):
@@ -979,6 +989,7 @@ class ParameterSchema:
             self.unsupported_api_numeric_range,
             self.unsupported_mcp_numeric_range,
             self.string_enum,
+            self.informational_callback,
         ) == (
             other.name,
             other.type_annotation,
@@ -996,6 +1007,7 @@ class ParameterSchema:
             other.unsupported_api_numeric_range,
             other.unsupported_mcp_numeric_range,
             other.string_enum,
+            other.informational_callback,
         )
 
     def __hash__(self) -> int:
@@ -1017,6 +1029,7 @@ class ParameterSchema:
                 self.unsupported_api_numeric_range,
                 self.unsupported_mcp_numeric_range,
                 self.string_enum,
+                self.informational_callback,
             )
         )
 
@@ -1039,6 +1052,7 @@ class ParameterSchema:
             unsupported_api_numeric_range=parameter.unsupported_api_numeric_range,
             unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
             string_enum=parameter.string_enum,
+            informational_callback=parameter.informational_callback,
         )
 
     @property
@@ -1064,6 +1078,7 @@ class ParameterSchema:
             unsupported_api_numeric_range=self.unsupported_api_numeric_range,
             unsupported_mcp_numeric_range=self.unsupported_mcp_numeric_range,
             string_enum=self.string_enum,
+            informational_callback=self.informational_callback,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1095,6 +1110,8 @@ class ParameterSchema:
             data["unsupported_mcp_numeric_range"] = True
         if self.string_enum is not None:
             data["string_enum"] = self.string_enum.to_dict()
+        if self.informational_callback is not None:
+            data["informational_callback"] = self.informational_callback.to_dict()
         if not self.required:
             data["default"] = _json_default(self.default)
         return data
@@ -1343,9 +1360,20 @@ class ApplicationSchema:
     tools: tuple[ToolSchema, ...]
     source_path: Path | None = None
     target_type: SourceType | None = None
+    callback_policy: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tools", tuple(self.tools))
+        if self.callback_policy is not None:
+            if (
+                type(self.callback_policy) is not str
+                or self.callback_policy != "exclusive-informational"
+            ):
+                raise ValueError("Unknown callback policy")
+            if self.source_type != SourceType.CLI or self.target_type == SourceType.CLI:
+                raise ValueError(
+                    "Informational callback policy requires CLI-to-API/MCP conversion"
+                )
 
     @classmethod
     def from_tools(
@@ -1368,7 +1396,15 @@ class ApplicationSchema:
 
     def to_tools(self) -> list[ToolInfo]:
         """Return detached mutable models for backwards-compatible consumers."""
-        return [tool.to_info() for tool in self.tools]
+        tools = [tool.to_info() for tool in self.tools]
+        if self.callback_policy is not None:
+            # Legacy lists cannot carry application-level execution policy. Fail
+            # closed rather than silently emit an ordinary callback-free route.
+            for tool in tools:
+                for parameter in tool.parameters:
+                    if parameter.informational_callback is not None:
+                        parameter.unsupported_callback = True
+        return tools
 
     def to_dict(self) -> dict[str, Any]:
         """Return a transparent, JSON-compatible view of the compiled app."""
@@ -1378,4 +1414,9 @@ class ApplicationSchema:
             "source_path": str(self.source_path) if self.source_path else None,
             "target_type": self.target_type.value if self.target_type else None,
             "tools": [tool.to_dict() for tool in self.tools],
+            **(
+                {"callback_policy": self.callback_policy}
+                if self.callback_policy is not None
+                else {}
+            ),
         }

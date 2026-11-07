@@ -8,6 +8,7 @@ from pathlib import Path
 
 import typer
 
+from intpot.commands._convert import callback_policy_option
 from intpot.converter import assess_schema, compile_app
 from intpot.core.inspectors.base import InspectionError
 from intpot.core.models import SourceType
@@ -26,9 +27,17 @@ def _schema_or_exit(
         raise typer.Exit(1) from None
 
 
-def _assessment_fields(schema):
-    assessment = assess_schema(schema)
-    return {"assessment": assessment} if assessment["diagnostics"] else {}
+def _assessment_fields(schema, callback_policy=None):
+    try:
+        assessment = assess_schema(schema, callback_policy=callback_policy)
+    except (TypeError, ValueError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from None
+    return (
+        {"assessment": assessment}
+        if assessment["diagnostics"] or callback_policy is not None
+        else {}
+    )
 
 
 def _params_summary(params):
@@ -49,6 +58,7 @@ def inspect_command(
         ..., help="Path to a source Python file or directory"
     ),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+    callback_policy: str = callback_policy_option(),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Print detection details to stderr"
     ),
@@ -71,22 +81,32 @@ def inspect_command(
             )
             all_results.append((file_path, schema))
 
+        assessments = [
+            _assessment_fields(schema, callback_policy)
+            if as_json or callback_policy is not None
+            else {}
+            for _, schema in all_results
+        ]
         if as_json:
             out = []
-            for file_path, schema in all_results:
+            for (file_path, schema), fields in zip(
+                all_results, assessments, strict=True
+            ):
                 out.append(
                     {
                         "source": str(file_path),
                         "type": schema.source_type.value,
                         "tools": [tool.to_dict() for tool in schema.tools],
-                        **_assessment_fields(schema),
+                        **fields,
                     }
                 )
             typer.echo(json.dumps(out, indent=2, default=str))
             return
 
-        for file_path, schema in all_results:
+        for (file_path, schema), fields in zip(all_results, assessments, strict=True):
             _print_table(file_path, schema.source_type, schema.tools)
+            if callback_policy is not None:
+                typer.echo(json.dumps(fields["assessment"], indent=2, default=str))
         return
 
     from intpot.core.detector import DetectionError, detect_source
@@ -104,6 +124,11 @@ def inspect_command(
         print(f"FOUND: {source} ({source_type.value})", file=sys.stderr)
 
     schema = _schema_or_exit(source_type, app_instance, source_path=source)
+    fields = (
+        _assessment_fields(schema, callback_policy)
+        if as_json or callback_policy is not None
+        else {}
+    )
 
     if as_json:
         out = [
@@ -111,13 +136,15 @@ def inspect_command(
                 "source": str(source),
                 "type": schema.source_type.value,
                 "tools": [tool.to_dict() for tool in schema.tools],
-                **_assessment_fields(schema),
+                **fields,
             }
         ]
         typer.echo(json.dumps(out, indent=2, default=str))
         return
 
     _print_table(source, schema.source_type, schema.tools)
+    if callback_policy is not None:
+        typer.echo(json.dumps(fields["assessment"], indent=2, default=str))
 
 
 def _print_table(source: Path, source_type: SourceType, tools):
