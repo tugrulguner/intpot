@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
+import hashlib
 import inspect
+import tokenize
+import types
 from enum import Enum
 from typing import Annotated, Any, get_args, get_origin
 
@@ -16,7 +20,7 @@ from intpot.core.inspectors._utils import (
 from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
-from intpot.core.provenance import inspected_callable_metadata
+from intpot.core.provenance import callable_source_metadata, inspected_callable_metadata
 from intpot.core.string_enums import (
     StringEnumSpec,
     annotation_string_enum,
@@ -321,9 +325,159 @@ def _registered_parameter_details(
     )
 
 
+def _callback_provider(candidate: Any) -> bool:
+    """Do not ask a parameter callback for its signature or annotations."""
+    if type(candidate) is types.FunctionType:
+        namespace = vars(candidate)
+        return (
+            getattr(candidate, "__annotate__", None) is not None
+            or "__wrapped__" in namespace
+            or "__signature__" in namespace
+        )
+    # Callable instances/partials may hide an annotated implementation. The
+    # registered inspector can retain their refusal without native introspection.
+    return callable(candidate)
+
+
+def _option_callback_provider(metadata: Any) -> bool:
+    from typer.models import OptionInfo
+
+    if type(metadata) is OptionInfo:
+        return _callback_provider(vars(metadata).get("callback"))
+    # An opaque OptionInfo subclass must not reach native callback introspection.
+    # Read class ancestry through type directly, without metadata attribute hooks.
+    return OptionInfo in type.__getattribute__(type(metadata), "__mro__")
+
+
+def _annotation_callback_provider(node: ast.AST, namespace: dict[str, Any]) -> bool:
+    """Read loaded metadata aliases and callback= references without evaluation."""
+    for item in ast.walk(node):
+        callback_reference = isinstance(item, ast.keyword) and item.arg == "callback"
+        if callback_reference:
+            expression = item.value
+        elif isinstance(item, (ast.Name, ast.Attribute)):
+            expression = item
+        else:
+            continue
+        attributes: list[str] = []
+        while isinstance(expression, ast.Attribute):
+            attributes.append(expression.attr)
+            expression = expression.value
+        if isinstance(expression, ast.Constant) and expression.value is None:
+            continue
+        if not isinstance(expression, ast.Name) or expression.id not in namespace:
+            if callback_reference:
+                return True
+            continue
+        candidate = namespace[expression.id]
+        for attribute in reversed(attributes):
+            if type(candidate) is not types.ModuleType or attribute not in vars(
+                candidate
+            ):
+                # Class/custom descriptors are opaque; do not probe their hooks.
+                return True
+            candidate = vars(candidate)[attribute]
+        if (
+            _callback_provider(candidate)
+            if callback_reference
+            else _option_callback_provider(candidate)
+        ):
+            return True
+    return False
+
+
+def _command_callback_provider(callback: types.FunctionType) -> bool:
+    """Preflight metadata before Typer builds wrappers for parameter callbacks."""
+
+    defaults = (
+        *(callback.__defaults__ or ()),
+        *(callback.__kwdefaults__ or {}).values(),
+    )
+    for metadata in defaults:
+        if _option_callback_provider(metadata):
+            return True
+    if getattr(callback, "__annotate__", None) is None:
+        for annotation in callback.__annotations__.values():
+            if type(annotation) is str:
+                try:
+                    node = ast.parse(annotation, mode="eval")
+                except SyntaxError:
+                    continue
+                if _annotation_callback_provider(node, callback.__globals__):
+                    return True
+            elif get_origin(annotation) is Annotated:
+                for metadata in get_args(annotation)[1:]:
+                    if _option_callback_provider(metadata):
+                        return True
+        return False
+    # Do not evaluate a deferred command annotation merely to discover its
+    # callback= metadata. Read only matching file-backed annotation syntax.
+    metadata = callable_source_metadata(callback)
+    location = metadata["source_location"]
+    if location is None:
+        return True
+    try:
+        with tokenize.open(location[0]) as stream:
+            source = stream.read()
+        if (
+            hashlib.sha256(source.encode("utf-8")).hexdigest()
+            != metadata["source_digest"]
+        ):
+            return True
+        tree = ast.parse(source)
+        node = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.lineno == location[1]
+        )
+        for parameter in (
+            *node.args.posonlyargs,
+            *node.args.args,
+            *node.args.kwonlyargs,
+        ):
+            annotation = parameter.annotation
+            if isinstance(annotation, ast.Constant) and type(annotation.value) is str:
+                annotation = ast.parse(annotation.value, mode="eval")
+            if annotation is not None and _annotation_callback_provider(
+                annotation, callback.__globals__
+            ):
+                return True
+        return False
+    except (OSError, ValueError, SyntaxError, UnicodeError, StopIteration):
+        return True
+
+
+def _registered_callback_provider(app: Any, seen: set[int] | None = None) -> bool:
+    """Avoid native construction before it inspects an unsupported callback."""
+    if seen is None:
+        seen = set()
+    if id(app) in seen:
+        return False
+    seen.add(id(app))
+    registrations = [
+        *(getattr(app, "registered_commands", ()) or ()),
+        getattr(app, "registered_callback", None),
+        getattr(app, "info", None),
+    ]
+    for command in registrations:
+        callback = getattr(command, "callback", None)
+        if type(callback) is types.FunctionType and _command_callback_provider(
+            callback
+        ):
+            return True
+    return any(
+        _registered_callback_provider(group.typer_instance, seen)
+        for group in (getattr(app, "registered_groups", ()) or ())
+    )
+
+
 class CLIInspector(BaseInspector):
     def inspect(self, app: Any) -> list[ToolInfo]:
         tools: list[ToolInfo] = []
+        if _registered_callback_provider(app):
+            self._extract_registered_app(app, tools)
+            return tools
 
         # Get the underlying Click group
         click_group = None

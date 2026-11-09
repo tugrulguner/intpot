@@ -223,7 +223,9 @@ programmatic policy; projected `ApplicationSchema.callback_policy` directs stand
 generation. A legacy `to_tools()` list restores callback refusal because it cannot carry
 application-level policy. Runtime qualification uses Python 3.11; callbacks exposing
 `__annotate__` providers, including ordinary callbacks on tested Python 3.14.9, remain
-refused without reading their annotations. Do not claim Python 3.14 callback adaptation.
+refused without reading their annotations. Registry preflight must precede native
+Typer tree construction, including deferred `Annotated` callback metadata; registered
+inspection retains the parameter and refusal. Do not claim Python 3.14 callback adaptation.
 The source-checkout CLI exposes the same explicit
 `--callback-policy exclusive-informational` on `to api`, `to mcp` and `inspect`;
 public v0.16.0 does not include these tracers.

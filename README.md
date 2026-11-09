@@ -404,7 +404,9 @@ tracer also passes its tested cases on Typer 0.9 / Click 8.1.7 / FastAPI 0.100 /
 Pydantic 2.0.3. These are bounded workflow checks, not exhaustive compatibility.
 Runtime qualification above uses Python 3.11. Callbacks exposing deferred annotation
 providers (`__annotate__`, including ordinary callbacks on the tested Python 3.14.9)
-are conservatively refused before reading their annotations; use Python 3.11 for
+are conservatively refused before reading their annotations. Registry preflight
+avoids native wrapper construction evaluating parameter-callback providers, including
+`Annotated` declarations; registered inspection retains refusal. Use Python 3.11 for
 this example. This opt-in does not add provider evaluation support.
 Public v0.16.0 does not include this capability.
 

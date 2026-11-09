@@ -168,6 +168,11 @@ Full Docling conversion remains unfinished.
 
 - `ParameterInfo` and `ParameterSchema` append the boolean `unsupported_callback`; retain
   positional compatibility, equality/hash, adapters, and JSON mapping (only true is emitted).
+- Preflight registered parameter-callback metadata before constructing the native tree:
+  Typer wrapper construction can evaluate callback `__annotate__` on Python 3.14.
+  Route provider-backed/opaque callbacks through registered inspection, preserving
+  refusal and parameters; inspect matching source syntax for deferred Annotated
+  callback references without invoking providers or module attribute hooks.
 - CLI inspection captures callable parameter callbacks from constructed parameters and
   registered-command fallback metadata. Do not store live callbacks or repr strings.
 - A parameter named `help` can be a real user input. Exclude synthetic help only when

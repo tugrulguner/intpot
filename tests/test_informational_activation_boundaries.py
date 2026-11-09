@@ -46,7 +46,7 @@ def info_callback(value: bool):
 @pytest.mark.parametrize("target", ["api", "mcp"])
 @pytest.mark.parametrize("fallback", [False, True])
 def test_dynamic_informational_activation_refuses(
-    tmp_source, configuration, extra, environment, fallback, target
+    tmp_source, configuration, extra, environment, fallback, target, monkeypatch
 ):
     path = tmp_source(
         """from __future__ import annotations
@@ -76,6 +76,18 @@ def convert(output: str, info: bool=typer.Option(False, callback=info_callback, 
         native.output,
         native.exception,
     )
+    from intpot.core.inspectors.cli import CLIInspector
+
+    registered_hits = []
+    original_registered = CLIInspector._extract_registered_app
+
+    def registered(self, *args, **kwargs):
+        registered_hits.append(True)
+        return original_registered(self, *args, **kwargs)
+
+    monkeypatch.setattr(CLIInspector, "_extract_registered_app", registered)
+    callback = loaded.app.registered_commands[0].callback.__globals__["info_callback"]
+    provider = getattr(callback, "__annotate__", None) is not None
     hits = []
     if fallback:
 
@@ -86,4 +98,10 @@ def convert(output: str, info: bool=typer.Option(False, callback=info_callback, 
         loaded.app._get_command = fail
     with pytest.raises(UnsupportedCLIParameterCallbackError):
         getattr(loaded, "to_" + target)(callback_policy="exclusive-informational")
-    assert bool(hits) == fallback
+    if provider:
+        # Preflight must choose registered inspection before even the forced
+        # native-constructor hook can inspect a parameter callback's provider.
+        assert not hits and registered_hits
+    else:
+        assert bool(hits) == fallback
+        assert bool(registered_hits) == fallback
