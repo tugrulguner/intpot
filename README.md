@@ -406,7 +406,7 @@ Runtime qualification above uses Python 3.11. Callbacks exposing deferred annota
 providers (`__annotate__`, including ordinary callbacks on the tested Python 3.14.9)
 are conservatively refused before reading their annotations. Registry preflight
 avoids native wrapper construction evaluating parameter-callback providers, including
-`Annotated` declarations; registered inspection retains refusal. Use Python 3.11 for
+whole `Annotated` type aliases and argument callbacks; registered inspection retains refusal. Use Python 3.11 for
 this example. This opt-in does not add provider evaluation support.
 Public v0.16.0 does not include this capability.
 

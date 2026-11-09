@@ -170,6 +170,9 @@ Full Docling conversion remains unfinished.
   positional compatibility, equality/hash, adapters, and JSON mapping (only true is emitted).
 - Preflight registered parameter-callback metadata before constructing the native tree:
   Typer wrapper construction can evaluate callback `__annotate__` on Python 3.14.
+  Cover OptionInfo and ArgumentInfo, whole Annotated type aliases and effective
+  opaque command callables and signatures overridden by __wrapped__/__signature__; none authorize
+  argument callback adaptation or annotation-provider evaluation.
   Route provider-backed/opaque callbacks through registered inspection, preserving
   refusal and parameters; inspect matching source syntax for deferred Annotated
   callback references without invoking providers or module attribute hooks.

@@ -339,14 +339,30 @@ def _callback_provider(candidate: Any) -> bool:
     return callable(candidate)
 
 
-def _option_callback_provider(metadata: Any) -> bool:
-    from typer.models import OptionInfo
+def _parameter_callback_provider(metadata: Any, seen: set[int] | None = None) -> bool:
+    from typer.models import ArgumentInfo, OptionInfo
 
-    if type(metadata) is OptionInfo:
+    # A loaded whole Annotated alias can hide parameter metadata behind one name.
+    # Inspect only the known typing implementation's stored metadata, not a
+    # callback's annotations or arbitrary objects' attribute hooks.
+    if type(metadata) is type(Annotated[bool, None]):
+        if seen is None:
+            seen = set()
+        if id(metadata) in seen or len(seen) >= 64:
+            return True
+        seen.add(id(metadata))
+        extras = vars(metadata).get("__metadata__")
+        if type(extras) is not tuple:
+            return True
+        return any(_parameter_callback_provider(extra, seen) for extra in extras)
+    if type(metadata) is OptionInfo or type(metadata) is ArgumentInfo:
         return _callback_provider(vars(metadata).get("callback"))
-    # An opaque OptionInfo subclass must not reach native callback introspection.
-    # Read class ancestry through type directly, without metadata attribute hooks.
-    return OptionInfo in type.__getattribute__(type(metadata), "__mro__")
+    # Opaque parameter-info subclasses must not reach native introspection.
+    # Use identity, not custom metaclass equality or metadata attribute hooks.
+    return any(
+        base is OptionInfo or base is ArgumentInfo
+        for base in type.__getattribute__(type(metadata), "__mro__")
+    )
 
 
 def _annotation_callback_provider(node: ast.AST, namespace: dict[str, Any]) -> bool:
@@ -380,7 +396,7 @@ def _annotation_callback_provider(node: ast.AST, namespace: dict[str, Any]) -> b
         if (
             _callback_provider(candidate)
             if callback_reference
-            else _option_callback_provider(candidate)
+            else _parameter_callback_provider(candidate)
         ):
             return True
     return False
@@ -388,13 +404,18 @@ def _annotation_callback_provider(node: ast.AST, namespace: dict[str, Any]) -> b
 
 def _command_callback_provider(callback: types.FunctionType) -> bool:
     """Preflight metadata before Typer builds wrappers for parameter callbacks."""
+    if "__wrapped__" in vars(callback) or "__signature__" in vars(callback):
+        # The effective command signature can contain callback metadata absent
+        # from this function's own defaults/annotations. Do not build native
+        # parameter-callback wrappers to discover it.
+        return True
 
     defaults = (
         *(callback.__defaults__ or ()),
         *(callback.__kwdefaults__ or {}).values(),
     )
     for metadata in defaults:
-        if _option_callback_provider(metadata):
+        if _parameter_callback_provider(metadata):
             return True
     if getattr(callback, "__annotate__", None) is None:
         for annotation in callback.__annotations__.values():
@@ -407,7 +428,7 @@ def _command_callback_provider(callback: types.FunctionType) -> bool:
                     return True
             elif get_origin(annotation) is Annotated:
                 for metadata in get_args(annotation)[1:]:
-                    if _option_callback_provider(metadata):
+                    if _parameter_callback_provider(metadata):
                         return True
         return False
     # Do not evaluate a deferred command annotation merely to discover its
@@ -462,8 +483,9 @@ def _registered_callback_provider(app: Any, seen: set[int] | None = None) -> boo
     ]
     for command in registrations:
         callback = getattr(command, "callback", None)
-        if type(callback) is types.FunctionType and _command_callback_provider(
-            callback
+        if callable(callback) and (
+            type(callback) is not types.FunctionType
+            or _command_callback_provider(callback)
         ):
             return True
     return any(

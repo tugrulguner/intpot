@@ -1,1 +1,1 @@
-Prevent native Typer tree construction from evaluating unsupported parameter-callback annotation providers during inspection and conversion, including Annotated declarations.
+Prevent native Typer tree construction from evaluating unsupported parameter-callback annotation providers during inspection and conversion, including whole Annotated type aliases, argument callbacks and overridden command signatures.
