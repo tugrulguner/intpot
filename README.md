@@ -368,13 +368,47 @@ Pydantic model parameters, routes with multiple HTTP methods, streaming, backgro
 or framework-specific error handling.
 
 Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
-parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
+parameter metadata (`to_dict()` includes the marker only when true). Default CLI-to-API/MCP
 projection and generation raise `intpot.UnsupportedCLIParameterCallbackError`, naming
 all affected tools/parameters and the target, rather than dropping callback validation or
 transformation. Assignment-style and `Annotated` declarations are detected. The CLI
 reports refusal on stderr with exit status 1 before writing output; `--dry-run` also
 refuses. This is a focused known-loss guard, not a general conversion assessment or
 callback transpiler. Source CLI behavior is unchanged.
+
+**Experimental source-checkout adaptation (unreleased):**
+`load(app).to_api(callback_policy="exclusive-informational")` and the matching
+`to_mcp(...)` explicitly admit only
+qualified eager boolean informational callbacks with a verified no-op inactive branch
+and a successful Typer exit. The request remains a flat typed object: ordinary calls
+retain normal validation, one informational flag may exit before irrelevant conversion
+fields are validated, and conflicting active flags reject rather than emulate CLI order.
+HTTP informational success returns `{"result": "<captured text>"}`; the current-lock
+MCP tracer returns validated text content and a structured result-text object. Active callbacks execute
+in a bounded fresh subprocess with the original package installed; shared mutable
+server-state equivalence and sandboxing are not promised. Inactive callbacks supply
+None to the business body. Dynamic activation through environment/default maps and
+unqualified callback shapes remain refused. Other conversion guards still apply.
+The same programmatic policy is available on `assess()`, `project()` and `write()`;
+projected `ApplicationSchema.callback_policy` carries it into direct API/MCP generation.
+Legacy `to_tools()` lists cannot carry that application policy and restore callback
+refusal rather than silently lose it. The unreleased CLI exposes the same opt-in via
+`--callback-policy exclusive-informational` on `to api`, `to mcp` and `inspect`.
+Inspection keeps raw source metadata and adds a policy-aware assessment (JSON or table
+plus assessment); conversion and directory previews retain all guards before writes.
+Full Docling conversion remains unfinished. The generated MCP tracer has been exercised on
+FastMCP 4.1.2 / MCP 2.2.0, FastMCP 2.14.7 / MCP 1.30.0, and FastMCP 2.0.0
+with MCP 1.12.4 and 1.6.0. Structured output is advertised only when the native
+protocol supports it; the oldest SDK returns checked native text content. The API
+tracer also passes its tested cases on Typer 0.9 / Click 8.1.7 / FastAPI 0.100 /
+Pydantic 2.0.3. These are bounded workflow checks, not exhaustive compatibility.
+Runtime qualification above uses Python 3.11. Callbacks exposing deferred annotation
+providers (`__annotate__`, including ordinary callbacks on the tested Python 3.14.9)
+are conservatively refused before reading their annotations. Registry preflight
+avoids native wrapper construction evaluating parameter-callback providers, including
+whole `Annotated` type aliases and argument callbacks; registered inspection retains refusal. Use Python 3.11 for
+this example. This opt-in does not add provider evaluation support.
+Public v0.16.0 does not include this capability.
 
 Referenced absolute imports inside module-level `if`/`try` branches can also be retained
 when the callable's live global binding is identical to the corresponding export of an

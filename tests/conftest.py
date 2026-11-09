@@ -18,3 +18,22 @@ def tmp_source(tmp_path: Path):
         return p
 
     return _write
+
+
+@pytest.fixture()
+def callback_annotations_eager():
+    """Probe actual annotation storage without evaluating an annotation provider."""
+
+    def probe(value: bool):
+        pass
+
+    return getattr(probe, "__annotate__", None) is None
+
+
+@pytest.fixture()
+def eager_callback_annotations(callback_annotations_eager):
+    """Positive capture cases require eager, provider-free callback annotations."""
+    if not callback_annotations_eager:
+        pytest.skip(
+            "callback annotation providers are deliberately refused; eager capture unavailable"
+        )

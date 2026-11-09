@@ -128,6 +128,7 @@ Prefer `--json` when you need to reason about the result programmatically.
 | `--output`, `-o` | `to *`, `eject` | Output path (prints to stdout if omitted) |
 | `--dry-run` | `to *` | Preview generated code without writing files |
 | `--tool NAME` | `to *` | Select exact canonical tool names; repeatable; all selected guards remain active (unreleased) |
+| `--callback-policy exclusive-informational` | `to api`, `to mcp`, `inspect` | Explicitly qualify exclusive informational CLI callbacks; ordinary calls remain typed and unqualified callbacks still refuse (unreleased) |
 | `--allow-scaffold` | `to *` | Opt in to `NotImplementedError` stubs when source recovery fails |
 | `--verbose`, `-v` | `to *`, `inspect` | Show detection details on stderr |
 | `--json` | `inspect` | Emit JSON instead of a table |

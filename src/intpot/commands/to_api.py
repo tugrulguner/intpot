@@ -6,7 +6,11 @@ from pathlib import Path
 
 import typer
 
-from intpot.commands._convert import convert, tool_selection_option
+from intpot.commands._convert import (
+    callback_policy_option,
+    convert,
+    tool_selection_option,
+)
 from intpot.core.models import SourceType
 
 
@@ -24,6 +28,7 @@ def to_api(
         False, "--dry-run", help="Preview output without writing files"
     ),
     tools: list[str] = tool_selection_option(),
+    callback_policy: str = callback_policy_option(),
     allow_scaffold: bool = typer.Option(
         False,
         "--allow-scaffold",
@@ -41,4 +46,5 @@ def to_api(
         dry_run=dry_run,
         allow_scaffold=allow_scaffold,
         tools=tools or None,
+        callback_policy=callback_policy,
     )
