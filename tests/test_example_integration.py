@@ -59,6 +59,38 @@ def test_unselected_command_demonstrates_real_source_validation() -> None:
     assert "at least three" in result.stdout + result.stderr
 
 
+@pytest.mark.parametrize(
+    "recipe",
+    ["convert_enum_export.py", "convert_selected_tools.py", "convert_informational.py"],
+)
+def test_printed_launch_command_preserves_a_spaced_output_path(
+    recipe: str, tmp_path: Path
+) -> None:
+    import runpy
+    import shlex
+
+    if recipe == "convert_informational.py":
+        source = runpy.run_path(str(ROOT / "examples/informational_text/app.py"))
+        if callable(getattr(source["version_callback"], "__annotate__", None)):
+            pytest.skip("informational parameter providers are intentionally refused")
+    output = tmp_path / "generated servers"
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / recipe), "--output-dir", str(output)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    command = next(
+        line.removeprefix("HTTP: ")
+        for line in result.stdout.splitlines()
+        if line.startswith("HTTP: ")
+    )
+    arguments = shlex.split(command)
+    assert arguments[arguments.index("--app-dir") + 1] == str(output)
+
+
 def test_mcp_example_client_calls_a_new_generated_server(tmp_path: Path) -> None:
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
