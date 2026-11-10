@@ -9,13 +9,29 @@ Intpot has two public workflows: define typed functions with `App` and serve/eje
 
 - `intpot.App` registers functions using `@app.tool()`.
 - `app.serve(mode="cli" | "api" | "mcp")` creates a live Typer, FastAPI, or FastMCP application.
-- `app.eject(mode="cli" | "api" | "mcp")` emits standalone Python source.
+- `app.eject("api")` emits standalone Python source; `"cli"` and `"mcp"` are also supported targets.
 
 ## Conversion
 
 The supported source frameworks are Typer, FastAPI, and FastMCP. All six directed conversions among these frameworks are supported by `intpot to cli|api|mcp`. Generated output is Python that can be inspected, edited, and run without Intpot as a runtime dependency.
 
 Intpot preserves recoverable function bodies and direct imports, annotations, defaults, async functions, and supported framework conventions. FastAPI parameter sources are applied when generating API output. Conversion is not a promise of perfect equivalence for arbitrary framework-specific behavior: inspect and test generated code in the target framework, especially where a source app uses features outside normalized tool metadata.
+
+## Source-checkout conversion examples (unreleased)
+
+Public v0.16.0 does not contain these newer conversion capabilities. From a current
+checkout with Python 3.11 and all extras, use the runnable teaching scripts:
+
+- [Enum export](https://github.com/tugrulguner/intpot/blob/main/examples/convert_enum_export.py): convert a file-export application with optional repeatable string-enum options; order, duplicates, defaults, and validation remain explicit.
+- [Tool selection](https://github.com/tugrulguner/intpot/blob/main/examples/convert_selected_tools.py): `intpot.load(...).select("slug")` exports one workflow without removing its parameters or weakening its guards.
+- [Informational conversion](https://github.com/tugrulguner/intpot/blob/main/examples/convert_informational.py): explicitly request `callback_policy="exclusive-informational"` for qualified eager informational flags. Ordinary callback conversion still refuses; this is not arbitrary callback or lifecycle translation.
+
+The [example guide](https://github.com/tugrulguner/intpot/blob/main/examples/README.md)
+contains native CLI commands, HTTP requests and an actual stdio MCP client. Generated
+enum and informational applications retain their original source-package dependency.
+Paths belong to the server filesystem; fresh workers are not a sandbox. Deferred
+parameter-callback annotation providers remain refused; use the documented Python 3.11
+workflow. Full Docling conversion is not established. See [conversion boundaries](/conversion-boundaries/).
 
 ## Other included features
 

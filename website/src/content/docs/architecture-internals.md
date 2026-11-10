@@ -22,6 +22,25 @@ For a source file, `core/detector.py` checks syntax and looks for module-level f
 
 `converter.compile_app()` compiles inspected values into immutable `ApplicationSchema`. `project_schema()` applies validation and transformations in `core/transforms.py` and `core/projections.py`: framework-specific parameter placement, aliases, and names are projected for the selected target. The target generator in `core/generators/` renders a Jinja template under `templates/*.j2`. CLI `intpot to ...` and Python `IntpotApp.to_*()` share this broad normalization/projection/generation pipeline; `App.eject()` uses the same target generators for Intpot-authored declarations.
 
+## Conditional informational workers (unreleased)
+
+An explicit `callback_policy="exclusive-informational"` is retained on the immutable
+`ApplicationSchema`. Assessment, projection, direct API/MCP generation and writing
+share qualification rather than mutating the original parameter callback markers.
+The ordinary generated branch retains typed validation; a single qualified literal
+informational flag can exit before irrelevant business inputs are validated. Multiple
+active flags reject instead of inventing CLI token order.
+
+Generated informational handlers dispatch in bounded fresh workers, with request-owned
+output capture. They need the original source package and revalidate retained source
+identity. This is **not a sandbox**, a purity guarantee, or shared-state equivalence:
+trusted active callbacks can perform filesystem effects. Importing the source remains
+trusted Python. Registry preflight avoids evaluating parameter-callback `__annotate__`
+providers before native wrapper construction; provider-backed and opaque declarations
+retain refusal rather than being evaluated. The runnable adaptation is qualified on
+Python 3.11; public v0.16.0 does not include it. Legacy tool lists cannot carry the
+application policy and restore refusal. See [the conversion contract](/conversion-boundaries/).
+
 ## Why the schema is immutable
 
 The frozen `ApplicationSchema`, `ToolSchema`, and `ParameterSchema` records provide a stable snapshot between inspecting mutable framework objects and rendering target code. They capture supported defaults, source annotations, callable body/imports where recoverable, async status, and API operation metadata. Compatibility models remain at inspector/generator edges for existing callers, but projection works from the canonical snapshot. This separation makes target transformations explicit and lets callers inspect a projected schema before writing code.

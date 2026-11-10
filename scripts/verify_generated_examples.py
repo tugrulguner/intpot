@@ -220,7 +220,307 @@ def verify_application_conformance() -> None:
         print(f"verified {label} source and generated interfaces")
 
 
+def verify_capability_examples(python: str | None = None) -> dict[str, str]:
+    """Run the teaching scripts through native CLI, live HTTP, and stdio MCP."""
+    import os
+    import socket
+    import subprocess
+    import sys
+    import tempfile
+    import time
+    from importlib import import_module
+
+    try:
+        http = import_module("httpx")
+    except ModuleNotFoundError:
+        http = import_module("httpx2")
+    interpreter = python or sys.executable
+    env = os.environ.copy()
+    env.pop("PYTHONHOME", None)
+    # This is an application dependency, never a path to Intpot's source package.
+    env["PYTHONPATH"] = str(ROOT / "examples")
+
+    def run(
+        arguments: list[str], *, succeeds: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        result = subprocess.run(
+            [interpreter, *arguments],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert (result.returncode == 0) == succeeds, (
+            arguments,
+            result.stdout,
+            result.stderr,
+        )
+        return result
+
+    summary: dict[str, str] = {}
+    with tempfile.TemporaryDirectory(prefix="intpot-capabilities-") as directory:
+        base = Path(directory)
+        source = base / "input.txt"
+        source.write_text("Curiosity & <science>\n", encoding="utf-8")
+        provider = (
+            run(
+                [
+                    "-c",
+                    "import runpy,sys; ns=runpy.run_path(sys.argv[1]); print(callable(getattr(ns['version_callback'],'__annotate__',None)))",
+                    str(ROOT / "examples/informational_text/app.py"),
+                ]
+            ).stdout.strip()
+            == "True"
+        )
+        for kind, tool in (
+            ("enum", "export"),
+            ("selected", "slug"),
+            ("informational", "convert"),
+        ):
+            out = base / kind
+            helper = (
+                "convert_enum_export.py"
+                if kind == "enum"
+                else "convert_selected_tools.py"
+                if kind == "selected"
+                else "convert_informational.py"
+            )
+            command = [str(ROOT / "examples" / helper), "--output-dir", str(out)]
+            if kind == "informational" and provider:
+                refused = run(command, succeeds=False)
+                assert "UnsupportedCLIParameterCallbackError" in refused.stderr
+                assert not out.exists()
+                summary[kind] = (
+                    "provider-backed callbacks refused before output directory"
+                )
+                continue
+            run(command)
+            native = base / ("native-" + kind)
+            if kind == "enum":
+                native_args = [
+                    str(ROOT / "examples/enum_export/app.py"),
+                    str(source),
+                    str(native),
+                ]
+                run(native_args)
+                assert native.with_suffix(".txt").read_bytes() == source.read_bytes()
+                repeat = run(
+                    [*native_args, "--to", "html", "--to", "text", "--to", "html"]
+                )
+                assert repeat.stdout.count(str(native.with_suffix(".html"))) == 2
+                bad_native = base / "native-invalid"
+                run(
+                    [*native_args[:2], str(bad_native), "--to", "invalid"],
+                    succeeds=False,
+                )
+                assert (
+                    not bad_native.with_suffix(".txt").exists()
+                    and not bad_native.with_suffix(".html").exists()
+                )
+            elif kind == "selected":
+                assert (
+                    run(
+                        [
+                            str(ROOT / "examples/selected_tools.py"),
+                            "slug",
+                            "Hello World",
+                        ]
+                    ).stdout.strip()
+                    == "hello-world"
+                )
+                refused = run(
+                    [
+                        "-c",
+                        "import intpot,sys; intpot.load(sys.argv[1]).write(sys.argv[2], 'api')",
+                        str(ROOT / "examples/selected_tools.py"),
+                        str(base / "refused/whole.py"),
+                    ],
+                    succeeds=False,
+                )
+                assert "UnsupportedCLIParameterCallbackError" in refused.stderr
+                assert not (base / "refused").exists()
+            else:
+                run(
+                    [
+                        str(ROOT / "examples/informational_text/app.py"),
+                        str(source),
+                        str(native),
+                        "--format",
+                        "html",
+                    ]
+                )
+                early = run(
+                    [
+                        str(ROOT / "examples/informational_text/app.py"),
+                        "--version",
+                        "--format",
+                        "invalid",
+                    ]
+                )
+                assert early.stdout.strip() == "informational-text 1.0"
+            with socket.socket() as listener:
+                listener.bind(("127.0.0.1", 0))
+                port = listener.getsockname()[1]
+            with (base / (kind + ".log")).open("w") as log:
+                server = subprocess.Popen(
+                    [
+                        interpreter,
+                        "-m",
+                        "uvicorn",
+                        kind + "_api:app",
+                        "--app-dir",
+                        str(out),
+                        "--host",
+                        "127.0.0.1",
+                        "--port",
+                        str(port),
+                    ],
+                    cwd=ROOT,
+                    env=env,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                )
+                url = f"http://127.0.0.1:{port}"
+                try:
+                    for _ in range(200):
+                        assert server.poll() is None, (
+                            base / (kind + ".log")
+                        ).read_text()
+                        try:
+                            schema = http.get(url + "/openapi.json")
+                            if schema.status_code == 200:
+                                break
+                        except http.TransportError:
+                            pass
+                        time.sleep(0.05)
+                    else:
+                        raise AssertionError("example HTTP server did not become ready")
+                    for transport in ("http", "mcp"):
+                        target = base / (transport + "-" + kind)
+                        payload = (
+                            {
+                                "source": str(source),
+                                "output": str(target),
+                                "to": ["html", "text", "html"],
+                            }
+                            if kind == "enum"
+                            else {"text": "Hello World"}
+                            if kind == "selected"
+                            else {
+                                "source": str(source),
+                                "output": str(target),
+                                "format": "html",
+                            }
+                        )
+                        if transport == "http":
+                            wire = "Hello World" if kind == "selected" else payload
+                            response = http.post(
+                                url + "/" + tool, json=wire, timeout=20
+                            )
+                            assert response.status_code == 200, response.text
+                            result = response.json()["result"]
+                        else:
+                            result = run(
+                                [
+                                    str(ROOT / "examples/call_converted_mcp.py"),
+                                    kind,
+                                    json.dumps(payload),
+                                    "--server-dir",
+                                    str(out),
+                                ]
+                            ).stdout.strip()
+                        if kind == "enum":
+                            for suffix in (".txt", ".html"):
+                                assert (
+                                    target.with_suffix(suffix).read_bytes()
+                                    == native.with_suffix(suffix).read_bytes()
+                                )
+                            bad = {
+                                **payload,
+                                "output": str(base / "invalid-enum"),
+                                "to": ["invalid"],
+                            }
+                        elif kind == "selected":
+                            assert result == "hello-world"
+                            assert set(schema.json()["paths"]) == {"/slug"}
+                            bad = {}
+                        else:
+                            assert target.read_bytes() == native.read_bytes()
+                            early_payload = {"version": True, "format": "invalid"}
+                            if transport == "http":
+                                early_response = http.post(
+                                    url + "/convert", json=early_payload, timeout=20
+                                )
+                                assert (
+                                    early_response.status_code == 200
+                                    and early_response.json()
+                                    == {"result": "informational-text 1.0\n"}
+                                )
+                            else:
+                                early_result = run(
+                                    [
+                                        str(ROOT / "examples/call_converted_mcp.py"),
+                                        kind,
+                                        json.dumps(early_payload),
+                                        "--server-dir",
+                                        str(out),
+                                    ]
+                                )
+                                assert (
+                                    early_result.stdout.strip()
+                                    == "informational-text 1.0"
+                                )
+                            bad = {
+                                "version": True,
+                                "formats": True,
+                                "output": str(base / "conflict"),
+                            }
+                        if transport == "http":
+                            assert (
+                                http.post(
+                                    url + "/" + tool, json=bad, timeout=20
+                                ).status_code
+                                == 422
+                            )
+                        else:
+                            run(
+                                [
+                                    str(ROOT / "examples/call_converted_mcp.py"),
+                                    kind,
+                                    json.dumps(bad),
+                                    "--server-dir",
+                                    str(out),
+                                ],
+                                succeeds=False,
+                            )
+                        assert not (base / "conflict").exists()
+                        assert (
+                            not (base / "invalid-enum.txt").exists()
+                            and not (base / "invalid-enum.html").exists()
+                        )
+                finally:
+                    server.terminate()
+                    try:
+                        server.wait(timeout=8)
+                    except subprocess.TimeoutExpired:
+                        server.kill()
+                        server.wait(timeout=8)
+            summary[kind] = {
+                "enum": "native/http/stdio-mcp byte parity; invalid inputs no files",
+                "selected": "only slug; native/http/stdio-mcp; full source refused",
+                "informational": "native/http/stdio-mcp byte parity; early exit; conflicts rejected",
+            }[kind]
+    print(json.dumps(summary, sort_keys=True))
+    return summary
+
+
 def main() -> None:
+    import sys
+
+    verify_capability_examples()
+    if "--capability-only" in sys.argv:
+        return
     verify_generated_cli()
     verify_generated_mcp()
     verify_dependency_api()

@@ -118,8 +118,8 @@ Generated strings still need runtime verification. Successful generation does no
 the result works: compile it, import it with its runtime dependencies installed, then
 invoke a real CLI command, API request, or MCP tool.
 
-Current unsupported or lossy conversions include nested Typer sub-apps, repeatable CLI
-options, some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and
+Current unsupported or lossy conversions include nested Typer sub-apps, repeatable CLI options other than the bounded optional
+string-enum list subset described below, some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and
 routes with multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and
 route/router/app-level dependencies remain available through `.tools` and `inspect_app`,
 but `.to_cli()`, `.to_mcp()`, and `.write()` raise
@@ -434,8 +434,8 @@ This is executable application evidence, not a generated-text snapshot.
 
 ## Exact body-reference locations (v0.16.0)
 
-**Availability:** requires v0.16.0 or newer. Until publication, use a source checkout
-containing this change; v0.15.0 does not include
+**Availability:** requires v0.16.0 or newer; included in the published release.
+v0.15.0 does not include
 `references[*].reference_locations`, `source_digest` or `support_source_digests`.
 
 Each binding reference adds `reference_locations`: a source-ordered list of original
@@ -505,8 +505,7 @@ writes. Source inspection does not gain unresolved-helper recovery from that fix
 
 ## Bounded definition provenance (v0.14.0)
 
-**Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a
-source checkout containing this change. v0.13.0 does not include captured definition
+**Availability:** available in published v0.14.0 and newer. v0.13.0 does not include captured definition
 coordinates.
 
 Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
@@ -544,7 +543,7 @@ diagnostic codes expose `references`
 (each missing `name` and its `generated_definition`), `suggested_action`, and
 `source_location`. Generated names identify owned helpers, wrappers and implementations;
 they are not source locations. Published v0.13.0 uses `None`/JSON `null`; v0.14.0
-adds bounded definition provenance (until publication, use its source checkout). Never
+adds bounded definition provenance, available in the published package. Never
 infer original coordinates from `source_path`. Existing codes, tool/target/names/message fields and refusal exceptions
 stay unchanged. Suggestions distinguish eager before-definition ordering from body and
 postponed-annotation availability before use. Inspection remains available; scaffold

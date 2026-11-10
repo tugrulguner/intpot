@@ -237,8 +237,18 @@ def main() -> None:
                 item["receipts_verified"]
                 for item in mcp_conformance["interfaces"].values()
             )
+            run(
+                [
+                    str(python),
+                    str(ROOT / "scripts" / "verify_generated_examples.py"),
+                    "--capability-only",
+                ],
+                cwd=base,
+                env=env,
+            )
             print(
-                f"verified {kind} {artifact.name}: version, shipped skills, generated CLI/API/MCP, diagnostic context, source provenance, binding chains, reference occurrences, bounded order/storage/inventory conformance"
+                f"verified {kind} {artifact.name}: installed version, shipped skills, "
+                "generated CLI/API/MCP, diagnostics, application and capability examples"
             )
 
 

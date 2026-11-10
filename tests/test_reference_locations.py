@@ -343,7 +343,8 @@ def test_occurrence_docs_label_the_versioned_bounded_contract(relative):
         "\n## ", 1
     )[0]
     assert "requires v0.16.0 or newer" in section
-    assert "Until publication" in section
+    assert "included in the published release" in section
+    assert "Until publication" not in section
     assert "v0.15.0 does not include" in section
     assert all(
         field in section
