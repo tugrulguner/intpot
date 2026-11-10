@@ -88,6 +88,15 @@ def convert(output: str, info: bool=typer.Option(False, callback=info_callback, 
     monkeypatch.setattr(CLIInspector, "_extract_registered_app", registered)
     callback = loaded.app.registered_commands[0].callback.__globals__["info_callback"]
     provider = getattr(callback, "__annotate__", None) is not None
+    descriptor_tree = False
+    if not provider:
+        import typer.main
+
+        native = typer.main.get_command(loaded.app)
+        descriptor_tree = any(
+            hasattr(param, "type_descriptor") and not hasattr(param, "type")
+            for param in native.params
+        )
     hits = []
     if fallback:
 
@@ -104,4 +113,4 @@ def convert(output: str, info: bool=typer.Option(False, callback=info_callback, 
         assert not hits and registered_hits
     else:
         assert bool(hits) == fallback
-        assert bool(registered_hits) == fallback
+        assert bool(registered_hits) == (fallback or descriptor_tree)

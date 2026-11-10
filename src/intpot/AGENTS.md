@@ -63,6 +63,17 @@ that walk broke, the test quietly went from 22 assertions to 1 and kept reportin
 worse than having no test, because it still looked like coverage. Any parametrised test
 whose inputs come from introspection needs a floor on what discovery returns.
 
+## Typer type-descriptor compatibility
+
+Typer 0.29 command parameters retain a `type_descriptor` rather than Click's `type`.
+Recognize that representation before extracting parameters and reuse declaration
+inspection; preserve the native command's option names and paired aliases, including
+already-constructed command trees. Never silently return an empty tool list or discard
+validation when the native representation changes. List omission normalization may use
+only the installed framework's builtin converter/normalizer on empty builtin input,
+not a source callback, parser, factory, or annotation provider. Keep the legacy backend
+path and all source-refusal guards intact.
+
 ## Reviewing a change
 
 The rules above came from bugs that shipped — check those first. Beyond them, these are

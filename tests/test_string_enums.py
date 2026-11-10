@@ -142,8 +142,23 @@ def test_registered_fallback_preserves_enum_case_refusal(
 def test_enum_custom_choices_refuse_before_writes(
     enum_source, tmp_path, monkeypatch, target, fallback, annotated, scaffold, override
 ):
+    import inspect
+
+    import typer
+
+    if (
+        override == "click_type"
+        and "click_type" not in inspect.signature(typer.Option).parameters
+    ):
+        pytest.skip("native Typer no longer accepts click_type declarations")
     enum_source.with_name("modes.py").write_text(
         "from enum import StrEnum\nclass Mode(StrEnum):\n FAST='fast'\n SAFE='safe'\n"
+    )
+    choice_setup = (
+        "from typer.main import get_click_type\nfrom typer.models import OptionInfo\n"
+        "_Choice = type(get_click_type(annotation=Mode, parameter_info=OptionInfo()))\n"
+        if override == "click_type"
+        else ""
     )
     selection = "_Choice(['safe'])" if override == "click_type" else "_only_safe"
     declaration = (
@@ -153,10 +168,7 @@ def test_enum_custom_choices_refuse_before_writes(
     )
     enum_source.write_text(
         "from pathlib import Path\nfrom typing import Annotated\nimport typer\n"
-        "from typer.main import get_click_type\nfrom typer.models import OptionInfo\n"
-        "from .modes import Mode\n"
-        "_Choice = type(get_click_type(annotation=Mode, parameter_info=OptionInfo()))\n"
-        "def _only_safe(value):\n"
+        "from .modes import Mode\n" + choice_setup + "def _only_safe(value):\n"
         "    if value != 'safe':\n        raise ValueError('Only safe is allowed')\n"
         "    return Mode.SAFE\n"
         "app = typer.Typer()\n@app.command()\n"
