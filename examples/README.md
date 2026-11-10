@@ -10,7 +10,43 @@ numeric validation and real receipt effects. The diagnostic teaching scripts inc
 `semantic_schema.py`, `helper_recovery.py`, `conversion_refusals.py`,
 `source_provenance.py`, `binding_chains.py`, and `reference_locations.py`.
 
-The newer examples below are **unreleased source-checkout capabilities**, not part of
+### Capability map
+
+- Define once, serve/eject CLI, HTTP and MCP: `universal_app.py`.
+- Existing-framework conversion, typed defaults and async tools: `cli_app.py`,
+  `api_app.py`, `mcp_server.py`, their `advanced_*` variants and `conversions/`.
+- Numeric bounds, helpers, business errors and receipts: `batch_quote.py`,
+  `storage_quote.py`, `inventory_reservation.py`.
+- Recoverable helpers/constants and shared immutable schema: `helper_recovery.py`,
+  `semantic_schema.py`.
+- Refusal/assessment, diagnostic context, provenance, binding chains and exact
+  references: `conversion_refusals.py`, `diagnostic_context.py`,
+  `definition_bindings.py`, `source_provenance.py`, `binding_chains.py`,
+  `reference_locations.py`.
+- Scalar enum choice and explicit informational adaptation: `informational_text/app.py`.
+- Repeatable enum collections, explicit tool selection and informational conversion:
+  the three short `convert_*.py` recipes below.
+- Project scaffolding, directory discovery and agent guidance: `project_workflow.py`.
+
+### Bootstrap a real project
+
+The project-tooling commands already exist in public v0.16.0; this new teaching script
+is supplied by the source checkout. With Python 3.11 and all extras installed:
+
+```sh
+uv sync --all-extras --locked --python 3.11
+uv run --no-sync python examples/project_workflow.py --output-dir ./my-new-project
+```
+
+It runs the installed `intpot init`, `intpot add skills --agent claude` and
+`intpot inspect DIRECTORY --json` commands. The persistent project contains
+`server.py`, separate project-local CLI/Python skills under `.claude/skills/`, and
+`discovery.json` listing its MCP tools. It prints a shell-quoted command to start the
+native stdio MCP server. Existing destinations are refused, not overwritten; no home
+agent configuration is edited. Discovery imports Python, so the example scans only
+its newly created, trusted scaffold—not arbitrary untrusted directories.
+
+The newer conversion examples below are **unreleased source-checkout capabilities**, not part of
 public v0.16.0. They are application and conversion scripts, not conformance harnesses.
 Run commands from the checkout root with Python 3.11 and all extras:
 

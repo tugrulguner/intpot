@@ -17,6 +17,7 @@ CAPABILITY_PATHS = (
     "examples/convert_selected_tools.py",
     "examples/convert_informational.py",
     "examples/call_converted_mcp.py",
+    "examples/project_workflow.py",
 )
 
 
