@@ -124,7 +124,7 @@ the contracts a change has to keep.
   body cannot fall through to `None`. Treating `dict` as unconditional is what made every
   generated FastAPI handler 500 before #56; ignoring fallthrough creates the same failure
   on only some requests.
-- MCP keeps the source annotation, except from CLI, where it becomes `str`. Plain terminal CLI echoes must return text rather than raw numeric values under that schema; evaluate the expression once, preserve None as empty text, and avoid builtin/parameter collisions.
+- MCP keeps the source annotation, except from CLI, where it becomes `str`. Plain terminal CLI echoes must return text rather than raw numeric values under that schema; evaluate the expression once, preserve None as empty text, and avoid builtin/parameter collisions. Silent CLI completion, bare returns and literal None returns also produce empty MCP text. Rewrite only the command's own return scope: nested function/class returns remain unchanged. Never suppress failures, repeat business effects, disable client output validation or change HTTP response shapes to repair an MCP schema mismatch.
 
 **CLI string enums (unreleased):** `ParameterInfo`/`ParameterSchema.string_enum`
 contains pure immutable `StringEnumSpec` metadata; `StringEnumDefault` is a symbolic
