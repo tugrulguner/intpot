@@ -237,12 +237,23 @@ def _enum_parameter_default(spec: StringEnumSpec, default: Any) -> Any:
         # versions preserve None. Read the installed API instead of version tags.
         import typer.main
 
-        factory: Any = typer.main.generate_list_convertor
-        if "default_value" in inspect.signature(factory).parameters:
-            converter = factory(None, default_value=None)
+        factory: Any = getattr(typer.main, "generate_list_convertor", None)
+        if callable(factory):
+            converter: Any
+            if "default_value" in inspect.signature(factory).parameters:
+                converter = factory(None, default_value=None)
+            else:
+                converter = factory(None)
+            default = converter(())
         else:
-            converter = factory(None)
-        default = converter(())
+            normalize: Any = getattr(typer.main, "_normalize_collection_value", None)
+            if not callable(normalize):
+                raise TypeError("Unsupported native enum collection normalization")
+            # Typer 0.29 moved omission normalization to the command callback.
+            # Supply only builtin metadata and an empty tuple, never a source
+            # parameter, factory, parser, callback, or annotation provider.
+            metadata = types.SimpleNamespace(default=None, multiple=True, nargs=1)
+            default = normalize(metadata, ())
         if default is not None and (type(default) is not list or default):
             raise TypeError("Unsupported native enum collection default")
     return enum_default(spec, default)
@@ -522,8 +533,74 @@ class CLIInspector(BaseInspector):
         if click_group is None:
             return tools
 
+        # Typer 0.29's Click-compatible parameters expose the original Typer
+        # TypeDescriptor instead of Click's ``type``. This is a known structural
+        # API change; use the registration reader, which interprets original
+        # annotations/OptionInfo without running factories or callbacks.
+        if self._uses_typer_type_descriptors(click_group):
+            self._extract_registered_app(
+                self._descriptor_registration_view(click_group), tools
+            )
+            return tools
+
         self._extract_commands(click_group, tools, prefix="")
         return tools
+
+    @staticmethod
+    def _uses_typer_type_descriptors(command: Any) -> bool:
+        """Recognize the Typer 0.29 parameter representation structurally."""
+        commands = _child_commands(command)
+        children = commands.values() if commands is not None else (command,)
+        for child in children:
+            nested = _child_commands(child)
+            if nested is not None:
+                if CLIInspector._uses_typer_type_descriptors(child):
+                    return True
+                continue
+            params = getattr(child, "params", ())
+            if any(
+                not hasattr(param, "type")
+                and type(getattr(param, "type_descriptor", None)).__name__
+                == "TypeDescriptor"
+                for param in params
+            ):
+                return True
+        return False
+
+    @staticmethod
+    def _descriptor_registration_view(command: Any) -> Any:
+        """Reuse original callbacks when callers supply an already-built tree."""
+        children = _child_commands(command)
+        view = types.SimpleNamespace(
+            info=command,
+            registered_callback=command if children is not None else None,
+            registered_commands=[],
+            registered_groups=[],
+        )
+        for child in children.values() if children is not None else (command,):
+            if _child_commands(child) is not None:
+                view.registered_groups.append(
+                    types.SimpleNamespace(
+                        typer_instance=CLIInspector._descriptor_registration_view(
+                            child
+                        ),
+                        name=getattr(child, "name", None),
+                        context_settings=getattr(child, "context_settings", None),
+                    )
+                )
+            else:
+                callback = getattr(child, "callback", None)
+                if callable(callback):
+                    view.registered_commands.append(
+                        types.SimpleNamespace(
+                            callback=inspect.unwrap(callback),
+                            native_parameters=getattr(child, "params", ()),
+                            name=getattr(child, "name", None),
+                            help=getattr(child, "help", None),
+                            context_settings=getattr(child, "context_settings", None),
+                        )
+                    )
+        return view
 
     def _extract_registered_app(
         self,
@@ -601,6 +678,11 @@ class CLIInspector(BaseInspector):
                 else default_map,
             )
             parameters: list[ParameterInfo] = []
+            native_parameters = {
+                item.name: item
+                for item in getattr(command, "native_parameters", ())
+                if isinstance(getattr(item, "name", None), str)
+            }
             for param in signature.parameters.values():
                 (
                     annotation,
@@ -619,6 +701,10 @@ class CLIInspector(BaseInspector):
                         command_default_map, param.name
                     ),
                 )
+                native_parameter = native_parameters.get(param.name)
+                if native_parameter is not None:
+                    aliases = _option_aliases(native_parameter)
+                    parameter_interface_name = _primary_option_name(aliases)
                 _, original_metadata = _parameter_annotation_metadata(
                     annotations.get(param.name, param.annotation), param.default
                 )
