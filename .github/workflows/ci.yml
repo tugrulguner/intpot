@@ -139,6 +139,23 @@ jobs:
             "${run[@]}" pytest "${consumer_tests[@]}" -q -k "$target_filter"
           fi
 
+  compatibility-typer-029:
+    name: Typer 0.29.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.11"
+      - name: Exercise type-descriptor inspection with the installed framework
+        run: >-
+          uv run --no-project --python 3.11 --with-editable ".[all]"
+          --with "typer==0.29.0" --with pytest
+          pytest tests/test_typer029_compatibility.py -q
+
   compatibility-fastmcp-2-latest:
     name: latest FastMCP 2.x
     runs-on: ubuntu-latest

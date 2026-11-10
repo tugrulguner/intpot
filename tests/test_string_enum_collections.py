@@ -169,7 +169,10 @@ def test_collection_omission_uses_only_builtin_empty_converter(
         return convert
 
     monkeypatch.setattr(
-        typer.main, "generate_list_convertor", old_factory if legacy else new_factory
+        typer.main,
+        "generate_list_convertor",
+        old_factory if legacy else new_factory,
+        raising=False,
     )
     result = _enum_parameter_default(parameter.string_enum, None)
     assert result == ([] if legacy else None)
