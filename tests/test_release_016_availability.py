@@ -22,7 +22,8 @@ def test_occurrence_example_minimum_release_is_explicit(relative):
 def test_roadmap_keeps_occurrences_separate_from_richer_dependencies():
     text = (ROOT / "ROADMAP.md").read_text()
     assert "## v0.16 — Current foundation" in text
-    assert "v0.16.0 release candidate" in text
+    assert "v0.16.0 release adds" in text
+    assert "v0.16.0 release candidate" not in text
     assert "plain-body" in text
     assert "(unreleased)" not in text
     assert "richer evaluation-order dependency edges remain separate" in text

@@ -552,8 +552,8 @@ This is executable application evidence, not a generated-text snapshot.
 
 ## Exact body-reference locations (v0.16.0)
 
-**Availability:** requires v0.16.0 or newer. Until publication, use a source checkout
-containing this change; v0.15.0 does not include
+**Availability:** requires v0.16.0 or newer; included in the published release.
+v0.15.0 does not include
 `references[*].reference_locations`, `source_digest` or `support_source_digests`.
 
 Each binding reference adds `reference_locations`: a source-ordered list of original
@@ -623,8 +623,7 @@ writes. Source inspection does not gain unresolved-helper recovery from that fix
 
 ## Bounded definition provenance (v0.14.0)
 
-**Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a
-source checkout containing this change. v0.13.0 does not include captured definition
+**Availability:** available in published v0.14.0 and newer. v0.13.0 does not include captured definition
 coordinates.
 
 Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
@@ -671,8 +670,8 @@ Suggestions name the missing bindings; eager definition dependencies must exist 
 those definitions, while body and deferred-annotation dependencies must exist before use.
 
 In published v0.13.0, `source_location` is always `null` (`None` in Python).
-v0.14.0 adds bounded definition provenance as described above; until publication,
-use a source checkout containing this change.
+v0.14.0 adds bounded definition provenance as described above and is available
+in the published package.
 An application `source_path` is not sufficient provenance, and no generated AST
 position is presented as an original line. Diagnostics are observations of
 bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
@@ -839,6 +838,21 @@ implemented. The FastAPI input also includes routes with multiple HTTP methods. 
 [`semantic_schema.py`](examples/semantic_schema.py) for a runnable canonical-schema
 inspection example. See [`callback_cli.py`](examples/callback_cli.py) for executable
 source validation, callback inspection, and intentional conversion refusal.
+
+### Runnable capability scripts (unreleased)
+
+Use Python 3.11 from this source checkout with all extras for the newer workflows;
+public v0.16.0 does not include them. These are short teaching scripts, separate from
+conformance drivers:
+
+- [Enum export application](examples/enum_export/app.py) and [conversion recipe](examples/convert_enum_export.py): select text/HTML exports with repeatable typed `--to` values.
+- [Selected-tool application](examples/selected_tools.py) and [conversion recipe](examples/convert_selected_tools.py): export `slug` while retaining refusal for another command's ordinary callback.
+- [Informational conversion recipe](examples/convert_informational.py): reuse the [native text converter](examples/informational_text/app.py) with an explicit policy instead of dropping its version/format callbacks.
+
+The [example guide](examples/README.md) supplies complete native, loopback HTTP and
+stdio MCP commands, source-package requirements, expected file effects and rejection
+boundaries. Keep ordinary callback refusal, server-filesystem paths and unreleased
+availability distinct from the published introductory examples.
 
 ## CLI Reference
 

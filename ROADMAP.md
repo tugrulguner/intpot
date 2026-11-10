@@ -57,7 +57,7 @@ Accumulate independently useful conversion fixes and application conformance on 
 Do not cut a package release for every bounded improvement. Prepare a release when a
 coherent capability bundle warrants upgrading, with representative application evidence;
 critical correctness/security fixes can justify an earlier release. Merged, documented
-source capability remains explicitly unreleased until publication is separately approved.
+source capabilities remain unreleased until separately approved publication.
 
 The next unreleased slice removes the batch-order example's manual string-formatting
 workaround: plain terminal numeric echoes must pass the MCP client's declared text-output
@@ -78,11 +78,11 @@ Keep all three source-direction gains unreleased until a coherent bundle is appr
 
 ### Released diagnostic foundation
 
-The v0.16.0 release candidate adds exact identifier occurrence ranges for verified
+The v0.16.0 release adds exact identifier occurrence ranges for verified
 unchanged plain-body references. It rereads only captured owning source with matching
 fingerprints, leaves transformed/nested/header cases unavailable and preserves existing
 definition coordinates, binding chains and refusals. No recovery capability is added.
-This requires v0.16.0 or newer; until publication, use a source checkout.
+This requires v0.16.0 or newer.
 
 The v0.15.0 release adds bounded static binding paths per diagnostic
 reference: one deterministic shortest path through an emitted wrapper, implementation
@@ -219,7 +219,7 @@ or generated-code execution as a prerequisite for live serving.
 - [x] Explain existing missing-binding references with bounded deterministic paths through
       emitted owned definitions (v0.15.0). Keep unknown paths explicit.
 - [x] Map bounded unchanged plain-body identifier occurrences to verified original
-      line/column ranges (v0.16.0 release candidate); leave ambiguous and transformed cases unavailable.
+      line/column ranges (v0.16.0 release); leave ambiguous and transformed cases unavailable.
 - [ ] Extend provenance to richer evaluation-order dependency edges and other reference occurrences.
       Keep ambiguous cases unresolved rather than treating absence of evidence as safety.
 - [x] Refuse demonstrated missing body bindings before any output writes, including mixed

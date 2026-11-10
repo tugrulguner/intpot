@@ -1,5 +1,113 @@
 # Examples
 
+## Runnable capability examples
+
+Start with `universal_app.py` for `App`, serving, and ejection; `cli_app.py`,
+`api_app.py`, and `mcp_server.py` are framework inputs for the converters. The
+advanced variants add multiple commands, async tools, imports, and HTTP metadata.
+`batch_quote.py`, `storage_quote.py`, and `inventory_reservation.py` demonstrate
+numeric validation and real receipt effects. The diagnostic teaching scripts include
+`semantic_schema.py`, `helper_recovery.py`, `conversion_refusals.py`,
+`source_provenance.py`, `binding_chains.py`, and `reference_locations.py`.
+
+The newer examples below are **unreleased source-checkout capabilities**, not part of
+public v0.16.0. They are application and conversion scripts, not conformance harnesses.
+Run commands from the checkout root with Python 3.11 and all extras:
+
+```sh
+uv sync --all-extras --locked --python 3.11
+printf 'Curiosity & <science>\n' > input.txt
+```
+
+Paths in requests refer to the **server filesystem**. These local examples do not
+provide uploads, downloads, authentication, or a safe public filesystem boundary.
+Start one HTTP server at a time; stop it with Ctrl-C before starting the next.
+
+### Repeatable enum export
+
+`enum_export/app.py` reads UTF-8 text and writes plain text or escaped HTML. Repeat
+`--to` for several formats. Omission defaults to text; order and duplicates are retained,
+so duplicate formats overwrite the same destination and remain in the output message.
+The ordinary optional string-enum list subset is supported, not arbitrary repeatables.
+
+```sh
+uv run --no-sync python examples/enum_export/app.py input.txt native-result --to html --to text
+uv run --no-sync python examples/convert_enum_export.py --output-dir generated/enum
+PYTHONPATH=examples uv run --no-sync uvicorn enum_api:app --app-dir generated/enum --host 127.0.0.1 --port 8000
+```
+
+In another terminal, from the same checkout:
+
+```sh
+curl --fail-with-body http://127.0.0.1:8000/export -H 'Content-Type: application/json' \
+  -d '{"source":"input.txt","output":"http-result","to":["html","text"]}'
+PYTHONPATH=examples uv run --no-sync python examples/call_converted_mcp.py enum '{"source":"input.txt","output":"mcp-result","to":["html","text"]}' --server-dir generated/enum
+```
+
+The script writes `enum_api.py` and `enum_mcp.py`. The client starts the MCP server,
+prints its result, and closes it. Both generated targets retain the source package as
+a dependency: keep `examples` on `PYTHONPATH` or install that package. Invalid enum
+values are rejected before output files. Native omission can be `None` or `[]` depending
+on Typer; this application's default branch handles both. Explicit empty arrays are
+not a universal transport-omission contract.
+
+### Explicitly select a tool
+
+`selected_tools.py` contains a whitespace-normalizing `slug(text)` command and a
+separate callback-guarded command. Full-app conversion refuses the callback; selecting
+`slug` preserves its required input without editing the source registry.
+
+```sh
+uv run --no-sync python examples/selected_tools.py slug 'Hello World'
+# hello-world
+uv run --no-sync python examples/convert_selected_tools.py --output-dir generated/selected
+uv run --no-sync uvicorn selected_api:app --app-dir generated/selected --host 127.0.0.1 --port 8000
+```
+
+In another terminal:
+
+```sh
+curl --fail-with-body http://127.0.0.1:8000/slug -H 'Content-Type: application/json' -d '"Hello World"'
+uv run --no-sync python examples/call_converted_mcp.py selected '{"text":"Hello World"}' --server-dir generated/selected
+```
+
+The HTTP body is a **JSON string**, because this generated operation has one body
+parameter. MCP uses the named object. Both return `hello-world` in their native
+envelopes. The converter writes `selected_api.py` and `selected_mcp.py`; selection is
+not full-application conversion or permission to bypass selected-tool guards.
+
+### Explicit informational callback policy
+
+`convert_informational.py` reuses the unchanged `informational_text/app.py` and opts
+into `exclusive-informational`. Default callback conversion still refuses. Use
+Python 3.11: parameter callbacks exposing deferred `__annotate__` providers on the
+tested Python 3.14 are refused without evaluating those providers.
+
+```sh
+uv run --no-sync python examples/informational_text/app.py --version --format invalid
+uv run --no-sync python examples/convert_informational.py --output-dir generated/info
+PYTHONPATH=examples uv run --no-sync uvicorn informational_api:app --app-dir generated/info --host 127.0.0.1 --port 8000
+```
+
+In another terminal:
+
+```sh
+curl --fail-with-body http://127.0.0.1:8000/convert -H 'Content-Type: application/json' \
+  -d '{"source":"input.txt","output":"http-info.html","format":"html"}'
+curl --fail-with-body http://127.0.0.1:8000/convert -H 'Content-Type: application/json' \
+  -d '{"version":true,"format":"invalid"}'
+PYTHONPATH=examples uv run --no-sync python examples/call_converted_mcp.py informational '{"version":true,"format":"invalid"}' --server-dir generated/info
+```
+
+The ordinary request writes escaped HTML. A single information flag prints
+`informational-text 1.0` before irrelevant conversion fields are validated. Simultaneous
+`version=true` and `formats=true` reject; unordered requests do not emulate CLI token
+order. Generated filenames are `informational_api.py` and `informational_mcp.py`.
+Workers need the original package on `PYTHONPATH`. Active callbacks are trusted Python;
+fresh workers isolate captured output, not arbitrary effects or shared mutable state.
+See [the complete informational example](informational_text/README.md) for limits.
+Full Docling conversion is not established.
+
 ## Repeatable enum-option conformance
 
 Run `python examples/enum_collection_conformance.py --output-dir /path/to/new-evidence`

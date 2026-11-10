@@ -54,7 +54,24 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == [
+    import json
+
+    first, *lines = result.stdout.splitlines()
+    capabilities = json.loads(first)
+    assert set(capabilities) == {"enum", "selected", "informational"}
+    assert (
+        capabilities["enum"]
+        == "native/http/stdio-mcp byte parity; invalid inputs no files"
+    )
+    assert (
+        capabilities["selected"]
+        == "only slug; native/http/stdio-mcp; full source refused"
+    )
+    assert capabilities["informational"] in {
+        "native/http/stdio-mcp byte parity; early exit; conflicts rejected",
+        "provider-backed callbacks refused before output directory",
+    }
+    assert lines == [
         "verified generated CLI command",
         "verified generated MCP tool",
         "verified dependency FastAPI route",

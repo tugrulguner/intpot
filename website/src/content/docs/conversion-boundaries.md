@@ -282,8 +282,8 @@ This is executable application evidence, not a generated-text snapshot.
 
 ## Exact body-reference locations (v0.16.0)
 
-**Availability:** requires v0.16.0 or newer. Until publication, use a source checkout
-containing this change; v0.15.0 does not include
+**Availability:** requires v0.16.0 or newer; included in the published release.
+v0.15.0 does not include
 `references[*].reference_locations`, `source_digest` or `support_source_digests`.
 
 Each binding reference adds `reference_locations`: a source-ordered list of original
@@ -353,8 +353,7 @@ writes. Source inspection does not gain unresolved-helper recovery from that fix
 
 ## Bounded definition provenance (v0.14.0)
 
-**Availability:** requires v0.14.0 or newer; until v0.14.0 is published, use a
-source checkout containing this change. v0.13.0 does not include captured definition
+**Availability:** available in published v0.14.0 and newer. v0.13.0 does not include captured definition
 coordinates.
 
 Inspected `ToolInfo` and immutable `ToolSchema` carry optional `source_location`
@@ -401,8 +400,8 @@ Suggestions name the missing bindings; eager definition dependencies must exist 
 those definitions, while body and deferred-annotation dependencies must exist before use.
 
 In published v0.13.0, `source_location` is always `null` (`None` in Python).
-v0.14.0 adds bounded definition provenance as described above; until publication,
-use a source checkout containing this change.
+v0.14.0 adds bounded definition provenance as described above and is available
+in the published package.
 An application `source_path` is not sufficient provenance, and no generated AST
 position is presented as an original line. Diagnostics are observations of
 bounded rendered-name checks, not a dependency graph or a proof of conversion readiness.
@@ -488,3 +487,30 @@ Run `uv run python examples/helper_recovery.py` to exercise the helper chain ret
 through generated CLI, HTTP API, and MCP consumers. `examples/missing_binding.py` retains
 a refusal control using a dynamically initialized module value rather than a recoverable
 literal. These capabilities are included in v0.11.0; the documented unsupported cases remain explicit.
+
+
+## Informational callbacks (unreleased)
+
+The default conversion policy still refuses callback-bearing parameters. The opt-in
+`exclusive-informational` policy is a narrow exception for qualified informational
+callbacks; it does not enable argument callbacks. Deferred providers such as
+`__annotate__` are refused without reading or invoking them. Python 3.11 qualification
+applies. This is an informational projection, not a general callback translation or
+full Docling conversion.
+
+On a loaded converter, use the informational path consistently: `app.assess("api",
+callback_policy="exclusive-informational")`, `app.project("api",
+callback_policy="exclusive-informational")`, `app.to_api(callback_policy=
+"exclusive-informational")`, `app.to_mcp(callback_policy="exclusive-informational")`,
+and `app.write(path, "api", callback_policy="exclusive-informational")`. The immutable
+`ApplicationSchema.callback_policy` carries the choice; parameter metadata remains
+informational. The CLI exposes `--callback-policy exclusive-informational` on
+`intpot to api`, `intpot to mcp`, and `intpot inspect`. There is no informational-policy
+CLI-to-CLI conversion; same-source conversion still refuses.
+
+For runnable workflows, see [`examples/convert_informational.py`](https://github.com/tugrulguner/intpot/blob/main/examples/convert_informational.py),
+[`examples/enum_export/app.py`](https://github.com/tugrulguner/intpot/blob/main/examples/enum_export/app.py),
+[`examples/convert_enum_export.py`](https://github.com/tugrulguner/intpot/blob/main/examples/convert_enum_export.py),
+and [`examples/selected_tools.py`](https://github.com/tugrulguner/intpot/blob/main/examples/selected_tools.py) with
+[`examples/convert_selected_tools.py`](https://github.com/tugrulguner/intpot/blob/main/examples/convert_selected_tools.py).
+These newer paths remain unreleased; published v0.16.0 features above remain available.

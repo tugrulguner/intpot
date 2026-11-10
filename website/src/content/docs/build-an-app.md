@@ -94,6 +94,28 @@ A successful conversion only establishes that Intpot generated source. For each 
 - **Port unavailable:** choose an unused local port and pass `--port`.
 - **Conversion rejects FastAPI dependencies:** see [conversion boundaries](/conversion-boundaries/); dependencies cannot be safely mapped to CLI/MCP.
 
+## Try the newer conversion examples (unreleased)
+
+The runtime workflow above is available in the published package. The following
+conversion teaching scripts instead require a current source checkout, Python 3.11,
+and all extras; public v0.16.0 does not include their newer guarantees:
+
+```sh
+uv sync --all-extras --locked --python 3.11
+uv run --no-sync python examples/convert_enum_export.py --output-dir generated/enum
+uv run --no-sync python examples/convert_selected_tools.py --output-dir generated/selected
+uv run --no-sync python examples/convert_informational.py --output-dir generated/info
+```
+
+Run these from the repository root. Each script uses the public Python API and writes
+standalone HTTP and MCP servers. The [runnable example guide](https://github.com/tugrulguner/intpot/blob/main/examples/README.md)
+shows the source applications, loopback HTTP commands, and `call_converted_mcp.py`
+stdio calls, including package dependencies and rejection cases. These are teaching
+applications; the separate conformance drivers check their behavior. Informational
+conversion explicitly requests the bounded callback policy; default and unqualified
+callbacks still refuse. Keep the original source package available to generated enum
+and informational servers. Do not expose their filesystem paths publicly.
+
 ## Next steps
 
 Read [conversion boundaries](/conversion-boundaries/), then [schema and parameter reference](/schema-reference/) and [architecture internals](/architecture-internals/). The [cookbook](https://github.com/tugrulguner/intpot/blob/main/docs/cookbook.md) has additional recipes. [Download this guide as Markdown](/downloads/build-an-app.md).
