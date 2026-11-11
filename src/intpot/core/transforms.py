@@ -312,9 +312,40 @@ def _from_cli(
     # Also remove typer.Exit raises → convert to return/raise
     remover = _TyperExitTransformer(target)
     new_tree = remover.visit(new_tree)
+    if target == SourceType.MCP:
+        # A successful CLI command can be silent. Its MCP text contract still
+        # requires a string after the command's effects have completed.
+        new_tree = _EmptyMCPReturns().visit(new_tree)
+        # A return inside a context manager need not leave the function:
+        # __exit__ can raise and an outer manager can suppress that exception.
+        # Only a terminal top-level return/raise proves no fallback is needed.
+        if not new_tree.body or not isinstance(
+            new_tree.body[-1], (ast.Return, ast.Raise)
+        ):
+            new_tree.body.append(ast.Return(value=ast.Constant(value="")))
     ast.fix_missing_locations(new_tree)
 
     return ast.unparse(new_tree)
+
+
+class _EmptyMCPReturns(ast.NodeTransformer):
+    """Map literal None returns only in the converted command's own scope."""
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        return node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST:
+        return node
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
+        return node
+
+    def visit_Return(self, node: ast.Return) -> ast.AST:
+        if node.value is None or (
+            isinstance(node.value, ast.Constant) and node.value.value is None
+        ):
+            return ast.copy_location(ast.Return(value=ast.Constant(value="")), node)
+        return node
 
 
 class _EchoToAccumulator(ast.NodeTransformer):

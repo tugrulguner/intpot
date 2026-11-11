@@ -172,6 +172,16 @@ pinned contact-conversion CLI, retains real vCard artifacts, and records current
 Intpot discovery/conversion boundaries. Run it with `external_csv2vcard.py`; it
 does not claim that the full third-party application converts successfully.
 
+### Cruft project creation (unreleased)
+
+[The Cruft case study](external-applications/cruft.md) exercises an unchanged,
+pinned application's selected noninteractive project-creation command. Run
+`external_cruft.py` with its separately installed official package. It compares
+native CLI, live HTTP and real stdio MCP, including project/tracking-file bytes,
+existing-destination rejection and explicit overwrite. Its local Cookiecutter
+template is explicitly synthetic. This qualifies the selected workflow and the
+silent-result adaptation, not Cruft's full application or interactive behavior.
+
 ## Runnable application conversions
 
 These are standalone Python applications generated from the three source examples,

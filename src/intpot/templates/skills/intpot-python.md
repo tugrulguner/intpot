@@ -432,6 +432,22 @@ output options, binary streams, arbitrary explicit returns and all echo/control-
 forms are not certified. The MCP client still validates results against the output schema.
 This is executable application evidence, not a generated-text snapshot.
 
+### Silent CLI commands (unreleased)
+
+CLI-to-MCP conversion also maps normal completion without a returned value, bare
+`return`, and literal `return None` to empty text, consistent with its declared
+`str` output schema. Nested helper/function/class return values are unchanged.
+Effects execute once and errors still propagate; client result validation stays on.
+Existing CLI-to-HTTP response shapes are unchanged. This does not certify arbitrary
+explicit return values, interactive commands, or general terminal capture.
+
+The [Cruft project-creation case study](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/cruft.md)
+compares an unchanged application's selected noninteractive `create` workflow through
+native CLI, real HTTP and stdio MCP. Generated project and tracking-file bytes,
+existing-destination refusal and explicit overwrite are checked. Full-application
+conversion, arbitrary templates/hooks and public filesystem safety are not claimed.
+
+
 ## Exact body-reference locations (v0.16.0)
 
 **Availability:** requires v0.16.0 or newer; included in the published release.
