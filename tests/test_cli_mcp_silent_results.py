@@ -115,3 +115,62 @@ def create(output: str) -> None:
 
     asyncio.run(call())
     assert target.read_bytes() == native_path.read_bytes()
+
+
+@pytest.mark.parametrize("ending", ["return", "return None"])
+def test_suppressed_context_exit_reaches_valid_mcp_fallthrough(
+    tmp_path: Path, ending: str
+) -> None:
+    source = tmp_path / "context_exit_cli.py"
+    source.write_text(
+        """from pathlib import Path
+from contextlib import suppress
+import typer
+app = typer.Typer()
+@app.command()
+def create(output: str, fail: bool = False) -> None:
+    if fail:
+        raise ValueError("unhandled before effects")
+    class ExitFailure:
+        def __enter__(self):
+            return None
+        def __exit__(self, *args):
+            raise ValueError("exit failed")
+    with suppress(ValueError):
+        with ExitFailure():
+            ENDING
+    previous = Path(output).read_text() if Path(output).exists() else ""
+    Path(output).write_text(previous + "created once")
+""".replace("ENDING", ending)
+    )
+    app = intpot.load(source)
+    native_path = tmp_path / "native.txt"
+    native = CliRunner().invoke(app.app, [str(native_path)])
+    assert native.exit_code == 0 and native.stdout == ""
+    assert native_path.read_text() == "created once"
+    native_error = tmp_path / "native-error.txt"
+    rejected = CliRunner().invoke(app.app, [str(native_error), "--fail"])
+    assert rejected.exit_code != 0 and not native_error.exists()
+    generated = tmp_path / "context_exit_server.py"
+    generated.write_text(app.to_mcp())
+    destination = tmp_path / "mcp.txt"
+
+    async def call() -> None:
+        async with Client(
+            PythonStdioTransport(
+                generated, python_cmd=sys.executable, env=dict(os.environ)
+            )
+        ) as client:
+            result = await client.call_tool("create", {"output": str(destination)})
+            assert not result.is_error
+            assert result.structured_content == {"result": ""}
+            error_path = tmp_path / "mcp-error.txt"
+            result = await client.call_tool(
+                "create",
+                {"output": str(error_path), "fail": True},
+                raise_on_error=False,
+            )
+            assert result.is_error and not error_path.exists()
+
+    asyncio.run(call())
+    assert destination.read_bytes() == native_path.read_bytes()

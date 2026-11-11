@@ -316,7 +316,12 @@ def _from_cli(
         # A successful CLI command can be silent. Its MCP text contract still
         # requires a string after the command's effects have completed.
         new_tree = _EmptyMCPReturns().visit(new_tree)
-        if _FALLTHROUGH in _suite_outcomes(new_tree.body):
+        # A return inside a context manager need not leave the function:
+        # __exit__ can raise and an outer manager can suppress that exception.
+        # Only a terminal top-level return/raise proves no fallback is needed.
+        if not new_tree.body or not isinstance(
+            new_tree.body[-1], (ast.Return, ast.Raise)
+        ):
             new_tree.body.append(ast.Return(value=ast.Constant(value="")))
     ast.fix_missing_locations(new_tree)
 
