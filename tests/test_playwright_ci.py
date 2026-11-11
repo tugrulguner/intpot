@@ -23,6 +23,7 @@ def test_browser_workflows_use_locked_prebuilt_image(workflow: str) -> None:
     assert "options: --init --shm-size=1g" in text
     assert "playwright install" not in text
     assert "apt-get" not in text
+    assert 'git config --global --add safe.directory "$GITHUB_WORKSPACE"' in text
     assert "- run: npm ci" in text
     assert "- run: npm run build" in text
     assert "node-version: 22" in text
