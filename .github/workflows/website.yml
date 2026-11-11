@@ -16,6 +16,9 @@ jobs:
   build:
     name: website build
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init --shm-size=1g
     defaults:
       run:
         working-directory: website
@@ -23,13 +26,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Trust this mounted checkout for source provenance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: website/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - run: npm run build
       - name: Verify generated site essentials
         run: |
