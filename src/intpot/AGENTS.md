@@ -101,6 +101,12 @@ the contracts a change has to keep.
   `.tools` returns detached copies, so mutating one must not change `.schema` or output.
 - A semantic field added to either representation must be mapped in both conversion
   directions and reviewed across every inspector, generator, transform, and serializer.
+- For the unreleased plain-string collection subset, `minimum_items` is optional and
+  restricted to `None`/`1`; inventory it in the shipped skill with this exact field
+  spelling. It captures explicit required CLI variadics only, not API/MCP required-array
+  inference. Preserve source builtin normalization for omitted repeatable options and
+  document unsupported forms as pre-write refusals; do not promise broad collection
+  support or introduce an unsupported-string-collection marker/exception.
 
 **Templates**
 

@@ -23,6 +23,7 @@ Public v0.16.0 does not contain these newer conversion capabilities. From a curr
 checkout with Python 3.11 and all extras, use the runnable teaching scripts:
 
 - [Enum export](https://github.com/tugrulguner/intpot/blob/main/examples/convert_enum_export.py): convert a file-export application with optional repeatable string-enum options; order, duplicates, defaults, and validation remain explicit.
+- Plain string-list file manifest ([source](https://github.com/tugrulguner/intpot/blob/main/examples/file_manifest.py), [conversion recipe](https://github.com/tugrulguner/intpot/blob/main/examples/convert_file_manifest.py)): required variadic paths and optional repeatable labels preserve order and duplicates (unreleased source checkout; not in public v0.16.0).
 - [Tool selection](https://github.com/tugrulguner/intpot/blob/main/examples/convert_selected_tools.py): `intpot.load(...).select("slug")` exports one workflow without removing its parameters or weakening its guards.
 - [Informational conversion](https://github.com/tugrulguner/intpot/blob/main/examples/convert_informational.py): explicitly request `callback_policy="exclusive-informational"` for qualified eager informational flags. Ordinary callback conversion still refuses; this is not arbitrary callback or lifecycle translation.
 

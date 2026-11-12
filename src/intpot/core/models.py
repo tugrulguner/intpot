@@ -761,6 +761,23 @@ def _validate_numeric_bounds(
             raise ValueError("numeric default must satisfy its bounds")
 
 
+def _validate_minimum_items(annotation: str, minimum: int | None, default: Any) -> None:
+    if minimum is None:
+        return
+    if type(minimum) is not int or minimum != 1:
+        raise ValueError("minimum_items must be None or the supported minimum 1")
+    if annotation not in {"list[str]", "List[str]"}:
+        raise ValueError("minimum_items requires a plain string-list annotation")
+    if default is not _SENTINEL:
+        value = _thaw_default(default)
+        if (
+            type(value) is not list
+            or not value
+            or any(type(item) is not str for item in value)
+        ):
+            raise ValueError("String-list default must satisfy minimum_items")
+
+
 @dataclass
 class ParameterInfo:
     _source_binding_name: ClassVar[str | None] = None
@@ -782,8 +799,10 @@ class ParameterInfo:
     unsupported_mcp_numeric_range: bool = False
     string_enum: StringEnumSpec | None = None
     informational_callback: InformationalCallbackSpec | None = None
+    minimum_items: int | None = None
 
     def __post_init__(self) -> None:
+        _validate_minimum_items(self.type_annotation, self.minimum_items, self.default)
         _validate_numeric_bounds(
             self.type_annotation, self.minimum, self.maximum, self.default
         )
@@ -915,8 +934,10 @@ class ParameterSchema:
     unsupported_mcp_numeric_range: bool = False
     string_enum: StringEnumSpec | None = None
     informational_callback: InformationalCallbackSpec | None = None
+    minimum_items: int | None = None
 
     def __post_init__(self) -> None:
+        _validate_minimum_items(self.type_annotation, self.minimum_items, self.default)
         _validate_numeric_bounds(
             self.type_annotation, self.minimum, self.maximum, self.default
         )
@@ -990,6 +1011,7 @@ class ParameterSchema:
             self.unsupported_mcp_numeric_range,
             self.string_enum,
             self.informational_callback,
+            self.minimum_items,
         ) == (
             other.name,
             other.type_annotation,
@@ -1008,6 +1030,7 @@ class ParameterSchema:
             other.unsupported_mcp_numeric_range,
             other.string_enum,
             other.informational_callback,
+            other.minimum_items,
         )
 
     def __hash__(self) -> int:
@@ -1030,6 +1053,7 @@ class ParameterSchema:
                 self.unsupported_mcp_numeric_range,
                 self.string_enum,
                 self.informational_callback,
+                self.minimum_items,
             )
         )
 
@@ -1053,6 +1077,7 @@ class ParameterSchema:
             unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
             string_enum=parameter.string_enum,
             informational_callback=parameter.informational_callback,
+            minimum_items=parameter.minimum_items,
         )
 
     @property
@@ -1079,6 +1104,7 @@ class ParameterSchema:
             unsupported_mcp_numeric_range=self.unsupported_mcp_numeric_range,
             string_enum=self.string_enum,
             informational_callback=self.informational_callback,
+            minimum_items=self.minimum_items,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1098,6 +1124,8 @@ class ParameterSchema:
             data["aliases"] = list(self.aliases)
         if self.unsupported_callback:
             data["unsupported_callback"] = True
+        if self.minimum_items is not None:
+            data["minimum_items"] = self.minimum_items
         if self.minimum is not None:
             data["minimum"] = self.minimum
         if self.maximum is not None:

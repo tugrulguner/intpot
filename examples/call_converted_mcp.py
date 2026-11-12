@@ -24,6 +24,7 @@ SERVERS = {
     "enum": ("enum_mcp.py", "export"),
     "selected": ("selected_mcp.py", "slug"),
     "informational": ("informational_mcp.py", "convert"),
+    "manifest": ("manifest_mcp.py", "manifest"),
 }
 
 
@@ -53,7 +54,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     if (
-        args.example in {"enum", "selected", "informational"}
+        args.example in {"enum", "selected", "informational", "manifest"}
         and args.server_dir is None
     ):
         parser.error("--server-dir is required for newly generated examples")

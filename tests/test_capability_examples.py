@@ -14,6 +14,7 @@ def test_capability_teaching_scripts_are_present_and_runnable() -> None:
         "examples/selected_tools.py",
         "examples/convert_selected_tools.py",
         "examples/convert_informational.py",
+        "examples/convert_file_manifest.py",
     ]
     missing = [name for name in scripts if not (ROOT / name).is_file()]
     assert not missing, f"missing user-facing capability examples: {missing}"
@@ -57,6 +58,10 @@ def test_capability_recipes_preserve_actual_cli_http_mcp_effects() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     result = module.verify_capability_examples()
+    assert (
+        result["manifest"]
+        == "native/http/stdio-mcp manifest parity; order/duplicates; empty required list no files"
+    )
     assert (
         result["enum"] == "native/http/stdio-mcp byte parity; invalid inputs no files"
     )

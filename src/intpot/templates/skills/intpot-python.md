@@ -119,7 +119,7 @@ the result works: compile it, import it with its runtime dependencies installed,
 invoke a real CLI command, API request, or MCP tool.
 
 Current unsupported or lossy conversions include nested Typer sub-apps, repeatable CLI options other than the bounded optional
-string-enum list subset described below, some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and
+string-enum list subset and plain `list[str]` forms described below, some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and
 routes with multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and
 route/router/app-level dependencies remain available through `.tools` and `inspect_app`,
 but `.to_cli()`, `.to_mcp()`, and `.write()` raise
@@ -190,6 +190,7 @@ framework-visible spelling such as `send-email` when it differs.
 `param_source`, `placement`, `binding_name`, `interface_name`, `aliases`,
 `unsupported_callback`, `minimum`, `maximum`, `unsupported_numeric_range`,
 `unsupported_api_numeric_range`, `unsupported_mcp_numeric_range`, `string_enum`,
+`minimum_items`,
 `informational_callback`, plus a
 `required` property. `binding_name` preserves a source callable's valid Python parameter
 spelling when canonical sanitization changes it. `interface_name` is the primary
@@ -197,6 +198,18 @@ framework-visible parameter spelling; `aliases` retains exact additional Typer/C
 option declarations such as `--customer-id` and `-c`. `placement` is the explicit target
 location selected by a projection (`cli_argument`, `cli_option`, `api_body`, `api_query`,
 `api_header`, `api_path`, or `mcp_parameter`); source inspection may leave it as `None`.
+
+`minimum_items` is optional metadata (`None` or `1`), copied through mutable/immutable
+records, hashing and JSON; absent values are omitted. It records only an explicitly
+required CLI variadic list's minimum, never an API/MCP required-array inference.
+Unreleased source supports native `list[str]` required variadic arguments (at least one
+value) and optional repeatable `list[str]` options, retaining order, duplicates, and
+source builtin normalization (`None` on modern Typer, `[]` on the legacy floor).
+Required repeatable options, optional positional collections, nested/nullable-element
+forms, optional repeatable collections wrapped in `Optional[...]`, and context,
+environment, prompt, parser, or factory-dependent collections are unsupported; guarded
+forms refuse before writes. This feature is not in public v0.16.0. Do not claim that
+Docling was converted or that this source-checkout capability is installable from PyPI.
 **The type field is `type_annotation`, not `annotation`.** `default` is a private sentinel
 when the parameter is required — check `param.required` rather than comparing against
 `None`.

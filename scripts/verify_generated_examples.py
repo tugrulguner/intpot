@@ -273,10 +273,12 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
             ).stdout.strip()
             == "True"
         )
+        manifest_sources: list[str] = []
         for kind, tool in (
             ("enum", "export"),
             ("selected", "slug"),
             ("informational", "convert"),
+            ("manifest", "manifest"),
         ):
             out = base / kind
             helper = (
@@ -284,6 +286,8 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                 if kind == "enum"
                 else "convert_selected_tools.py"
                 if kind == "selected"
+                else "convert_file_manifest.py"
+                if kind == "manifest"
                 else "convert_informational.py"
             )
             command = [str(ROOT / "examples" / helper), "--output-dir", str(out)]
@@ -340,6 +344,25 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                 )
                 assert "UnsupportedCLIParameterCallbackError" in refused.stderr
                 assert not (base / "refused").exists()
+            elif kind == "manifest":
+                second = base / "second input.txt"
+                second.write_text("A second input\n", encoding="utf-8")
+                manifest_sources = [str(source), str(second), str(source)]
+                run(
+                    [
+                        str(ROOT / "examples/file_manifest.py"),
+                        *manifest_sources,
+                        "--output",
+                        str(native),
+                        "--label",
+                        "release",
+                        "--label",
+                        "A B",
+                        "--label",
+                        "release",
+                    ]
+                )
+                assert json.loads(native.read_text())["count"] == 3
             else:
                 run(
                     [
@@ -408,6 +431,12 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                             else {"text": "Hello World"}
                             if kind == "selected"
                             else {
+                                "source": manifest_sources,
+                                "output": str(target),
+                                "label": ["release", "A B", "release"],
+                            }
+                            if kind == "manifest"
+                            else {
                                 "source": str(source),
                                 "output": str(target),
                                 "format": "html",
@@ -445,6 +474,12 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                             assert result == "hello-world"
                             assert set(schema.json()["paths"]) == {"/slug"}
                             bad = {}
+                        elif kind == "manifest":
+                            assert target.read_bytes() == native.read_bytes()
+                            bad = {
+                                "source": [],
+                                "output": str(base / "invalid-manifest"),
+                            }
                         else:
                             assert target.read_bytes() == native.read_bytes()
                             early_payload = {"version": True, "format": "invalid"}
@@ -495,6 +530,7 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                                 succeeds=False,
                             )
                         assert not (base / "conflict").exists()
+                        assert not (base / "invalid-manifest").exists()
                         assert (
                             not (base / "invalid-enum.txt").exists()
                             and not (base / "invalid-enum.html").exists()
@@ -508,6 +544,7 @@ def verify_capability_examples(python: str | None = None) -> dict[str, str]:
                         server.wait(timeout=8)
             summary[kind] = {
                 "enum": "native/http/stdio-mcp byte parity; invalid inputs no files",
+                "manifest": "native/http/stdio-mcp manifest parity; order/duplicates; empty required list no files",
                 "selected": "only slug; native/http/stdio-mcp; full source refused",
                 "informational": "native/http/stdio-mcp byte parity; early exit; conflicts rejected",
             }[kind]

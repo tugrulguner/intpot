@@ -1,5 +1,14 @@
 # AGENTS.md
 
+Documentation changes must distinguish source-checkout capabilities from public
+availability. Keep examples/index, README, roadmap, shipped skills, and canonical
+website Markdown/MDX aligned; do not update generated website exports in a feature
+worktree. For plain CLI `list[str]`, document required variadic minimum one and optional
+repeatable lists only, preserve source omission normalization, and state unsupported
+forms and before-write refusal precisely. `minimum_items` is CLI-explicit metadata only,
+not inferred API/MCP array validation. Do not claim Docling conversion or PyPI availability
+for unreleased source behavior.
+
 Guidance for coding agents working **on intpot**. If you want intpot's skills for your
 *own* project instead, run `intpot add skills`.
 

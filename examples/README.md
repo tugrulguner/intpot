@@ -26,6 +26,8 @@ numeric validation and real receipt effects. The diagnostic teaching scripts inc
 - Scalar enum choice and explicit informational adaptation: `informational_text/app.py`.
 - Repeatable enum collections, explicit tool selection and informational conversion:
   the three short `convert_*.py` recipes below.
+- Plain `list[str]` CLI input, repeated options and file-manifest conversion: `file_manifest.py`
+  and the bounded workflow below (unreleased source checkout only).
 - Project scaffolding, directory discovery and agent guidance: `project_workflow.py`.
 
 ### Bootstrap a real project
@@ -86,6 +88,36 @@ a dependency: keep `examples` on `PYTHONPATH` or install that package. Invalid e
 values are rejected before output files. Native omission can be `None` or `[]` depending
 on Typer; this application's default branch handles both. Explicit empty arrays are
 not a universal transport-omission contract.
+
+### Plain string-list file manifest (unreleased)
+
+`file_manifest.py` hashes server-local source files and records path/label order,
+including duplicates. It has no authentication or upload boundary. Create the inputs,
+run the native CLI, convert and call HTTP/MCP as follows:
+
+```sh
+printf 'first file\n' > createfirst.txt
+printf 'second file\n' > createsecond.txt
+uv run --no-sync python examples/file_manifest.py createfirst.txt createsecond.txt createfirst.txt --output native.json --label red --label blue --label red
+uv run --no-sync python examples/convert_file_manifest.py --output-dir generated/manifest
+uv run --no-sync uvicorn manifest_api:app --app-dir generated/manifest --host 127.0.0.1 --port 8000
+```
+
+From another terminal, send the generated HTTP body's named object and exercise the
+stdio MCP client:
+
+```sh
+curl --fail-with-body http://127.0.0.1:8000/manifest -H 'Content-Type: application/json' \
+  -d '{"source":["createfirst.txt","createsecond.txt","createfirst.txt"],"output":"http.json","label":["red","blue","red"]}'
+uv run --no-sync python examples/call_converted_mcp.py manifest '{"source":["createfirst.txt","createsecond.txt","createfirst.txt"],"output":"mcp.json","label":["red","blue","red"]}' --server-dir generated/manifest
+```
+
+The converter emits `manifest_api.py` and `manifest_mcp.py`; the MCP client starts
+and closes its server. The generated manifest implementation retains its standard-library
+imports; this example does not need an application-package import path. Paths are trusted server-local
+filesystem inputs; this workflow does not provide upload handling, authorization, or
+a safe public filesystem boundary. API/MCP availability here is not a general claim
+for every string-collection shape. Public v0.16.0 does not include this source feature.
 
 ### Explicitly select a tool
 

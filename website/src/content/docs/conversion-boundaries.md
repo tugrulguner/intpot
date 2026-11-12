@@ -80,6 +80,19 @@ registered-command fallback inspection. An enum class alone does not describe a
 parameter whose native choices or parsing have been overridden. These guards do not
 translate CLI callbacks or lifecycle behavior.
 
+## Plain string-list CLI conversion (unreleased)
+
+Source checkout supports required variadic `list[str]` arguments (minimum one value)
+and optional repeatable `list[str]` options. Input order and duplicates are preserved;
+omission follows the installed source normalizer (`None` on modern Typer, `[]` on the
+legacy floor). Outer `Optional[list[str]]` repeatable options are also supported.
+Required repeatable options, optional positional/nested collections, nullable elements,
+and context/environment/prompt/parser/factory-dependent forms refuse before writes.
+There is no unsupported-collection marker or specialized exception. This is not in
+public v0.16.0, and does not mean Docling conversion works: its callbacks remain a
+separate blocker. These are server-local native values, not upload or filesystem-safety
+features.
+
 The [Docling experiment](https://github.com/tugrulguner/intpot/blob/main/examples/external-applications/docling.md)
 verifies native HTML-to-Markdown file creation and overwriting, while Intpot still
 inspects its enum collections but refuses the selected command's three parameter

@@ -1,0 +1,1 @@
+Preserve ordinary CLI string-list arguments and optional repeatable options in generated interfaces, retaining native omission, order, duplicates, and required-argument cardinality with validation before command effects.

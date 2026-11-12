@@ -58,7 +58,7 @@ def test_checked_in_generated_examples_execute_through_real_frameworks() -> None
 
     first, *lines = result.stdout.splitlines()
     capabilities = json.loads(first)
-    assert set(capabilities) == {"enum", "selected", "informational"}
+    assert set(capabilities) == {"enum", "selected", "informational", "manifest"}
     assert (
         capabilities["enum"]
         == "native/http/stdio-mcp byte parity; invalid inputs no files"

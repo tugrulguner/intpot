@@ -276,9 +276,11 @@ def _fastapi_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[...,
         contract = contracts[param_name]
         placement = resolve_parameter_placement(contract, SourceType.API)
         marker = markers[placement]
-        marker_kwargs = (
+        marker_kwargs: dict[str, Any] = (
             {"description": contract.description} if contract.description else {}
         )
+        if contract.minimum_items is not None:
+            marker_kwargs["min_length"] = contract.minimum_items
         if contract.interface_name is not None:
             marker_kwargs["alias"] = contract.interface_name
         declared = (
@@ -364,6 +366,51 @@ def build_fastapi_app(name: str, tools: list[RegisteredTool]) -> object:
     return api_app
 
 
+def _fastmcp_endpoint(func: Callable[..., Any], info: ToolInfo) -> Callable[..., Any]:
+    """Apply declared list cardinality without changing the registered callable."""
+    endpoint = _restore_positional_only(func, info)
+    if not any(parameter.minimum_items is not None for parameter in info.parameters):
+        return endpoint
+    import functools
+    import inspect
+    from typing import Annotated, get_type_hints
+
+    from pydantic import Field
+
+    contracts = _parameter_contracts(endpoint, info)
+    signature = inspect.signature(endpoint)
+    hints = get_type_hints(func, include_extras=True)
+    parameters = []
+    for parameter in signature.parameters.values():
+        contract = contracts[parameter.name]
+        annotation = hints.get(parameter.name, parameter.annotation)
+        if contract.minimum_items is not None:
+            annotation = Annotated[annotation, Field(min_length=contract.minimum_items)]
+        hints[parameter.name] = annotation
+        parameters.append(parameter.replace(annotation=annotation))
+    wrapper: Callable[..., Any]
+    if inspect.iscoroutinefunction(endpoint):
+
+        @functools.wraps(endpoint)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await endpoint(*args, **kwargs)
+
+        wrapper = async_wrapper
+    else:
+
+        @functools.wraps(endpoint)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            return endpoint(*args, **kwargs)
+
+        wrapper = sync_wrapper
+    wrapper.__annotations__ = hints
+    wrapper.__signature__ = signature.replace(  # type: ignore[attr-defined]
+        parameters=parameters,
+        return_annotation=hints.get("return", signature.return_annotation),
+    )
+    return wrapper
+
+
 def build_fastmcp_app(name: str, tools: list[RegisteredTool]) -> object:
     """Construct a FastMCP server from registered tools."""
     try:
@@ -379,5 +426,5 @@ def build_fastmcp_app(name: str, tools: list[RegisteredTool]) -> object:
         mcp.tool(
             name=resolve_tool_interface_name(tool.info, SourceType.MCP),
             description=tool.info.description,
-        )(_restore_positional_only(tool.func, tool.info))
+        )(_fastmcp_endpoint(tool.func, tool.info))
     return mcp
