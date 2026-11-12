@@ -67,6 +67,7 @@ def _copy_tool_info(info: ToolInfo) -> ToolInfo:
                 unsupported_mcp_numeric_range=parameter.unsupported_mcp_numeric_range,
                 string_enum=parameter.string_enum,
                 informational_callback=parameter.informational_callback,
+                minimum_items=parameter.minimum_items,
             )
             for parameter in info.parameters
         ],

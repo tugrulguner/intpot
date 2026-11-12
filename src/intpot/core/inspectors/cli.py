@@ -21,6 +21,7 @@ from intpot.core.inspectors.base import BaseInspector
 from intpot.core.models import _SENTINEL, ParameterInfo, ToolInfo
 from intpot.core.numeric_ranges import cli_numeric_range, cli_range_default
 from intpot.core.provenance import callable_source_metadata, inspected_callable_metadata
+from intpot.core.string_collections import cli_string_list
 from intpot.core.string_enums import (
     StringEnumSpec,
     annotation_string_enum,
@@ -325,6 +326,27 @@ def _registered_parameter_details(
     numeric_range, default = cli_range_default(
         numeric_range, python_type_name(annotation), default
     )
+    if enum is None:
+        option = hasattr(metadata, "prompt") or (
+            not hasattr(metadata, "param_decls")
+            and signature_default is not inspect.Parameter.empty
+            and signature_default is not Ellipsis
+        )
+        collection = cli_string_list(
+            annotation,
+            metadata,
+            default,
+            option=option,
+            automatic_envvar=automatic_envvar and option,
+            context_default=context_default,
+            unsupported_context=unsupported_context,
+        )
+        if collection is not None:
+            type_name, default, minimum_items = collection
+            annotation = (
+                (list[str] | None) if type_name.startswith("Optional[") else list[str]
+            )
+            numeric_range = dict(numeric_range, minimum_items=minimum_items)
     return (
         annotation,
         default,
@@ -902,6 +924,26 @@ class CLIInspector(BaseInspector):
 
             original = callback_params.get(param.name)
             enum = annotation_string_enum(original.annotation) if original else None
+            minimum_items = None
+            if enum is None and original is not None:
+                list_annotation, list_metadata = _parameter_annotation_metadata(
+                    original.annotation, original.default
+                )
+                option = getattr(param, "param_type_name", None) == "option"
+                collection = cli_string_list(
+                    list_annotation,
+                    list_metadata,
+                    default,
+                    option=option,
+                    automatic_envvar=automatic_envvar
+                    and option
+                    and getattr(param, "allow_from_autoenv", True),
+                    context_default=_has_context_default(default_map, param.name),
+                    unsupported_context=unsupported_context,
+                    native_parameter=param,
+                )
+                if collection is not None:
+                    type_str, default, minimum_items = collection
             if enum is not None:
                 assert original is not None
                 _, metadata = _parameter_annotation_metadata(
@@ -960,6 +1002,7 @@ class CLIInspector(BaseInspector):
                     unsupported_callback=callable(getattr(param, "callback", None)),
                     informational_callback=informational_callback,
                     string_enum=enum,
+                    minimum_items=minimum_items,
                     **numeric_range,
                 )
             )

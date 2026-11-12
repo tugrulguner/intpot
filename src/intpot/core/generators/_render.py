@@ -53,6 +53,15 @@ _TYPING_NAMES = {
 }
 
 
+def _plain_string_collection(parameter: ParameterInfo | ParameterSchema) -> bool:
+    return parameter.string_enum is None and parameter.type_annotation in {
+        "list[str]",
+        "List[str]",
+        "Optional[list[str]]",
+        "Optional[List[str]]",
+    }
+
+
 def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
     """Scan all type annotations across tools and return required typing imports."""
     found: set[str] = set()
@@ -61,7 +70,7 @@ def _extract_typing_imports(tools: Sequence[RenderableTool]) -> list[str]:
         for param in tool.parameters:
             # Enum annotations are replaced by private aliases at rendering time.
             # Their original spelling can introduce unused, conflicting imports.
-            if param.string_enum is None:
+            if param.string_enum is None and not _plain_string_collection(param):
                 _scan_type_string(param.type_annotation, found)
     return sorted(found)
 
@@ -181,6 +190,12 @@ def _private_aliases(tools: Sequence[RenderableTool]) -> dict[str, str]:
             aliases[f"impl:{tool.name}"] = unique(f"_{tool.name}_impl")
     for tool in tools:
         for parameter in tool.parameters:
+            if (
+                _plain_string_collection(parameter)
+                and parameter.type_annotation.startswith("Optional[")
+                and "typing:Optional" not in aliases
+            ):
+                aliases["typing:Optional"] = unique("_intpot_typing_Optional")
             if parameter.string_enum is not None:
                 spec = parameter.string_enum
                 if spec.key not in aliases:
@@ -247,6 +262,12 @@ def _collect_extra_imports(
                     seen.add(retained)
                     source_imports.append(retained)
         for parameter in tool.parameters:
+            if _plain_string_collection(parameter):
+                default_imports.add(f"import builtins as {aliases['builtins']}")
+                if parameter.type_annotation.startswith("Optional["):
+                    default_imports.add(
+                        f"from typing import Optional as {aliases['typing:Optional']}"
+                    )
             if parameter.string_enum is not None:
                 default_imports.add(parameter.string_enum.import_source(aliases))
                 if parameter.string_enum.many:
@@ -942,9 +963,10 @@ def _collect_support_definitions(tools: Sequence[RenderableTool]) -> list[str]:
     for tool in tools:
         signature_bindings.update(_loaded_names(tool.return_type, mode="eval"))
         for parameter in tool.parameters:
-            signature_bindings.update(
-                _loaded_names(parameter.type_annotation, mode="eval")
-            )
+            if not _plain_string_collection(parameter):
+                signature_bindings.update(
+                    _loaded_names(parameter.type_annotation, mode="eval")
+                )
     # Required guards and module initialization also resolve these builtins.
     signature_bindings.update({"object", "TypeError"})
     for tool in tools:
@@ -1020,6 +1042,11 @@ def render_template(template_name: str, **kwargs: object) -> str:
     def parameter_type(parameter: ParameterInfo | ParameterSchema) -> str:
         spec = parameter.string_enum
         if spec is None:
+            if _plain_string_collection(parameter):
+                annotation = f"{aliases['builtins']}.list[{aliases['builtins']}.str]"
+                if parameter.type_annotation.startswith("Optional["):
+                    annotation = f"{aliases['typing:Optional']}[{annotation}]"
+                return annotation
             return parameter.type_annotation
         annotation = spec.alias(aliases)
         if spec.many:
@@ -1072,7 +1099,9 @@ def render_template(template_name: str, **kwargs: object) -> str:
             kwargs,
             generated_aliases=aliases,
             has_numeric_ranges=any(
-                p.minimum is not None or p.maximum is not None
+                p.minimum_items is not None
+                or p.minimum is not None
+                or p.maximum is not None
                 for t in tools
                 for p in t.parameters
             ),

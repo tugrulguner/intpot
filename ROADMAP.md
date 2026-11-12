@@ -39,6 +39,15 @@ blocker per slice. Preserve successful results, rejected inputs, defaults, busin
 and relevant side effects over the documented shared input domain. Native CLI, HTTP and
 MCP response/error formats can differ; test and explain those adaptations explicitly.
 
+An additional bounded source-checkout slice now supports required variadic `list[str]`
+CLI arguments and optional repeatable `list[str]` options, preserving ordering, duplicates,
+and source Typer omission normalization. It is unreleased and not part of public v0.16.0.
+The `minimum_items` schema field records only an explicit required CLI variadic minimum;
+it does not infer API/MCP required-array validation. Outer `Optional[list[str]]` repeatable
+options are supported; nested collections and nullable elements remain unsupported and
+refuse before writes. See the runnable
+`examples/file_manifest.py` workflow and conversion-boundaries documentation.
+
 The first source slice is a bounded batch-order CLI with same-module helpers/constants
 and numeric option validation. Preserve ordinary finite inclusive non-clamping integer
 and floating ranges through generated interfaces, with explicit refusal for range

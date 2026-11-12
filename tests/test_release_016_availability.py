@@ -13,6 +13,13 @@ ROOT = Path(__file__).parents[1]
 )
 def test_occurrence_example_minimum_release_is_explicit(relative):
     text = (ROOT / relative).read_text()
+    if relative.endswith(".md"):
+        # Availability belongs to this example, not newer capabilities in the index.
+        text = next(
+            block
+            for block in text.split("\n\n")
+            if "`reference_locations.py` requires" in block
+        )
     assert "requires v0.16.0 or newer" in text
     assert "until publication" not in text.lower()
     assert "source-checkout-only (unreleased)" not in text

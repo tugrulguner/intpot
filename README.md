@@ -320,6 +320,16 @@ the original enum type and rejects invalid choices before body effects. Unsuppor
 custom/local enums and required/positional/nested collections refuse instead of becoming unchecked strings.
 Repeatable options preserve typed array elements, order, duplicates and None versus
 empty-list defaults; see the runnable [collection conformance driver](examples/enum_collection_conformance.py).
+Plain `list[str]` CLI collections are also supported in the unreleased source checkout:
+required variadic arguments require at least one value, while optional repeatable options
+preserve order, duplicates and the installed Typer omission value (`None` on modern
+versions, `[]` on the legacy floor). `ParameterInfo` and `ParameterSchema` expose
+optional `minimum_items` metadata (`None` or `1`); it is omitted from JSON when absent.
+This records the explicit CLI-required variadic minimum only, not inferred API/MCP
+array constraints. Outer `Optional[list[str]]` repeatable options are included in this
+bounded subset; context/environment/prompt/parser/factory-dependent collections refuse
+before writes, as do required repeatable options, optional positional and nested or
+nullable-element forms. This native-list support is not in public v0.16.0.
 The [Docling experiment](examples/external-applications/docling.md) records real native
 HTML-to-Markdown file effects and remaining conversion barriers; it does **not** claim
 working Docling HTTP/MCP conversion.
@@ -363,7 +373,7 @@ preserved by inspection, but API-to-CLI/MCP conversion refuses them with
 `UnsupportedFastAPIDependencyError` rather than emitting code with missing values. Full
 dependency injection mapping remains tracked in
 [#20](https://github.com/tugrulguner/intpot/issues/20). Review generated code when a source
-uses nested Typer command groups, repeatable CLI options, `Annotated[..., Body(...)]`,
+uses nested Typer command groups, unsupported repeatable CLI collection forms, `Annotated[..., Body(...)]`,
 Pydantic model parameters, routes with multiple HTTP methods, streaming, background tasks,
 or framework-specific error handling.
 

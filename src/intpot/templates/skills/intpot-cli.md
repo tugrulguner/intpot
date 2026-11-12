@@ -162,7 +162,7 @@ conversion or eject:
    behavioral test.
 
 Current unsupported or lossy cases include nested Typer sub-apps, repeatable CLI options
-outside the bounded optional string-enum list subset described above,
+outside the bounded optional string-enum list and plain `list[str]` subsets described above,
 some FastAPI `Annotated[..., Body(...)]` parameters, factory-created apps, and routes with
 multiple HTTP methods. FastAPI `Depends()`, `Security()`, nested, and route/router/app-level
 dependencies remain visible to `intpot inspect`, but API-to-CLI/MCP conversion refuses
@@ -171,6 +171,19 @@ recoverable body makes conversion refuse before output writes. `--allow-scaffold
 explicitly requests labeled `NotImplementedError` implementations, not working programs.
 `inspect --json` adds an `assessment` with per-tool body-recovery diagnostics when missing.
 This is not general fidelity assessment and never bypasses callback/dependency guards.
+
+**Plain string-list conversion (unreleased source checkout):** required variadic
+`list[str]` arguments need at least one value; optional repeatable `list[str]` options
+retain input order and duplicates, and normalize omission using the installed source
+Typer behavior (`None` on modern releases, `[]` on the legacy floor). `minimum_items`
+is optional metadata on `ParameterInfo`/`ParameterSchema`, limited to `None` or `1`,
+omitted from JSON when absent, and used only for explicitly required CLI variadics—not
+inferred for API/MCP required arrays.
+Outer `Optional[list[str]]` repeatable options are supported.
+Required repeatable options, optional positional or nested collections,
+nullable elements, and context/environment/prompt/parser/factory-dependent forms refuse
+before writes; do not assert general collection support or a validation marker/error
+field. This is absent from public v0.16.0/PyPI; it is source-checkout capability only.
 
 Typer/Click parameter callbacks remain inspectable as `unsupported_callback=True` on
 parameter metadata (`to_dict()` includes the marker only when true). CLI-to-API/MCP
