@@ -6,6 +6,7 @@ import ast
 import inspect
 import sys
 import textwrap
+import tokenize
 import types
 from importlib.util import resolve_name
 from typing import Any, Union, get_args, get_origin
@@ -159,10 +160,10 @@ def extract_source_imports(fn: Any) -> list[str]:
         return []
 
     try:
-        with open(source_file) as f:
+        with tokenize.open(source_file) as f:
             module_source = f.read()
         module_tree = ast.parse(module_source)
-    except (OSError, SyntaxError):
+    except (OSError, SyntaxError, UnicodeDecodeError):
         return []
 
     # One entry per bound name, so a statement importing several names can be

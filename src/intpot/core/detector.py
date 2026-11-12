@@ -6,6 +6,7 @@ import ast
 import importlib.util
 import sys
 import threading
+import tokenize
 from importlib import import_module
 from pathlib import Path
 from typing import Any
@@ -71,7 +72,8 @@ def _has_framework_app_ast(source_path: Path) -> bool:
     Returns False for files without candidate assignments.
     """
     try:
-        source = source_path.read_text(encoding="utf-8")
+        with tokenize.open(source_path) as stream:
+            source = stream.read()
         tree = ast.parse(source, filename=str(source_path))
     except (SyntaxError, UnicodeDecodeError, ValueError) as exc:
         # Returning False here reported malformed Python as "no app instance
