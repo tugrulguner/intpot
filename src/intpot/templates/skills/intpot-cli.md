@@ -178,8 +178,9 @@ retain input order and duplicates, and normalize omission using the installed so
 Typer behavior (`None` on modern releases, `[]` on the legacy floor). `minimum_items`
 is optional metadata on `ParameterInfo`/`ParameterSchema`, limited to `None` or `1`,
 omitted from JSON when absent, and used only for explicitly required CLI variadics—not
-inferred for API/MCP required arrays. Optional `Optional[list[str]]` collections are
-still in progress. Required repeatable options, optional positional or nested collections,
+inferred for API/MCP required arrays.
+Outer `Optional[list[str]]` repeatable options are supported.
+Required repeatable options, optional positional or nested collections,
 nullable elements, and context/environment/prompt/parser/factory-dependent forms refuse
 before writes; do not assert general collection support or a validation marker/error
 field. This is absent from public v0.16.0/PyPI; it is source-checkout capability only.

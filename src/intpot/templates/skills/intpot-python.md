@@ -205,9 +205,9 @@ required CLI variadic list's minimum, never an API/MCP required-array inference.
 Unreleased source supports native `list[str]` required variadic arguments (at least one
 value) and optional repeatable `list[str]` options, retaining order, duplicates, and
 source builtin normalization (`None` on modern Typer, `[]` on the legacy floor).
-Required repeatable options, optional positional collections, nested/nullable-element
-forms, optional repeatable collections wrapped in `Optional[...]`, and context,
-environment, prompt, parser, or factory-dependent collections are unsupported; guarded
+Outer `Optional[list[str]]` repeatable options are supported.
+Required repeatable options, optional positional or nested collections, nullable elements,
+and context, environment, prompt, parser, or factory-dependent collections are unsupported; guarded
 forms refuse before writes. This feature is not in public v0.16.0. Do not claim that
 Docling was converted or that this source-checkout capability is installable from PyPI.
 **The type field is `type_annotation`, not `annotation`.** `default` is a private sentinel
