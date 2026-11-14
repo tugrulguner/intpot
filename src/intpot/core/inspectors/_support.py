@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import tokenize
 import types
 from typing import Any
 
@@ -27,7 +28,7 @@ def extract_support_definitions(fn: Any) -> list[str]:
         origin = inspect.getsourcefile(fn)
         if not origin:
             return []
-        with open(origin, encoding="utf-8") as source_file:
+        with tokenize.open(origin) as source_file:
             tree = ast.parse(source_file.read())
         source_node = next(
             node
@@ -37,7 +38,7 @@ def extract_support_definitions(fn: Any) -> list[str]:
             and min([node.lineno, *(item.lineno for item in node.decorator_list)])
             == fn.__code__.co_firstlineno
         )
-    except (OSError, TypeError, SyntaxError, StopIteration):
+    except (OSError, TypeError, SyntaxError, StopIteration, UnicodeDecodeError):
         return []
 
     definitions: dict[str, ast.AST] = {}

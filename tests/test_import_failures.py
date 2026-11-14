@@ -366,6 +366,35 @@ def test_a_malformed_source_reports_the_parse_error(tmp_source):
     assert "No FastMCP, Typer, or FastAPI app instance found" not in result.output
 
 
+@pytest.mark.parametrize(
+    ("encoding", "header"),
+    [("utf-8-sig", ""), ("cp1252", "# coding: cp1252\n")],
+)
+def test_inspect_accepts_python_source_encodings(
+    tmp_path: Path, encoding: str, header: str
+) -> None:
+    source = tmp_path / "greeting.py"
+    source.write_text(
+        header
+        + textwrap.dedent("""\
+            import typer
+
+            app = typer.Typer()
+
+            @app.command()
+            def greet() -> str:
+                "Return a greeting."
+                return "Bonjour, été"
+            """),
+        encoding=encoding,
+    )
+
+    result = runner.invoke(app, ["inspect", str(source), "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert '"name": "greet"' in result.output
+
+
 def test_a_valid_file_with_no_app_is_still_reported_as_having_no_app(tmp_source):
     """The two must stay distinguishable — that is the whole point."""
     result = runner.invoke(app, ["inspect", str(tmp_source("value = 42\n"))])
