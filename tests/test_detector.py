@@ -72,3 +72,46 @@ def test_detect_typer_app_in_conditional_module_block(tmp_source):
     source_type, app = detect_source(path)
     assert source_type == SourceType.CLI
     assert callable(app.registered_commands[0].callback)
+
+
+def test_detect_typer_app_with_utf8_bom(tmp_path):
+    path = tmp_path / "bom_app.py"
+    path.write_text(
+        """\
+import typer
+
+app = typer.Typer()
+
+
+@app.command()
+def hello() -> str:
+    return "hello"
+""",
+        encoding="utf-8-sig",
+    )
+    source_type, app = detect_source(path)
+    assert source_type == SourceType.CLI
+    assert callable(app.registered_commands[0].callback)
+
+
+def test_detect_typer_app_with_encoding_declaration(tmp_path):
+    path = tmp_path / "cookie_app.py"
+    path.write_text(
+        """\
+# -*- coding: latin-1 -*-
+# caf\xe9 uses a non-UTF-8 byte
+
+import typer
+
+app = typer.Typer()
+
+
+@app.command()
+def hello() -> str:
+    return "hello"
+""",
+        encoding="latin-1",
+    )
+    source_type, app = detect_source(path)
+    assert source_type == SourceType.CLI
+    assert callable(app.registered_commands[0].callback)
